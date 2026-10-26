@@ -8,13 +8,13 @@ Releases: **1.0.0** (duplicate, dose mismatch, missing item) and **1.1.0** (adds
 
 Team: Rachit Shah (intake & validation) · Vedant Misra (SQLite storage) · Sarthak Kakkar (rules, report, CLI) · Devang Borkar (Docker, CI, release, README).
 
-See [PLAN.md](PLAN.md) for repo ownership, merge order, CI, task list and schedule. Usage and real output are added in the release week (Devang).
+Task board: [Linear — Team 1: Medication List Reconciliation](https://linear.app/team-1-medrec/project/team-1-medication-list-reconciliation-cafde8ad7add). See [PLAN.md](PLAN.md) for repo ownership, merge order, CI, task list and schedule. Usage and real output are added in the release week (Devang).
 
 ## Workflow rules
 - Feature branch per task (`<name>/<topic>`, e.g. `rachit/loader`); merge by PR only, never commit to `main`.
 - CI must pass on every PR; keep `main` green. Pull/rebase on `main` daily.
-- PR title starts with the Linear ID (`MED-12 Feature: ...`); paste the PR link into the Linear issue.
-- Commits carry your full name as git author; message `[<FirstName>] <area>: <summary> (MED-<n>)`.
+- PR title starts with the Linear ID (`TEA-12 Feature: ...`); paste the PR link into the Linear issue.
+- Commits carry your full name as git author; message `[<FirstName>] <area>: <summary> (TEA-<n>)`.
 - Secrets go in `.env` (gitignored), never committed. Only synthetic data.
 - AI use is allowed, but you must be able to explain every line you submit.
 

@@ -4,7 +4,7 @@ Week 3 project, Mon 2026-10-26 → Fri 2026-10-30 presentation. This file holds 
 
 Team: **Rachit Shah** (intake & validation, task board) · **Vedant Misra** (SQLite storage, tech lead) · **Sarthak Kakkar** (rules, report, CLI) · **Devang Borkar** (Docker, CI, release, README).
 
-Assumptions to confirm at the Monday session: CSV input, Python 3.12, argparse, stdlib only at runtime (pytest is the only dev dependency), Linear team key `MED`. All data is synthetic.
+Assumptions to confirm at the Monday session: CSV input, Python 3.12, argparse, stdlib only at runtime (pytest is the only dev dependency), Linear team key `TEA`. All data is synthetic.
 
 ---
 
@@ -242,71 +242,72 @@ jobs:
       - run: docker build -t medrec:ci .
       - run: docker run --rm medrec:ci --version
 ```
+- The skeleton (TEA-8) ships the `test` job; the `docker` job lands with the Dockerfile (TEA-15) and then becomes a required check.
 - Skeleton has `tests/test_smoke.py` (imports every module, asserts `__version__`) and `tests/test_version.py` (CHANGELOG has a heading for the pyproject version) → green immediately. Integration test marked `xfail` until Wed.
 - pytest config in pyproject: `testpaths=["tests"]`, `pythonpath=["src"]`, `addopts="-q --strict-markers"`.
 - **Branch protection** (applied by Vedant as repo admin via `gh api`, after the skeleton merges): require PR, 1 approving review from another member, required checks `test` + `docker`, branches up to date, no force-push, no deletion, applies to admins.
 - **Test independence**: every DB test uses `tmp_path / "test.db"` (or `:memory:`), never `MEDREC_DB_PATH`'s default (an autouse fixture in `tests/conftest.py` sets `MEDREC_DB_PATH` to a tmp path); file paths built from `Path(__file__).parent`; no network; no module-level state; close every connection (`contextlib.closing`); rules tests build `Medication` objects directly, no files.
-- **Pre-push checklist** (in PR template): `git pull --rebase origin main` · `pytest` passes locally on 3.12 · no `.env`, `*.db`, keys, or real patient data · only my files changed (or hot-file rule followed) · PR title `MED-<n> <Type>: …`, description has `Fixes MED-<n>` · PR link pasted into Linear issue.
-- **Commits**: git `user.name` = full name; message `[<first-name>] <area>: <summary> (MED-<n>)`, e.g. `[Rachit] intake: reject future dates (MED-9)`.
+- **Pre-push checklist** (in PR template): `git pull --rebase origin main` · `pytest` passes locally on 3.12 · no `.env`, `*.db`, keys, or real patient data · only my files changed (or hot-file rule followed) · PR title `TEA-<n> <Type>: …`, description has `Fixes TEA-<n>` · PR link pasted into Linear issue.
+- **Commits**: git `user.name` = full name; message `[<first-name>] <area>: <summary> (TEA-<n>)`, e.g. `[Rachit] intake: reject future dates (TEA-17)`.
 - **Secrets**: `.env` already gitignored; `.env.example` committed with `MEDREC_DB_PATH=data/medrec.db` only.
 
 ---
 
 ## 4. Linear setup
 
-### 4.0 Workspace setup (manual, done by Vedant)
-1. linear.app → workspace switcher (top-left) → **Create or join a workspace** → name `Team 1 MedRec`; first team `Medication Reconciliation`, identifier **`MED`**.
-2. Settings → Members → **Invite**: Rachit, Sarthak, Devang (Member). **Adam**: invite too (Member, or Guest scoped to team MED if on a paid plan) — this is how "share board with Adam" works; a project link only opens for workspace members.
-3. Reconnect the Claude Linear connector to the new workspace (Claude app → Settings → Connectors → Linear → Disconnect → Connect, pick `Team 1 MedRec` on the OAuth screen). Confirm with `get_workspace` before creating anything.
-4. Optional but recommended: Settings → Integrations → **GitHub** → connect `Coforge-LMS/Medical_List_Reconciliation` so `MED-<n>` in PR titles auto-links and moves issues (may need the GitHub org admin to approve).
+### 4.0 Workspace
+- Workspace **Team 1 MedRec** (https://linear.app/team-1-medrec), team **TEA**. Members: Rachit, Vedant, Sarthak, Devang.
+- Board: [Team 1: Medication List Reconciliation](https://linear.app/team-1-medrec/project/team-1-medication-list-reconciliation-cafde8ad7add) (lead Rachit).
+- **Adam**: invite him via Settings → Members (a project link only opens for workspace members). Tracked in TEA-6.
+- GitHub integration: Settings → Integrations → GitHub, connected to this repo, so `TEA-<n>` in a PR title/branch links the PR to the issue.
 
-### 4.1 What gets created (after re-inspecting teams/users/statuses/labels/projects; reuse anything that exists)
-- **Project** `Team 1: Medication List Reconciliation` — team MED, lead Rachit (board owner), start 2026-10-26, target 2026-10-30, links to the GitHub repo.
+### 4.1 Board structure
+- **Project** `Team 1: Medication List Reconciliation` — team TEA, lead Rachit (board owner), start 2026-10-26, target 2026-10-30, links to the GitHub repo.
 - **Milestones**: `Mon Decisions + Skeleton` (10-26) · `Tue Core pieces` (10-27) · `Wed Integration` (10-28) · `Thu Release 1.0.0/1.1.0 + rollback + presentation page` (10-29) · `Fri Presentation` (10-30).
-- **Labels** (team MED): area `intake`, `storage`, `rules`, `devops`, `presentation`, `docs`; type `feature` (reuse the default `Feature`), `test`, `chore` (`docs` doubles as area and type).
+- **Labels**: area `intake`, `storage`, `rules`, `devops`, `presentation`, `docs`; type `feature` (reuse the default `Feature`), `test`, `chore` (`docs` doubles as area and type).
 - **Issue description template**: Owner · Branch · Milestone/due · Context · Acceptance criteria (checklist) · Blocked by · `PR link: (paste here)`. Created in dependency order so `blockedBy` relations point at real IDs. Status `Todo`; Mon items `In Progress`.
 
-### 4.2 Issue list (≈36)
-| # | Title | Owner | Branch | Due | Blocked by |
+### 4.2 Issue list (36 issues, TEA-5 … TEA-40)
+| ID | Title | Owner | Branch | Due | Blocked by |
 |---|---|---|---|---|---|
-| 1 | Chore: Monday shared-decisions session | Vedant (facilitates, all attend) | — | Mon | — |
-| 2 | Docs: PLAN.md + README Shared Decisions | Vedant | vedant/plan | Mon | 1 |
-| 3 | Chore: Skeleton + shared models + CI PR | Devang | devang/skeleton | Mon | 2 |
-| 4 | Chore: Branch protection on main | Vedant (repo admin) | — | Mon | 3 |
-| 5 | Chore: Share Linear board with Adam | Rachit | — | Mon | — |
-| 6 | Feature: Synthetic data generator + sample input files (P001 perfect, P002 duplicate, P003 dose, P004 missing both ways, P005 two rules, P006 bad records, P007 unrecognized name) | Rachit | rachit/data-generator | Tue | 3 |
-| 7 | Feature: Alias config loader + name normalization | Rachit | rachit/aliases | Tue | 3 |
-| 8 | Feature: Loader + validation → Medication objects with rejection reasons (incl. frequency normalization) | Rachit | rachit/loader | Tue | 3, 7 |
-| 9 | Test: Intake tests (each reason code, multi-reason row, bad header, empty file, alias hit/miss) | Rachit | rachit/intake-tests | Wed | 8 |
-| 10 | Feature: SQLite schema (runs + findings FK) + init_db | Vedant | vedant/schema | Tue | 3 |
-| 11 | Feature: connect() with MEDREC_DB_PATH + PRAGMA foreign_keys=ON per connection | Vedant | vedant/connect-fk | Tue | 3 |
-| 12 | Feature: save_run / load_run / list_runs | Vedant | vedant/save-load-list | Wed | 10, 11 |
-| 13 | Test: Single-transaction save + rollback test with temp DB (+ FK violation test) | Vedant | vedant/transaction-rollback | Wed | 12 |
-| 14 | Feature: ReconciliationRule base class + rule runner | Sarthak | sarthak/rules-base | Tue | 3 |
-| 15 | Feature: DuplicateRule | Sarthak | sarthak/rule-duplicate | Tue | 14 |
-| 16 | Feature: DoseMismatchRule (unit conversion, frequency) | Sarthak | sarthak/rule-dose-mismatch | Wed | 14 |
-| 17 | Feature: MissingItemRule (both directions) | Sarthak | sarthak/rule-missing-item | Wed | 14 |
-| 18 | Test: Rule tests (med breaking two rules, patient with no findings) | Sarthak | sarthak/rule-tests | Wed | 15, 16, 17 |
-| 19 | Feature: Nurse-facing report incl. perfect-match case + rejected section | Sarthak | sarthak/report | Wed | 14 |
-| 20 | Feature: CLI reconcile / history / show + exit codes | Sarthak | sarthak/cli | Wed | 8, 12, 19 |
-| 21 | Feature: Dockerfile + .dockerignore + named volume | Devang | devang/docker | Wed | 3 |
-| 22 | Feature: Backup with Connection.backup + PRAGMA integrity_check | Devang | devang/backup | Wed | 10 |
-| 23 | Test: End-to-end integration test (CSV → report → DB row) | Devang | devang/integration-test | Wed | 8, 12, 20 |
-| 24 | Chore: Release 1.0.0 (pyproject, CHANGELOG, tag v1.0.0, image medrec:1.0.0) | Devang | devang/release-1.0.0 | Thu | 9, 13, 18, 21, 23 |
-| 25 | Feature: Release 1.1.0 rule — UnrecognizedNameRule (+ tests, no schema change) | Sarthak | sarthak/rule-unrecognized-name | Thu | 24 |
-| 26 | Chore: Release 1.1.0 (tag v1.1.0, CHANGELOG, image medrec:1.1.0) | Devang | devang/release-1.1.0 | Thu | 25 |
-| 27 | Docs: Rollback procedure 1.1.0 → 1.0.0 keeping history (backup → integrity_check → run 1.0.0 on same volume → history shows 1.1.0 runs) | Devang | devang/rollback | Thu | 22, 26 |
-| 28 | Docs: README with real pasted output (reconcile, history, rollback) | Devang | devang/readme | Thu | 27 |
-| 29 | Docs: Presentation title section + handoff sentences | Rachit | rachit/presentation-title | Thu | 3 |
-| 30 | Docs: Presentation section — Rachit (+ Be-ready-to-answer checklist) | Rachit | rachit/presentation | Thu | 29 |
-| 31 | Docs: Presentation section — Vedant (+ checklist) | Vedant | vedant/presentation | Thu | 29 |
-| 32 | Docs: Presentation section — Sarthak (+ checklist) | Sarthak | sarthak/presentation | Thu | 29 |
-| 33 | Docs: Presentation section — Devang (+ checklist) | Devang | devang/presentation | Thu | 29 |
-| 34 | Docs: Demo script (scripts/demo.sh + demo section) | Devang | devang/demo-script | Thu | 27 |
-| 35 | Chore: Full-team demo dry run | Devang (runs), all | — | Fri AM | 28, 30–34 |
-| 36 | Chore: Friday presentation (30 min) | Rachit | — | Fri | 35 |
+| TEA-5 | Chore: Monday shared-decisions session | Vedant (facilitates, all attend) | — | Mon | — |
+| TEA-7 | Docs: PLAN.md + README Shared Decisions | Vedant | vedant/plan | Mon | TEA-5 |
+| TEA-8 | Chore: Skeleton + shared models + CI PR | Devang | devang/skeleton | Mon | TEA-7 |
+| TEA-9 | Chore: Branch protection on main | Vedant (repo admin) | — | Mon | TEA-8 |
+| TEA-6 | Chore: Share Linear board with Adam | Rachit | — | Mon | — |
+| TEA-10 | Feature: Synthetic data generator + sample input files (P001 perfect, P002 duplicate, P003 dose, P004 missing both ways, P005 two rules, P006 bad records, P007 unrecognized name) | Rachit | rachit/data-generator | Tue | TEA-8 |
+| TEA-11 | Feature: Alias config loader + name normalization | Rachit | rachit/aliases | Tue | TEA-8 |
+| TEA-17 | Feature: Loader + validation → Medication objects with rejection reasons (incl. frequency normalization) | Rachit | rachit/loader | Tue | TEA-8, TEA-11 |
+| TEA-24 | Test: Intake tests (each reason code, multi-reason row, bad header, empty file, alias hit/miss) | Rachit | rachit/intake-tests | Wed | TEA-17 |
+| TEA-12 | Feature: SQLite schema (runs + findings FK) + init_db | Vedant | vedant/schema | Tue | TEA-8 |
+| TEA-13 | Feature: connect() with MEDREC_DB_PATH + PRAGMA foreign_keys=ON per connection | Vedant | vedant/connect-fk | Tue | TEA-8 |
+| TEA-18 | Feature: save_run / load_run / list_runs | Vedant | vedant/save-load-list | Wed | TEA-12, TEA-13 |
+| TEA-25 | Test: Single-transaction save + rollback test with temp DB (+ FK violation test) | Vedant | vedant/transaction-rollback | Wed | TEA-18 |
+| TEA-14 | Feature: ReconciliationRule base class + rule runner | Sarthak | sarthak/rules-base | Tue | TEA-8 |
+| TEA-19 | Feature: DuplicateRule | Sarthak | sarthak/rule-duplicate | Tue | TEA-14 |
+| TEA-20 | Feature: DoseMismatchRule (unit conversion, frequency) | Sarthak | sarthak/rule-dose-mismatch | Wed | TEA-14 |
+| TEA-21 | Feature: MissingItemRule (both directions) | Sarthak | sarthak/rule-missing-item | Wed | TEA-14 |
+| TEA-26 | Test: Rule tests (med breaking two rules, patient with no findings) | Sarthak | sarthak/rule-tests | Wed | TEA-19, TEA-20, TEA-21 |
+| TEA-22 | Feature: Nurse-facing report incl. perfect-match case + rejected section | Sarthak | sarthak/report | Wed | TEA-14 |
+| TEA-27 | Feature: CLI reconcile / history / show + exit codes | Sarthak | sarthak/cli | Wed | TEA-17, TEA-18, TEA-22 |
+| TEA-15 | Feature: Dockerfile + .dockerignore + named volume | Devang | devang/docker | Wed | TEA-8 |
+| TEA-23 | Feature: Backup with Connection.backup + PRAGMA integrity_check | Devang | devang/backup | Wed | TEA-12 |
+| TEA-32 | Test: End-to-end integration test (CSV → report → DB row) | Devang | devang/integration-test | Wed | TEA-17, TEA-18, TEA-27 |
+| TEA-33 | Chore: Release 1.0.0 (pyproject, CHANGELOG, tag v1.0.0, image medrec:1.0.0) | Devang | devang/release-1.0.0 | Thu | TEA-24, TEA-25, TEA-26, TEA-15, TEA-32 |
+| TEA-34 | Feature: Release 1.1.0 rule — UnrecognizedNameRule (+ tests, no schema change) | Sarthak | sarthak/rule-unrecognized-name | Thu | TEA-33 |
+| TEA-35 | Chore: Release 1.1.0 (tag v1.1.0, CHANGELOG, image medrec:1.1.0) | Devang | devang/release-1.1.0 | Thu | TEA-34 |
+| TEA-36 | Docs: Rollback procedure 1.1.0 → 1.0.0 keeping history (backup → integrity_check → run 1.0.0 on same volume → history shows 1.1.0 runs) | Devang | devang/rollback | Thu | TEA-23, TEA-35 |
+| TEA-37 | Docs: README with real pasted output (reconcile, history, rollback) | Devang | devang/readme | Thu | TEA-36 |
+| TEA-16 | Docs: Presentation title section + handoff sentences | Rachit | rachit/presentation-title | Thu | TEA-8 |
+| TEA-28 | Docs: Presentation section — Rachit (+ Be-ready-to-answer checklist) | Rachit | rachit/presentation | Thu | TEA-16 |
+| TEA-29 | Docs: Presentation section — Vedant (+ checklist) | Vedant | vedant/presentation | Thu | TEA-16 |
+| TEA-30 | Docs: Presentation section — Sarthak (+ checklist) | Sarthak | sarthak/presentation | Thu | TEA-16 |
+| TEA-31 | Docs: Presentation section — Devang (+ checklist) | Devang | devang/presentation | Thu | TEA-16 |
+| TEA-38 | Docs: Demo script (scripts/demo.sh + demo section) | Devang | devang/demo-script | Thu | TEA-36 |
+| TEA-39 | Chore: Full-team demo dry run | Devang (runs), all | — | Fri AM | TEA-37, TEA-28, TEA-29, TEA-30, TEA-31, TEA-38 |
+| TEA-40 | Chore: Friday presentation (30 min) | Rachit | — | Fri | TEA-39 |
 
-**Be ready to answer** (checklists in 30–33)
+**Be ready to answer** (checklists in TEA-28 … TEA-31)
 - Rachit: why CSV not JSON · how a row becomes rejected (show a multi-reason row) · how alias matching works and what happens for a brand not in the config · how frequency is normalized · how we guarantee no real patient data · why the generator is seeded · empty file / wrong header behaviour.
 - Vedant: why two tables and what the FK protects · why `PRAGMA foreign_keys=ON` per connection · where the transaction begins/commits and what happens if a finding insert fails halfway · how the rollback test proves it · why `tmp_path` · how connections get closed · why parameterized queries · can 1.0.0 read 1.1.0 rows.
 - Sarthak: why an ABC + subclasses, and how to add a rule · dose mismatch logic incl. unit conversion · how one med gets two findings · perfect-match output · how wording avoids treatment advice · exit codes · how the 1.1.0 rule was added without touching the others.
