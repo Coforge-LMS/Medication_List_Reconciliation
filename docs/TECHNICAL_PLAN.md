@@ -4,7 +4,7 @@ Team 1, Week 3. A web app for clinicians that compares a patient's medications f
 
 > **Safety:** synthetic data only. The app **reports discrepancies and never recommends** treatment, dose changes or discontinuation. The UI and the PDF both show this disclaimer: *"Synthetic data. Reports discrepancies between sources for clinician review; does not recommend treatment."*
 
-Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in.
+Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in. 
 
 ---
 
@@ -23,6 +23,7 @@ Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Dec
 | Time (Thu) | Work |
 |---|---|
 | on approval (~11:15) | Phase 3 foundation, B1 due **12:45** |
+| 12:00 | **B0: CI + branch protection.** This gates every code merge. |
 | 12:45–17:00 | Phase 4 parallel build |
 | 16:30– | V2 branches start from the merged rules (B15, B16) |
 | 17:00–19:00 | Phase 5 integration and clean-stack verification |
@@ -400,7 +401,7 @@ docs/research/ (section owners) · TECHNICAL_PLAN, ASSUMPTIONS, BACKLOG (Vedant)
 | 21 | Compose startup from a clean machine | B9 | `docker compose down -v && docker compose up -d` log with timings | Devang |
 | 22 | App never connects to hapi-db | B9 | app service has no hapi-db credentials or env (compose review) | Devang |
 | 23 | No secrets in git; `.env.example` | B9 | `.env` gitignored; `git grep -i password` shows demo values only | Devang |
-| 24 | CI on PRs; Git workflow (branches, PRs, owner authorship) | B10 | required checks; PR template; commit authors per owner | Devang |
+| 24 | CI on PRs; Git workflow (branches, PRs, owner authorship); no merge without approval | B0 | required checks; branch protection (1 approval, enforce_admins); PR template; CODEOWNERS | Devang |
 | 25 | v1.0.0 tag, CHANGELOG, README (startup, release, rollback, backup) | B11 | tag + GitHub release; README commands run verbatim | Devang |
 | 26 | pg_dump backup + verified restore | B11 | `scripts/backup.sh` output; row counts match | Devang |
 | 27 | Customer research documented + client brief | B12 | `docs/research/` merged; `docs/CLIENT_BRIEF.md` | Rachit |

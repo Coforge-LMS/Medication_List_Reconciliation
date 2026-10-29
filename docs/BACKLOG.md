@@ -1,6 +1,8 @@
 # Backlog (Linear-ready)
 
-Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two release groups: **V1 (1.0.0)**, 14 tickets, and **V2 (1.1.0)**, 3 tickets. IDs `B1…B17` become `TEA-<n>` on sync.
+Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two release groups: **V1 (1.0.0)**, 15 tickets, and **V2 (1.1.0)**, 3 tickets. In Linear, B*n* = TEA-(40+*n*) and **B0 = TEA-58**.
+
+**Gate:** every code ticket (B2–B11, B15–B17) is blocked by **B0**. No code PR merges to `main` until CI runs on GitHub, branch protection is on, and a teammate has approved the PR.
 
 **Conventions:**
 - Due times are Thu 2026-10-29 EDT and assume the plan is approved around 11:15.
@@ -8,6 +10,20 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
 - Branch `<owner>/<topic>`. PR title starts with the TEA id. The commit author is the owner.
 
 ## V1: Release 1.0.0
+
+**B0 · CI on GitHub Actions + branch protection (prerequisite for all code PRs)**
+- Owner Devang · V1 · P1 · 1 h · due 12:00 · blocked by none · `devang/ci`
+- `.github/workflows/ci.yml` runs on PRs to `main` and pushes to `main`. It has two jobs, which become the required checks:
+  - `lint`: `uv sync --locked`, `ruff check .`, `ruff format --check .`
+  - `test`: `uv run pytest` with a `postgres:18.6-alpine` service and `TEST_DATABASE_URL` set
+- Best practice: `permissions: contents: read`, a concurrency group per ref, `timeout-minutes`, `ubuntu-24.04`, actions pinned to commit SHAs.
+- Also adds a PR template and `CODEOWNERS` (owners per TECHNICAL_PLAN §9).
+- After a teammate approves and CI is green, apply branch protection on `main`: required checks lint + test, 1 approval with stale reviews dismissed, conversation resolution, no force-push or deletion, `enforce_admins: true`.
+- AC:
+  - [ ] Both checks pass on this PR itself, with the Postgres service reachable.
+  - [ ] `gh api …/branches/main/protection` shows the settings above.
+  - [ ] A PR without an approval, or with a failing check, can't be merged, admins included.
+  - [ ] Opening a PR auto-requests the area owner (CODEOWNERS).
 
 **B1 · Scaffold + shared contract + alias config schema**
 - Owner Vedant · V1 · P1 · 1.5 h · due 12:45 · blocked by none · `vedant/foundation`
@@ -102,16 +118,14 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
   - [ ] `down` then `up` keeps data; `down -v` resets it. The app service has no hapi-db credentials.
   - [ ] No secrets committed.
 
-**B10 · CI, Git workflow, essential-test checklist, end-to-end test**
-- Owner Devang · V1 · P1 · 2.5 h · due 18:00 · blocked by B1 (CI); B2, B4, B5, B6, B7 (E2E) · `devang/ci-e2e`
-- `.github/workflows/ci.yml` runs `lint` + `test` with a Postgres service.
-- Branch protection via `gh api`: both checks required, 1 approval, `strict: false`.
-- Add a PR template (ticket id, test evidence, "I can explain every line").
-- `tests/e2e/test_e2e_reconcile.py`: TestClient + real Postgres + MockTransport serving `tests/fixtures/hapi/` by URL.
+**B10 · Essential-test checklist + end-to-end test**
+- Owner Devang · V1 · P1 · 1.5 h · due 18:00 · blocked by B0, B2, B4, B5, B6, B7 · `devang/e2e`
+- CI and branch protection moved to B0.
+- `tests/e2e/test_e2e_reconcile.py`: TestClient + real Postgres (the CI service) + MockTransport serving `tests/fixtures/hapi/` by URL.
 - AC:
-  - [ ] CI is green and main is protected; PR CI takes under 5 min.
   - [ ] The E2E test covers list → detail → reconcile → run page (CASE-MIXED grouped findings) → history → PDF 200, and asserts persisted rows.
   - [ ] Checklist in the PR: every QUALITY RULES test maps to a passing test id in the CI log.
+  - [ ] PR CI stays under 5 min.
 
 **B11 · Release 1.0.0: README, CHANGELOG, tag, image, backup/restore**
 - Owner Devang · V1 · P1 · 1.5 h · due 19:45 · blocked by B2–B10, B12 · `devang/release-1.0.0`
@@ -181,14 +195,14 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
 ---
 
 ## Critical path
-B1 → B4 + B5 + B6 (parallel) → B7 → B10 (E2E) → B11 **v1.0.0** → merge B15 + B16 → B17 **v1.1.0 + rollback** → B14.
+**B0 (CI + branch protection) and B1** → B4 + B5 + B6 (parallel) → B7 → B10 (E2E) → B11 **v1.0.0** → merge B15 + B16 → B17 **v1.1.0 + rollback** → B14.
 B2 is on the path for B3, B9 and B10. B12 must merge before B11.
 
 ## What each member can start immediately
 - **Rachit:** B2 (Synthea run, case bundle, importer against a local HAPI) and B12. Neither needs the contract.
 - **Vedant:** B1 now. B5 the moment B1 merges.
 - **Sarthak:** after B1 merges (~12:45), B6 and B7 in parallel streams; B8 after B6.
-- **Devang:** B9 skeleton (HAPI + both DBs need no app code); CI workflow draft for B10.
+- **Devang:** **B0 first.** It's the gate for every code merge. Then the B9 skeleton (HAPI + both DBs need no app code).
 
 ## Workload (estimated hours)
 | Member | Tickets | Hours |
@@ -196,7 +210,7 @@ B2 is on the path for B3, B9 and B10. B12 must merge before B11.
 | Rachit | B2 2.5, B3 1.5, B4 3, B12 1, B13 0.5 | **8.5** |
 | Vedant | B1 1.5, B5 3, B13 0.5, integration and review ~2 | **7.0** |
 | Sarthak | B6 2.5, B7 3.5, B8 1.5, B15 2, B16 2.5, B13 0.5 | **12.5** ⚠ |
-| Devang | B9 2.5, B10 2.5, B11 1.5, B14 2, B17 1, B13 0.5 | **10.0** |
+| Devang | B0 1, B9 2.5, B10 1.5, B11 1.5, B14 2, B17 1, B13 0.5 | **10.0** |
 
 ⚠ Sarthak's load follows the ownership fixed in the brief. Two things keep it in budget:
 - His V1 work runs as two parallel streams with disjoint files (rules + PDF, web + service), and V2 starts from the merged rules before v1.0.0.
