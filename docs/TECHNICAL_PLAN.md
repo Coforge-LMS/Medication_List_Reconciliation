@@ -12,6 +12,8 @@ Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Dec
 
 ## 1. What is realistic by Fri 10/30
 
+> **Superseded:** the presentation moved to **Mon 2026-11-02**. See §16.4 for the current schedule. This section is kept for history.
+
 | Item | Likelihood | Why |
 |---|---|---|
 | V1 1.0.0 (every Definition-of-Done item) | **High**, target Thu 19:45 | HAPI + Postgres smoke-tested (16 s start); stack pinned; 5 parallel streams with disjoint files |
@@ -507,30 +509,102 @@ The assignment and rubric documents are **not in this repo**. This list is infer
 
 ---
 
-## 16. Patient intake history: third source (added 2026-10-29)
+## 16. Patient intake history: third source (final, 2026-10-29)
 
-**Why:** reconciliation should start from what the patient actually takes, recorded at the arrival interview (WHO High 5s "best possible medication history" [R11]). It is the only source that catches over-the-counter drugs, supplements and stopped drugs. Omission is the most common discrepancy (Cornish 2005 [R11]). The EHR and pharmacy stay read-only snapshots, while the interview is captured by our tool, so it lives in **our** DB.
+**Why:** reconciliation should start from what the patient actually takes, recorded at the arrival interview (WHO High 5s "best possible medication history" [R11]). It is the only source that catches over-the-counter drugs, supplements and stopped drugs. Omission is the most common discrepancy (Cornish 2005 [R11]). The EHR and pharmacy stay read-only snapshots; the interview is captured by our tool, so it lives in **our** DB.
 
 **Decisions:**
-- Three-way comparison per medication. No source is treated as the truth.
+- Three-way comparison per medication; no source is treated as the truth.
 - An intake item with no usable dose is rejected with a reason.
 - Pharmacy stays a seeded file.
 - Intake is **seeded**, not typed in, so "forms" stay out of scope.
+- **The interview is its own table** (final schema below).
 
-| Area | Design | Ticket / owner |
+### 16.1 Final app DB schema (7 tables; supersedes §5 where they differ)
+```mermaid
+erDiagram
+  patient ||--o{ intake_interview : "interviewed (RESTRICT)"
+  intake_interview ||--o{ intake_medication : "reports (CASCADE)"
+  patient ||--o{ reconciliation_run : "has (RESTRICT)"
+  intake_interview |o--o{ reconciliation_run : "compared in (nullable)"
+  reconciliation_run ||--o{ medication_record : "snapshots (CASCADE)"
+  reconciliation_run ||--o{ finding : "produces (CASCADE)"
+  reconciliation_run ||--o{ rejected_record : "rejects (CASCADE)"
+  patient { bigint id PK
+    text identifier "UNIQUE NOT NULL"
+    text fhir_base_url "nullable"
+    text fhir_patient_id "nullable, latest HAPI id"
+    timestamptz fetched_at "nullable" }
+  intake_interview { bigint id PK
+    bigint patient_id FK
+    text interview_ref "UNIQUE, seed key"
+    timestamptz taken_at
+    text taken_by
+    text informant "patient | caregiver"
+    bool no_medications "default false" }
+  intake_medication { bigint id PK
+    bigint interview_id FK
+    text record_id "UNIQUE per interview"
+    text medication_name "raw, as said"
+    text dose_amount "raw"
+    text dose_unit "raw"
+    text frequency "raw"
+    jsonb raw }
+  reconciliation_run { bigint id PK
+    bigint patient_id FK
+    bigint intake_interview_id FK "nullable"
+    text app_version
+    timestamptz started_at }
+  finding { bigint id PK
+    bigint run_id FK
+    text discrepancy_type "TEXT"
+    text intake_value "nullable"
+    text fhir_value "nullable"
+    text pharmacy_value "nullable" }
+```
+`medication_record` and `rejected_record` are unchanged from §5 and accept `source='intake'`.
+
+**Why this shape:**
+- **Takes nothing vs not taken:** "takes nothing" is an interview with `no_medications = true` and zero rows; "not taken" is no interview at all.
+- **Audit:** `taken_by` / `taken_at` record who took the history and when, and each run records which interview it compared.
+- **Foreign keys:** intake hangs off `patient` by a real FK, which the brief requires. Patients can exist from the seed before the first FHIR fetch, so the FHIR columns are nullable.
+- **Size:** one table over the brief's "~4–6" (ASSUMPTIONS A33). V2 still ships zero DDL.
+
+**Seed:** `data/intake/intake_interviews.csv` + `data/intake/intake_medications.csv`, loaded by `python -m db.seed data/intake`.
+- The upsert is idempotent (by `interview_ref`, and by `(interview_id, record_id)`).
+- It creates `patient` rows by identifier.
+- It refuses a `no_medications` interview that has rows.
+
+### 16.2 Contract (additive)
+- `Source` gains `"intake"`.
+- `ReconciliationInput.intake: list | None = None`. **None = no interview** (the result is identical to two-source); **`[]` = the patient reports no medications**.
+- `Finding.intake_value: str | None`.
+- `IntakeInterviewInfo(taken_at, taken_by, informant, no_medications)`.
+- `RunDetail.intake` and `RunDetail.intake_interview`.
+
+### 16.3 Per-area design
+
+| Area | Design | Owner |
 |---|---|---|
-| Data | `data/generators/make_intake.py --seed 42` → `data/intake/intake_records.csv`. Pharmacy row shape plus `informant`; `date_recorded` is the interview date. Synthea patients get seeded patient-report patterns (brand names, one OTC drug or supplement, one unreported drug, one dose difference, one "not sure" dose). Case intake rows are built on the PR #12 FHIR cases. | TEA-43 · Rachit |
-| Contract | `Source` gains `"intake"`; `ReconciliationInput.intake = []`; `Finding.intake_value = None`; `RunDetail.intake = []`. Additive, with empty defaults. | TEA-59 · Vedant |
-| Storage | New table `intake_medication` (raw text columns; UNIQUE(patient_identifier, record_id)), for **6 tables** total. `db/seed.py` does an idempotent upsert from the CSV. `intake_rows_for(identifier)`. At run time intake rows are snapshotted into `medication_record` with `source='intake'`. `finding.intake_value` is nullable. Ships in 1.0.0, so V2 still ships zero DDL. | TEA-45 · Vedant |
-| Validation | `ingest.pharmacy.validate(rows, source=...)`. An unknown intake dose gives `unreadable_dosage` ("patient unsure of dose"). | TEA-44 · Rachit |
-| Rules | Rules compare only the sources **that have data** (no intake → today's two-source result). `missing` reports `present_in` / `missing_from` lists, with pattern wording ("Patient reports ibuprofen; not on the FHIR list or in pharmacy records"). `dosage_mismatch` fires when the base-dose sets differ across 2 or more sources. `duplicate` is checked per source, intake included. | TEA-60 · Sarthak |
-| Pages / PDF | Three columns: Patient-reported, FHIR, Pharmacy. Each finding shows all three values. Empty intake shows "No intake history recorded". | TEA-47 / TEA-48 · Sarthak |
-| Compose / E2E | One-shot `app-seed` service (app image, `python -m db.seed …`) that runs before `app`. The E2E test seeds intake and asserts CASE-MIXED's three-way findings. | TEA-49 / TEA-50 · Devang |
+| Data | `make_intake.py --seed 42` writes the two CSVs. Synthea patients mostly interviewed with seeded patterns; one `no_medications` patient; one with no interview. Case rows built on the PR #12 cases. A test asserts that every seeded name matches a FHIR/pharmacy identity or is a deliberate intake-only OTC drug. | Rachit |
+| Validation | `validate(rows, source="intake")`, with rows dated by their interview. An unknown dose gives `unreadable_dosage` ("patient unsure of dose"). | Rachit |
+| Storage | §16.1 schema, `db/seed.py`, `latest_intake_for(identifier)`. `save_run` stores `intake_interview_id` and snapshots intake rows. | Vedant |
+| Rules | Intake takes part when `intake is not None`. `missing` reports `present_in` / `missing_from` lists with pattern wording. `dosage_mismatch` fires when the dose sets differ across 2 or more sources. `duplicate` is checked per source. | Sarthak |
+| Pages / PDF | Three columns; three values per finding; an interview line ("Intake taken <date> by <who> (<informant>)" / "Patient reports no medications" / "No intake history recorded"). | Sarthak |
+| Compose | **Decided:** `infra/docker-compose.yml` (on main) is the Compose file, extended with app-db, app and a one-shot `app-seed`. `docker compose up` must work from the repo root (a root `compose.yaml` that `include`s it), and the DB passwords move from `infra/hapi.env` into a gitignored `.env` + `.env.example`. | Devang |
+| E2E | **Decided:** fixture request shapes are the `tests/fixtures/hapi/index.json` keys on main (`Patient/{id}`, `MedicationRequest?patient={id}&status=active`, `Patient?identifier=…`). There's no list fixture, so the E2E starts at `/patients/2178`. It seeds intake and asserts CASE-MIXED's three-way findings. | Devang |
 
-**Known limits** (`shortcut:` entries, documented):
-- With one table, "no intake taken" and "takes nothing" look the same. Upgrade path: an `intake_interview` table.
-- Who took the history isn't recorded beyond `informant`.
-- Lay terms and misspellings won't normalize. RxNorm only helps with brand names.
-- Unknown doses lose information (accepted trade-off).
+**Remaining known limits:**
+- Lay terms and misspellings won't normalize; RxNorm only helps with brand names.
+- An unknown dose loses information (accepted trade-off).
 
-**Schedule:** about 5.25 h of extra team effort; V1 is now ~21:00. RxNorm (V2) is the likely scope cut (rung 5).
+### 16.4 Schedule (presentation moved to Mon 2026-11-02; supersedes §1's dates)
+
+| Day | Goal |
+|---|---|
+| **Fri 10/30** | Contract first (10:00), then ingest, DB + seed, three-way rules, web, PDF, Compose; finish branch protection; client brief; instructor sign-off on §14 |
+| **Sat 10/31** | Clean `docker compose up` end to end, E2E green, **v1.0.0** + verified backup/restore |
+| **Sun 11/1** | V2: frequency rule + RxNorm → **v1.1.0** → rollback demo; presentation page and checklist; owner sign-offs |
+| **Mon 11/2** | Dry run with the fallback plan, then present |
+
+**Scope ladder update:** with the extra days, RxNorm is **back in scope** and no longer the first cut. The never-cut list is unchanged.
