@@ -1,0 +1,11 @@
+{
+  "MedicationRequest?patient=2174&status=active": "CASE-CLEAN/medicationrequest_active.json",
+  "MedicationRequest?patient=2178&status=active": "CASE-MIXED/medicationrequest_active.json",
+  "MedicationRequest?patient=2184&status=active": "CASE-BRAND/medicationrequest_active.json",
+  "Patient/2174": "CASE-CLEAN/patient_read.json",
+  "Patient/2178": "CASE-MIXED/patient_read.json",
+  "Patient/2184": "CASE-BRAND/patient_read.json",
+  "Patient?identifier=urn%3Amedrec%3Acase%7CCASE-BRAND": "CASE-BRAND/patient_search.json",
+  "Patient?identifier=urn%3Amedrec%3Acase%7CCASE-CLEAN": "CASE-CLEAN/patient_search.json",
+  "Patient?identifier=urn%3Amedrec%3Acase%7CCASE-MIXED": "CASE-MIXED/patient_search.json"
+}
