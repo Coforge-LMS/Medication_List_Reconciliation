@@ -41,7 +41,7 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
   - CASE-CLEAN: one alias match, otherwise identical.
   - CASE-MIXED: duplicate + dosage mismatch on the same drug, one missing on each side, 500 mg vs 0.5 g, a frequency difference, and a drug whose only pharmacy row is invalid.
   - CASE-BRAND: a brand not in the alias list.
-- Write `infra/hapi.env` and the stdlib `infra/import_fhir.py`. Load order is hospital → practitioner → patients → cases. The script skips the import if CASE-BRAND exists and fails loudly on any transaction error.
+- Write `infra/hapi.env` (shipped in PR #12; B9 later moves the DB passwords out of it into a gitignored `.env`) and the stdlib `infra/import_fhir.py`. Load order is hospital → practitioner → patients → cases. The script skips the import if CASE-BRAND exists and fails loudly on any transaction error.
 - Record real HAPI responses for the case patients into `tests/fixtures/hapi/`.
 - AC:
   - [ ] Against a local HAPI, the import gives `Patient?_summary=count` = 13, and a second run is a no-op.
@@ -112,7 +112,7 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
 **B9 · Dockerfile + Compose stack**
 - Owner Devang · V1 · P1 · 2.5 h · due 16:00 · blocked by B1, B2 · `devang/compose`
 - `infra/Dockerfile`: `python:3.12.16-slim-trixie`, `uv sync --locked`, non-root, urllib healthcheck. It bakes in app code, `pyproject.toml`, `data/aliases.json` and `data/pharmacy/`.
-- `compose.yaml` per §8: hapi-db, hapi, importer, app-db, app. Includes healthchecks (`pg_isready -h 127.0.0.1`), depends_on conditions, named volumes at `/var/lib/postgresql`, ports on 127.0.0.1, `image: medrec-app:${APP_VERSION:?}`, and `.env.example` with `APP_VERSION=dev`.
+- Extend `infra/docker-compose.yml` (from PR #12) with app-db, app and the one-shot app-seed, plus a root `compose.yaml` that `include`s it. Move the DB passwords out of `infra/hapi.env` into a gitignored `.env`; `hapi.env` keeps the non-secret HAPI settings. Includes healthchecks (`pg_isready -h 127.0.0.1`), depends_on conditions, named volumes at `/var/lib/postgresql`, ports on 127.0.0.1, `image: medrec-app:${APP_VERSION:?}`, and a committed `.env.example` with `APP_VERSION=dev` and the DB passwords.
 - AC:
   - [ ] On a clean clone, `cp .env.example .env && docker compose up -d --build` brings every service healthy with the importer exited 0. Timings logged.
   - [ ] `down` then `up` keeps data; `down -v` resets it. The app service has no hapi-db credentials.

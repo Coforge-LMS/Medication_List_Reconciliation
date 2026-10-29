@@ -37,7 +37,7 @@ OWNER: Vedant Misra, to review and finalize
 | A16 | Schema is applied with `create_all()`, no Alembic. The schema is frozen at 1.0.0 and V2 ships zero DDL. | Decided | [R05], [R10] |
 | A17 | History is append-only, with no delete endpoint. It is keyed on the stable patient identifier, so it survives HAPI re-imports. | Decided | Auditability: NPSG.03.06.01 documentation [R11]; [R01] |
 | A33 | Intake is two tables: `intake_interview` (who, when, informant, `no_medications`) and `intake_medication` (raw rows as said). Both hang off `patient` by a real FK, and the patient's FHIR columns become nullable. That is 7 tables, one over the brief's "~4–6", because the interview is a real event. It makes "takes nothing" vs "not taken" and who took the history explicit. Intake is snapshotted per run, and each run records which interview it compared. | Decided | Schema decided by the lead's delegate 2026-10-29; brief requires enforced FKs; [R05] snapshot-per-run |
-| A23 | The Coforge assignment and rubric are not in the repo. The deviation list is inferred from the closed PR #1 plan. Instructor sign-off is tracked as B18 (due Fri 10/30); record the response here. | Open | Ask the instructor for the rubric |
+| A23 | The Coforge assignment and rubric are not in the repo. The deviation list is inferred from the closed PR #1 plan. B18 tracks the sign-off and records the response here. | Open | Ask the instructor for the rubric |
 | A26 | Ownership split: FHIR → contract mapping and pharmacy **validation** go to Rachit ("ingestion validation"). Sarthak keeps the FHIR REST **client** and pharmacy record **access**. This balances an overloaded stream; the brief gave both to Sarthak. | Assumed | BACKLOG workload table; needs sign-off from Rachit and Sarthak |
 
 ## Sarthak Kakkar: rules, UI, PDF
@@ -67,7 +67,7 @@ OWNER: Devang Borkar, to review and finalize
 | A29 | No authentication; local demo only; ports bound to 127.0.0.1 | Decided | Brief (auth out of scope) |
 | A30 | Branch protection: 2 required checks, 1 approval, `strict: false` (the repo is public, so protection is available) | Decided | [R09]; 17 PRs tonight |
 | A35 | A one-shot `app-seed` Compose service seeds intake before the app starts; the intake CSVs are baked into the app image | Decided | Same pattern as the HAPI importer; [R08] |
-| A36 | `infra/docker-compose.yml` (on main) is the single Compose file. A root `compose.yaml` that `include`s it keeps `docker compose up` working from the repo root. DB passwords live in a gitignored `.env` with `.env.example`, not in `infra/hapi.env`. | Decided | Rachit + Devang decision 2026-10-29; brief: `docker compose up`, no secrets in git |
+| A36 | `infra/docker-compose.yml` (on main) is the single Compose file. A root `compose.yaml` that `include`s it keeps `docker compose up` working from the repo root. DB passwords are currently in `infra/hapi.env` (PR #12). B9 moves them to a gitignored `.env` with a committed `.env.example`; `hapi.env` keeps the non-secret HAPI settings. | Decided | Rachit + Devang decision 2026-10-29; brief: `docker compose up`, no secrets in git |
 | A37 | The FHIR request shapes are the `tests/fixtures/hapi/index.json` keys on main. The patient list is live-only (no fixture), so the E2E starts at the patient detail page. | Decided | Rachit + Devang decision 2026-10-29 |
 
 ## Customer questions

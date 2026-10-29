@@ -591,7 +591,7 @@ erDiagram
 | Storage | §16.1 schema, `db/seed.py`, `latest_intake_for(identifier)`. `save_run` stores `intake_interview_id` and snapshots intake rows. | Vedant |
 | Rules | Intake takes part when `intake is not None`. `missing` reports `present_in` / `missing_from` lists with pattern wording. `dosage_mismatch` fires when the dose sets differ across 2 or more sources. `duplicate` is checked per source. | Sarthak |
 | Pages / PDF | Three columns; three values per finding; an interview line ("Intake taken <date> by <who> (<informant>)" / "Patient reports no medications" / "No intake history recorded"). | Sarthak |
-| Compose | **Decided:** `infra/docker-compose.yml` (on main) is the Compose file, extended with app-db, app and a one-shot `app-seed`. `docker compose up` must work from the repo root (a root `compose.yaml` that `include`s it), and the DB passwords move from `infra/hapi.env` into a gitignored `.env` + `.env.example`. | Devang |
+| Compose | **Decided:** `infra/docker-compose.yml` (on main) is the Compose file, extended with app-db, app and a one-shot `app-seed`. `docker compose up` must work from the repo root (a root `compose.yaml` that `include`s it), and (B9) the DB passwords move from `infra/hapi.env` (as shipped in PR #12) into a gitignored `.env` + `.env.example`. | Devang |
 | E2E | **Decided:** fixture request shapes are the `tests/fixtures/hapi/index.json` keys on main (`Patient/{id}`, `MedicationRequest?patient={id}&status=active`, `Patient?identifier=…`). There's no list fixture, so the E2E starts at `/patients/2178`. It seeds intake and asserts CASE-MIXED's three-way findings. | Devang |
 
 **Remaining known limits:**
