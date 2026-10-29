@@ -1,0 +1,64 @@
+# TECHNICAL_PLAN section 9. Last matching pattern wins.
+# Email owners must have the address associated with their GitHub account.
+# All owners must have write access to this repository.
+
+# Devang: repository infrastructure, releases and E2E tests.
+* devang.borkar@coforge.com
+/.github/ devang.borkar@coforge.com
+/compose.yaml devang.borkar@coforge.com
+/infra/Dockerfile devang.borkar@coforge.com
+/.env.example devang.borkar@coforge.com
+/README.md devang.borkar@coforge.com
+/CHANGELOG.md devang.borkar@coforge.com
+/scripts/ devang.borkar@coforge.com
+/tests/e2e/ devang.borkar@coforge.com
+/presentation/ devang.borkar@coforge.com
+/docs/PRESENTATION_CHECKLIST.md devang.borkar@coforge.com
+
+# Vedant: shared contracts, configuration, persistence and planning.
+/pyproject.toml @this-ved-dev
+/uv.lock @this-ved-dev
+/.python-version @this-ved-dev
+/contract/ @this-ved-dev
+/db/ @this-ved-dev
+/tests/conftest.py @this-ved-dev
+/tests/contract/ @this-ved-dev
+/tests/db/ @this-ved-dev
+/docs/TECHNICAL_PLAN.md @this-ved-dev
+/docs/ASSUMPTIONS.md @this-ved-dev
+/docs/BACKLOG.md @this-ved-dev
+
+# Rachit: synthetic datasets, ingestion and HAPI import.
+/data/ @rachitshah-10
+/ingest/ @rachitshah-10
+/infra/import_fhir.py @rachitshah-10
+/infra/hapi.env @rachitshah-10
+/tests/data/ @rachitshah-10
+/tests/ingest/ @rachitshah-10
+/tests/infra/ @rachitshah-10
+/tests/fixtures/hapi/ @rachitshah-10
+/docs/CLIENT_BRIEF.md @rachitshah-10
+
+# Sarthak: web app (including the B1 stubs), rules, PDF and V2 RxNorm.
+/app/ @Sarthak-Coforge-03
+/rules/ @Sarthak-Coforge-03
+/tests/app/ @Sarthak-Coforge-03
+/tests/rules/ @Sarthak-Coforge-03
+/tests/pdf/ @Sarthak-Coforge-03
+/ingest/rxnorm.py @Sarthak-Coforge-03
+/data/rxnorm_cache.json @Sarthak-Coforge-03
+/data/generators/build_rxnorm_cache.py @Sarthak-Coforge-03
+/tests/ingest/test_ingest_rxnorm*.py @Sarthak-Coforge-03
+
+# Research section owners; the domain/customers document has shared sections.
+/docs/research/01-synthea.md @rachitshah-10
+/docs/research/02-hapi-fhir.md @rachitshah-10
+/docs/research/03-fhir-mapping.md @Sarthak-Coforge-03
+/docs/research/04-app-stack.md @Sarthak-Coforge-03
+/docs/research/05-postgres-persistence.md @this-ved-dev
+/docs/research/06-pdf.md @Sarthak-Coforge-03
+/docs/research/07-rxnorm.md @Sarthak-Coforge-03 @rachitshah-10
+/docs/research/08-docker-compose.md devang.borkar@coforge.com
+/docs/research/09-testing-ci.md devang.borkar@coforge.com
+/docs/research/10-release-rollback.md devang.borkar@coforge.com @this-ved-dev
+/docs/research/11-domain-customers.md @rachitshah-10 @this-ved-dev @Sarthak-Coforge-03 devang.borkar@coforge.com
