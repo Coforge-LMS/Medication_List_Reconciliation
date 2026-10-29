@@ -1,3 +1,5 @@
+"""DosageMismatchRule: strength, unit equivalence, measure and set semantics."""
+
 import pytest
 
 from rules import DosageMismatchRule
@@ -6,6 +8,7 @@ rule = DosageMismatchRule()
 
 
 def test_different_strength_is_a_mismatch(rec, data):
+    """10 mg vs 20 mg is a dosage mismatch."""
     (f,) = rule.evaluate(
         data(fhir=[rec("fhir", "lisinopril", "10")], pharmacy=[rec("pharmacy", "lisinopril", "20")])
     )
@@ -20,6 +23,7 @@ def test_different_strength_is_a_mismatch(rec, data):
     [(("500", "mg"), ("0.5", "g")), (("1", "mg"), ("1000", "mcg")), (("5", "mL"), ("5.0", "mL"))],
 )
 def test_equivalent_doses_in_other_units_are_not_a_mismatch(rec, data, fhir, pharmacy):
+    """500 mg vs 0.5 g (and similar) give no finding."""
     assert (
         rule.evaluate(
             data(
@@ -32,6 +36,7 @@ def test_equivalent_doses_in_other_units_are_not_a_mismatch(rec, data, fhir, pha
 
 
 def test_mass_vs_volume_is_a_different_measure(rec, data):
+    """mg vs mL is a mismatch whose summary says different measure."""
     (f,) = rule.evaluate(
         data(
             fhir=[rec("fhir", "amoxicillin", "250")],
@@ -43,6 +48,7 @@ def test_mass_vs_volume_is_a_different_measure(rec, data):
 
 
 def test_doses_compare_as_sets(rec, data):
+    """Repeated equivalent doses match; an extra distinct dose is a mismatch."""
     same = data(
         fhir=[rec("fhir", "metformin", "500")],
         pharmacy=[rec("pharmacy", "metformin", "500"), rec("pharmacy", "metformin", "0.5", "g")],
@@ -57,6 +63,7 @@ def test_doses_compare_as_sets(rec, data):
 
 
 def test_name_in_one_source_only_is_not_a_dosage_mismatch(rec, data):
+    """Different names are never compared for dose."""
     assert (
         rule.evaluate(
             data(

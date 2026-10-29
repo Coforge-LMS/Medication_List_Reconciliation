@@ -1,3 +1,5 @@
+"""Duplicate medication rule (TECHNICAL_PLAN §4.6)."""
+
 from typing import ClassVar
 
 from contract import Finding, ReconciliationInput, format_dose
@@ -10,6 +12,7 @@ class DuplicateMedicationRule(ReconciliationRule):
     discrepancy_type: ClassVar[str] = "duplicate"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
+        """Flag each (source, name) with 2+ records; source names and doses go in the value."""
         findings = []
         for source, records in (("fhir", data.fhir), ("pharmacy", data.pharmacy)):
             for name, group in by_name(records).items():

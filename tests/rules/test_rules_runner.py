@@ -1,7 +1,10 @@
+"""run_rules and DEFAULT_RULES: multi-finding, clean patient and rejected counterpart."""
+
 from rules import DEFAULT_RULES, run_rules
 
 
 def test_default_rules_are_the_three_v1_rules():
+    """DEFAULT_RULES holds the three V1 rules in order."""
     assert [r.discrepancy_type for r in DEFAULT_RULES] == [
         "duplicate",
         "missing",
@@ -10,6 +13,7 @@ def test_default_rules_are_the_three_v1_rules():
 
 
 def test_one_medication_can_yield_two_findings(rec, data):
+    """A pharmacy duplicate plus a dose difference gives two findings for one medication."""
     findings = run_rules(
         data(
             fhir=[rec("fhir", "atorvastatin", "40")],
@@ -26,6 +30,7 @@ def test_one_medication_can_yield_two_findings(rec, data):
 
 
 def test_no_discrepancy_patient_yields_no_findings(rec, data):
+    """Matching names and equivalent doses give no findings."""
     clean = data(
         fhir=[
             rec("fhir", "lisinopril 10 MG Oral Tablet", "10", normalized_name="lisinopril"),
@@ -40,6 +45,7 @@ def test_no_discrepancy_patient_yields_no_findings(rec, data):
 
 
 def test_rejected_counterpart_stays_missing_not_omitted(rec, rejected, data):
+    """A rejected counterpart is reported as missing with the rejection wording."""
     (f,) = run_rules(
         data(fhir=[rec("fhir", "amlodipine")], rejected=[rejected("pharmacy", "amlodipine")])
     )
@@ -47,4 +53,5 @@ def test_rejected_counterpart_stays_missing_not_omitted(rec, rejected, data):
 
 
 def test_custom_rule_list_is_honoured(rec, data):
+    """An explicit rule list replaces DEFAULT_RULES."""
     assert run_rules(data(fhir=[rec("fhir", "metoprolol")]), rules=[]) == []

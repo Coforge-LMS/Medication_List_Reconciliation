@@ -1,3 +1,5 @@
+"""Dosage mismatch rule (TECHNICAL_PLAN §4.2, §4.6)."""
+
 from typing import ClassVar
 
 from contract import Finding, MedicationRecord, ReconciliationInput, format_dose, to_base
@@ -10,6 +12,7 @@ class DosageMismatchRule(ReconciliationRule):
     discrepancy_type: ClassVar[str] = "dosage_mismatch"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
+        """Flag names in both sources whose dose sets differ; mg vs mL is a different measure."""
         pharmacy = by_name(data.pharmacy)
         findings = []
         for name, fhir_group in by_name(data.fhir).items():
@@ -42,10 +45,12 @@ class DosageMismatchRule(ReconciliationRule):
 
 
 def _base_doses(records: list[MedicationRecord]) -> set[tuple]:
+    """Distinct doses converted to mg or mL, so equivalent doses compare equal."""
     return {to_base(r.dose_amount, r.dose_unit) for r in records}
 
 
 def _sorted_base(doses: set[tuple]) -> list[str]:
+    """Base-unit doses as display strings, sorted by unit then amount."""
     return [format_dose(amount, unit) for amount, unit in sorted(doses, key=lambda d: (d[1], d[0]))]
 
 

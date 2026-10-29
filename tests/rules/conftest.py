@@ -13,7 +13,10 @@ _ids = count(1)
 
 @pytest.fixture
 def rec():
+    """Factory for accepted MedicationRecords; normalized_name defaults to the lowercased name."""
+
     def make(source, name, dose="10", unit="mg", normalized_name=None):
+        """Build one record with a unique source_record_id."""
         return MedicationRecord(
             patient_id="CASE-TEST",
             source=source,
@@ -30,7 +33,10 @@ def rec():
 
 @pytest.fixture
 def rejected():
+    """Factory for Rejections with an unreadable-dosage reason."""
+
     def make(source, name, normalized_name=None):
+        """Build one rejection with a unique source_record_id."""
         return Rejection(
             source=source,
             source_record_id=f"{source}-rej-{next(_ids)}",
@@ -45,7 +51,10 @@ def rejected():
 
 @pytest.fixture
 def data():
+    """Factory for ReconciliationInput from iterables of records and rejections."""
+
     def make(fhir=(), pharmacy=(), rejected=()):
+        """Build one patient's reconciliation input."""
         return ReconciliationInput(
             fhir=list(fhir), pharmacy=list(pharmacy), rejected=list(rejected)
         )

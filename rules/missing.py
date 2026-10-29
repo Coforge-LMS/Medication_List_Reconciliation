@@ -1,3 +1,5 @@
+"""Missing medication rule, with rejected-counterpart wording (TECHNICAL_PLAN §4.6)."""
+
 from typing import ClassVar
 
 from contract import Finding, ReconciliationInput, format_dose
@@ -14,6 +16,7 @@ class MissingMedicationRule(ReconciliationRule):
     discrepancy_type: ClassVar[str] = "missing"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
+        """Flag each name found in only one source; details.missing_from names the other."""
         names = {"fhir": by_name(data.fhir), "pharmacy": by_name(data.pharmacy)}
         findings = []
         for present in ("fhir", "pharmacy"):
@@ -41,6 +44,7 @@ class MissingMedicationRule(ReconciliationRule):
 
 
 def _summary(present: str, absent: str, rejected: int) -> str:
+    """Factual summary; mentions rejected records in the absent source when there are any."""
     listed, other = SOURCE_LABELS[present], SOURCE_LABELS[absent]
     if not rejected:
         return f"Listed in {listed}; no {other} record."

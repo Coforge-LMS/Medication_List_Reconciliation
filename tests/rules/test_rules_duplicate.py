@@ -1,9 +1,12 @@
+"""DuplicateMedicationRule: positive and negative cases."""
+
 from rules import DuplicateMedicationRule
 
 rule = DuplicateMedicationRule()
 
 
 def test_brand_and_generic_in_one_source_is_a_duplicate(rec, data):
+    """Lipitor and atorvastatin in the pharmacy list are one duplicate finding."""
     findings = rule.evaluate(
         data(
             fhir=[rec("fhir", "atorvastatin", "20")],
@@ -22,6 +25,7 @@ def test_brand_and_generic_in_one_source_is_a_duplicate(rec, data):
 
 
 def test_duplicate_counts_any_dose_and_is_per_source(rec, data):
+    """Different doses still count, and each source gets its own finding."""
     findings = rule.evaluate(
         data(
             fhir=[rec("fhir", "metformin", "500"), rec("fhir", "metformin", "1000")],
@@ -33,6 +37,7 @@ def test_duplicate_counts_any_dose_and_is_per_source(rec, data):
 
 
 def test_one_record_per_source_is_not_a_duplicate(rec, data):
+    """The same name once in each source is not a duplicate."""
     assert (
         rule.evaluate(
             data(fhir=[rec("fhir", "lisinopril")], pharmacy=[rec("pharmacy", "lisinopril")])
