@@ -23,6 +23,8 @@ OWNER: Rachit Shah, to review and finalize
 | A8 | Pharmacy `dose_amount` is per administration, matching the FHIR side (strength × doseQuantity) | Decided | Comparability of the dosage rule |
 | A9 | The alias list stays deliberately small. The generator picks brands only from it (except CASE-BRAND), so V2's RxNorm normalization visibly reduces false "missing" findings. | Decided | Brief: V2 must show fewer false "missing" |
 | A10 | The importer skips only when the last case patient exists, so a partial import is never treated as done | Decided | Red-team review |
+| A31 | Patient intake history is simulated from a seeded generator (patient-report patterns on top of Synthea meds) and seeded into the app DB, not typed in a form | Decided | Lead decision 2026-10-29; brief puts forms out of scope; [R11] (patient interview) |
+| A32 | An intake item with no usable dose ("not sure") is rejected as `unreadable_dosage` ("patient unsure of dose"), not accepted without a dose | Decided | Lead decision 2026-10-29; keeps the contract's dose required |
 
 ## Vedant Misra: persistence, history, compatibility
 OWNER: Vedant Misra, to review and finalize
@@ -34,6 +36,7 @@ OWNER: Vedant Misra, to review and finalize
 | A15 | `discrepancy_type` is TEXT (no ENUM, no CHECK). V1 renders unknown types as "Other (type)" with the stored summary (tolerant reader). | Decided | [R10] |
 | A16 | Schema is applied with `create_all()`, no Alembic. The schema is frozen at 1.0.0 and V2 ships zero DDL. | Decided | [R05], [R10] |
 | A17 | History is append-only, with no delete endpoint. It is keyed on the stable patient identifier, so it survives HAPI re-imports. | Decided | Auditability: NPSG.03.06.01 documentation [R11]; [R01] |
+| A33 | Intake lives in its own `intake_medication` table (the app DB now holds one source, not only snapshots). It is snapshotted per run like the other sources. One table, so "no intake taken" and "takes nothing" can't be told apart (`shortcut:`; upgrade path is an `intake_interview` table). | Decided | Lead decision 2026-10-29; [R05] snapshot-per-run |
 | A23 | The Coforge assignment and rubric are not in the repo. The deviation list is inferred from the closed PR #1 plan. | Open | Ask the instructor for the rubric |
 | A26 | Ownership split: FHIR → contract mapping and pharmacy **validation** go to Rachit ("ingestion validation"). Sarthak keeps the FHIR REST **client** and pharmacy record **access**. This balances an overloaded stream; the brief gave both to Sarthak. | Assumed | BACKLOG workload table; needs sign-off from Rachit and Sarthak |
 
@@ -50,6 +53,7 @@ OWNER: Sarthak Kakkar, to review and finalize
 | A20 | Stack: FastAPI + Jinja2/HTMX + SQLAlchemy 2.0 + psycopg 3 + httpx + fpdf2 with bundled DejaVu fonts. Exact pins, no upgrades before Friday. | Decided | [R04], [R06] |
 | A21 | V1 shows frequency as stored. Plain-language display ("once daily", not "QD") ships with the V2 frequency normalizer, so no V2 logic lands in V1. | Decided | ISMP / Joint Commission guidance [R11]; brief: "no V2 logic in V1" |
 | A22 | V2 RxNorm: ingredient-level identity. A different strength, form or route is reported as `dosage_mismatch`, never merged and never split into two "missing" findings. Offline cache; live only when `RXNORM_LIVE=1`. | Decided | [R07] |
+| A34 | Reconciliation is three-way per medication over the sources that have data. No source is presented as the truth (patient recall is unreliable). An empty intake list gives the two-source result. | Decided | Lead decision 2026-10-29; [R11] |
 
 ## Devang Borkar: containers, CI, releases, privacy
 OWNER: Devang Borkar, to review and finalize
@@ -62,6 +66,7 @@ OWNER: Devang Borkar, to review and finalize
 | A28 | Rollback = run the 1.0.0 image on the same volume (no restore). Always back up first. | Decided | [R10] |
 | A29 | No authentication; local demo only; ports bound to 127.0.0.1 | Decided | Brief (auth out of scope) |
 | A30 | Branch protection: 2 required checks, 1 approval, `strict: false` (the repo is public, so protection is available) | Decided | [R09]; 17 PRs tonight |
+| A35 | A one-shot `app-seed` Compose service seeds intake before the app starts; the intake CSV is baked into the app image | Decided | Same pattern as the HAPI importer; [R08] |
 
 ## Customer questions
 

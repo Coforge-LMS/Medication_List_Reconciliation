@@ -4,7 +4,9 @@ Team 1, Week 3. A web app for clinicians that compares a patient's medications f
 
 > **Safety:** synthetic data only. The app **reports discrepancies and never recommends** treatment, dose changes or discontinuation. The UI and the PDF both show this disclaimer: *"Synthetic data. Reports discrepancies between sources for clinician review; does not recommend treatment."*
 
-Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in. 
+Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in.
+
+> **Update 2026-10-29: patient intake history is a third source.** It is stored in the app DB and reconciled three-way against FHIR and pharmacy. **§16 extends §3–§8**; where they differ, §16 wins. Tickets: TEA-59 (contract), TEA-60 (three-way rules), plus intake sections on TEA-43…50.
 
 ---
 
@@ -98,7 +100,7 @@ flowchart LR
 
 ---
 
-## 4. Shared medication record contract (`contract/`; single source of truth)
+## 4. Shared medication record contract (`contract/`; single source of truth; intake source: see §16)
 
 Used by: the pharmacy generator, FHIR mapping, validation, DB rows, rules and tests. It is implemented first (B1) and **frozen** after merge; changing it needs a PR approved by all four.
 
@@ -188,7 +190,7 @@ All rules match on `normalized_name`, per patient, over **accepted** records.
 
 ---
 
-## 5. App database (we own it; HAPI's DB is never touched)
+## 5. App database (we own it; HAPI's DB is never touched; `intake_medication` table: see §16)
 
 Five tables, V2-ready from day one. Schema is applied with `Base.metadata.create_all()` at app startup and in the test fixture. There is no Alembic, because the schema is frozen at 1.0.0 and **V2 ships zero DDL** [R05, R10]. `create_all` only creates missing tables, so running 1.0.0 on a 1.1.0-era DB is a no-op.
 
@@ -272,7 +274,7 @@ HTML and JSON routes call the same `app.service.reconcile(fhir_id) -> run_id`. E
 
 ---
 
-## 7. Rules
+## 7. Rules (three-way with intake: see §16)
 
 ```python
 class ReconciliationRule(ABC):            # rules/base.py
@@ -410,6 +412,10 @@ docs/research/ (section owners) · TECHNICAL_PLAN, ASSUMPTIONS, BACKLOG (Vedant)
 | 30 | V2 frequency mismatch (4th subclass, deterministic normalization) | B15 | `tests/rules/test_rules_frequency.py` | Sarthak |
 | 31 | V2 RxNorm normalization (cache; no strength/form/route merge; fewer missing) | B16 | `tests/ingest/test_ingest_rxnorm.py` | Sarthak |
 | 32 | v1.1.0 + rollback keeping history | B17 | README rollback log: `/healthz` = 1.0.0, image revision = tag commit, 1.1.0 runs shown as "Other (frequency_mismatch)" | Devang |
+| 33 | Intake history generated (seeded, deterministic) | B3 (TEA-43) | `make_intake.py` determinism test; three-way expected findings in data/README | Rachit |
+| 34 | Intake stored in the app DB, seeded idempotently, snapshotted per run | B5 (TEA-45) | `tests/db`: seed twice leaves the same count; intake rows in get_run; rollback leaves 0 rows in all 6 tables | Vedant |
+| 35 | Three-way reconciliation (intake, FHIR, pharmacy); no intake = two-source result | TEA-60 | `tests/rules`: intake-only, not-reported, three-way dosage, empty-intake equivalence | Sarthak |
+| 36 | Patient-reported values shown in UI, PDF and E2E | B7, B8, B10 | page/PDF intake tests; E2E CASE-MIXED three-way findings | Sarthak / Devang |
 
 ---
 
@@ -476,7 +482,7 @@ Run with `uv run pytest`. DB tests need `TEST_DATABASE_URL`:
 |---|---|---|---|
 | 1 | CLI tool | Web app (FastAPI, server-rendered) + small REST API | **Yes**: changes the interface the rubric may test |
 | 2 | SQLite database | Two PostgreSQL databases (HAPI-owned + app-owned) | **Yes** |
-| 3 | Two input files (clinic + pharmacy CSV) | FHIR REST (HAPI) + synthetic pharmacy JSON | **Yes** |
+| 3 | Two input files (clinic + pharmacy CSV) | FHIR REST (HAPI) + synthetic pharmacy JSON + **patient intake history seeded in the app DB** (§16; restores the clinic intake input) | **Yes** |
 | 4 | Custom synthetic data generator | Synthea for EHR data + seeded pharmacy generator (+ small deliberate-case FHIR bundle) | Recommended (FYI) |
 | 5 | SQLite backup API | `pg_dump` / `pg_restore` with verified restore | FYI (equivalent) |
 | 6 | One new rule in 1.1.0 | Two additions: frequency-mismatch rule + RxNorm normalization | FYI (superset) |
@@ -498,3 +504,33 @@ The assignment and rubric documents are **not in this repo**. This list is infer
 | Sarthak's stream is the largest | Two parallel subagents (rules + PDF / web + service) with disjoint files; web codes against contract stubs and the recorded HAPI fixtures |
 | Fresh dependency releases | Exact pins + `uv.lock`; B1 proves resolution and a TestClient smoke test |
 | Individual grading | OWNER markers on every research section, assumption group and question; owner = git author; ownership changes are logged (ASSUMPTIONS A26) |
+
+---
+
+## 16. Patient intake history: third source (added 2026-10-29)
+
+**Why:** reconciliation should start from what the patient actually takes, recorded at the arrival interview (WHO High 5s "best possible medication history" [R11]). It is the only source that catches over-the-counter drugs, supplements and stopped drugs. Omission is the most common discrepancy (Cornish 2005 [R11]). The EHR and pharmacy stay read-only snapshots, while the interview is captured by our tool, so it lives in **our** DB.
+
+**Decisions:**
+- Three-way comparison per medication. No source is treated as the truth.
+- An intake item with no usable dose is rejected with a reason.
+- Pharmacy stays a seeded file.
+- Intake is **seeded**, not typed in, so "forms" stay out of scope.
+
+| Area | Design | Ticket / owner |
+|---|---|---|
+| Data | `data/generators/make_intake.py --seed 42` → `data/intake/intake_records.csv`. Pharmacy row shape plus `informant`; `date_recorded` is the interview date. Synthea patients get seeded patient-report patterns (brand names, one OTC drug or supplement, one unreported drug, one dose difference, one "not sure" dose). Case intake rows are built on the PR #12 FHIR cases. | TEA-43 · Rachit |
+| Contract | `Source` gains `"intake"`; `ReconciliationInput.intake = []`; `Finding.intake_value = None`; `RunDetail.intake = []`. Additive, with empty defaults. | TEA-59 · Vedant |
+| Storage | New table `intake_medication` (raw text columns; UNIQUE(patient_identifier, record_id)), for **6 tables** total. `db/seed.py` does an idempotent upsert from the CSV. `intake_rows_for(identifier)`. At run time intake rows are snapshotted into `medication_record` with `source='intake'`. `finding.intake_value` is nullable. Ships in 1.0.0, so V2 still ships zero DDL. | TEA-45 · Vedant |
+| Validation | `ingest.pharmacy.validate(rows, source=...)`. An unknown intake dose gives `unreadable_dosage` ("patient unsure of dose"). | TEA-44 · Rachit |
+| Rules | Rules compare only the sources **that have data** (no intake → today's two-source result). `missing` reports `present_in` / `missing_from` lists, with pattern wording ("Patient reports ibuprofen; not on the FHIR list or in pharmacy records"). `dosage_mismatch` fires when the base-dose sets differ across 2 or more sources. `duplicate` is checked per source, intake included. | TEA-60 · Sarthak |
+| Pages / PDF | Three columns: Patient-reported, FHIR, Pharmacy. Each finding shows all three values. Empty intake shows "No intake history recorded". | TEA-47 / TEA-48 · Sarthak |
+| Compose / E2E | One-shot `app-seed` service (app image, `python -m db.seed …`) that runs before `app`. The E2E test seeds intake and asserts CASE-MIXED's three-way findings. | TEA-49 / TEA-50 · Devang |
+
+**Known limits** (`shortcut:` entries, documented):
+- With one table, "no intake taken" and "takes nothing" look the same. Upgrade path: an `intake_interview` table.
+- Who took the history isn't recorded beyond `informant`.
+- Lay terms and misspellings won't normalize. RxNorm only helps with brand names.
+- Unknown doses lose information (accepted trade-off).
+
+**Schedule:** about 5.25 h of extra team effort; V1 is now ~21:00. RxNorm (V2) is the likely scope cut (rung 5).

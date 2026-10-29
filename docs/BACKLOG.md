@@ -1,6 +1,6 @@
 # Backlog (Linear-ready)
 
-Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two release groups: **V1 (1.0.0)**, 15 tickets, and **V2 (1.1.0)**, 3 tickets. In Linear, B*n* = TEA-(40+*n*) and **B0 = TEA-58**.
+Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two release groups: **V1 (1.0.0)**, 17 tickets, and **V2 (1.1.0)**, 3 tickets. In Linear, B*n* = TEA-(40+*n*), **B0 = TEA-58**, **B1b = TEA-59** and **B6b = TEA-60** (intake update, see the end of this file).
 
 **Gate:** every code ticket (B2–B11, B15–B17) is blocked by **B0**. No code PR merges to `main` until CI runs on GitHub, branch protection is on, and a teammate has approved the PR.
 
@@ -207,10 +207,10 @@ B2 is on the path for B3, B9 and B10. B12 must merge before B11.
 ## Workload (estimated hours)
 | Member | Tickets | Hours |
 |---|---|---|
-| Rachit | B2 2.5, B3 1.5, B4 3, B12 1, B13 0.5 | **8.5** |
-| Vedant | B1 1.5, B5 3, B13 0.5, integration and review ~2 | **7.0** |
-| Sarthak | B6 2.5, B7 3.5, B8 1.5, B15 2, B16 2.5, B13 0.5 | **12.5** ⚠ |
-| Devang | B0 1, B9 2.5, B10 1.5, B11 1.5, B14 2, B17 1, B13 0.5 | **10.0** |
+| Rachit | B2 2.5, B3 2.5 (incl. intake), B4 3.25, B12 1, B13 0.5 | **9.75** |
+| Vedant | B1 1.5, B1b 0.5, B5 4 (incl. intake), B13 0.5, integration and review ~2 | **8.5** |
+| Sarthak | B6 2.5, B6b 1, B7 4, B8 2, B15 2, B16 2.5, B13 0.5 | **14.5** ⚠ |
+| Devang | B0 1, B9 2.75, B10 1.75, B11 1.5, B14 2, B17 1, B13 0.5 | **10.5** |
 
 ⚠ Sarthak's load follows the ownership fixed in the brief. Two things keep it in budget:
 - His V1 work runs as two parallel streams with disjoint files (rules + PDF, web + service), and V2 starts from the merged rules before v1.0.0.
@@ -221,3 +221,35 @@ B2 is on the path for B3, B9 and B10. B12 must merge before B11.
 - **Cancel** TEA-7 … TEA-38 with the comment "superseded by the web-app plan, see docs/BACKLOG.md". TEA-7 is the closed PR #1.
 - **Retitle** TEA-39 (dry run) and TEA-40 (presentation) and attach them under B14.
 - **Create** B1–B17 in dependency order, with owner, estimate, due date, priority, labels (`V1`/`V2` + area) and blocked-by relations.
+
+## Intake update (2026-10-29)
+
+Patient intake history becomes a third source, stored in the app DB and reconciled three-way (TECHNICAL_PLAN §16). Linear is already updated: the two new tickets are below, and each changed ticket has an "Intake (added 2026-10-29)" section.
+
+**B1b · Contract: intake as a third source** (TEA-59)
+- Owner Vedant · V1 · P1 · 0.5 h · due 18:00 · blocked by B0 · blocks B4, B5, B6b, B7, B8 · `vedant/contract-intake`
+- Additive changes: `Source` gains `"intake"`, plus `ReconciliationInput.intake`, `Finding.intake_value` and `RunDetail.intake`, all defaulting to empty.
+- AC:
+  - [ ] Contract tests cover the new fields and defaults.
+  - [ ] Existing tests, including B6's, pass unchanged.
+
+**B6b · Three-way rules: intake + FHIR + pharmacy** (TEA-60)
+- Owner Sarthak · V1 · P1 · 1 h · due 19:00 · blocked by B1b · blocks B10, B11 · `feature/tea-60-three-way-rules`
+- Rework the merged two-source rules to work over whichever sources have data.
+- `missing` reports `present_in` / `missing_from` lists with pattern wording; `dosage_mismatch` fires when the dose sets differ across 2 or more sources; `duplicate` is checked per source.
+- AC:
+  - [ ] Intake-only, not-reported and three-way dosage tests.
+  - [ ] An empty intake list gives exactly the old results.
+  - [ ] The wording test covers the new summaries.
+
+| Changed ticket | Intake delta | Extra |
+|---|---|---|
+| B3 (TEA-43) | `make_intake.py` → `data/intake/intake_records.csv`; case intake rows; full three-way expected findings in data/README | +1 h |
+| B4 (TEA-44) | `validate(rows, source=...)`; unknown intake dose rejected ("patient unsure of dose") | +0.25 h |
+| B5 (TEA-45) | `intake_medication` table, `finding.intake_value`, `db/seed.py`, `intake_rows_for`, intake snapshot per run, tests | +1 h |
+| B7 (TEA-47) | pipeline step; three columns; "No intake history recorded" | +0.5 h |
+| B8 (TEA-48) | patient-reported table and value in the PDF | +0.5 h |
+| B9 (TEA-49) | one-shot `app-seed` service before `app` | +0.25 h |
+| B10 (TEA-50) | E2E seeds intake; asserts CASE-MIXED three-way findings | +0.25 h |
+
+Critical path addition: **B1b** → B4/B5/B6b → B7 → B10.
