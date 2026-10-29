@@ -4,7 +4,7 @@ Team 1, Week 3. A web app for clinicians that compares a patient's medications f
 
 > **Safety:** synthetic data only. The app **reports discrepancies and never recommends** treatment, dose changes or discontinuation. The UI and the PDF both show this disclaimer: *"Synthetic data. Reports discrepancies between sources for clinician review; does not recommend treatment."*
 
-Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in.
+Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Decisions with no research behind them, and their owners, are in `docs/ASSUMPTIONS.md`. Tickets are in `docs/BACKLOG.md` (B1–B17). This plan has been through a red-team review, and its findings are folded in. 
 
 ---
 
