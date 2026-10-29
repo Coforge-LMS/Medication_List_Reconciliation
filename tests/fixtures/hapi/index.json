@@ -1,0 +1,17 @@
+{
+  "Patient?_count=50": "patient-search.json",
+  "Patient/2174": "patient-case-clean.json",
+  "MedicationRequest?patient=2174&status=active&_count=100": "medreq-case-clean.json",
+  "Patient/2178": "patient-case-mixed.json",
+  "MedicationRequest?patient=2178&status=active&_count=100": "medreq-case-mixed.json",
+  "Patient/2184": "patient-case-brand.json",
+  "MedicationRequest?patient=2184&status=active&_count=100": "medreq-case-brand.json",
+  "Patient/1119": "patient-synthea-sample.json",
+  "MedicationRequest?patient=1119&status=active&_count=100": "medreq-synthea-sample.json",
+  "_case_ids": {
+    "CASE-CLEAN": "2174",
+    "CASE-MIXED": "2178",
+    "CASE-BRAND": "2184"
+  },
+  "_synthea_sample": "1119"
+}

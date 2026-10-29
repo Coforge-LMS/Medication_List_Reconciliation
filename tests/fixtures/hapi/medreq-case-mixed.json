@@ -1,0 +1,267 @@
+{
+  "resourceType": "Bundle",
+  "id": "506fcdf5-3d21-41a2-86d6-88645ff3630d",
+  "meta": {
+    "lastUpdated": "2026-10-29T14:48:59.496+00:00"
+  },
+  "type": "searchset",
+  "total": 5,
+  "link": [
+    {
+      "relation": "self",
+      "url": "http://localhost:18080/fhir/MedicationRequest?_count=100&patient=2178&status=active"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/2179",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2179",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "617310",
+              "display": "atorvastatin 20 MG Oral Tablet"
+            }
+          ],
+          "text": "atorvastatin 20 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-09-15T09:00:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/2180",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2180",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "314076",
+              "display": "lisinopril 10 MG Oral Tablet"
+            }
+          ],
+          "text": "lisinopril 10 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-09-15T09:00:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/2181",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2181",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "866924",
+              "display": "metoprolol tartrate 25 MG Oral Tablet"
+            }
+          ],
+          "text": "metoprolol tartrate 25 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-09-15T09:00:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/2182",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2182",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "861007",
+              "display": "metformin hydrochloride 500 MG Oral Tablet"
+            }
+          ],
+          "text": "metformin hydrochloride 500 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-09-15T09:00:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/2183",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2183",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "197361",
+              "display": "amlodipine 5 MG Oral Tablet"
+            }
+          ],
+          "text": "amlodipine 5 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-09-15T09:00:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    }
+  ]
+}
