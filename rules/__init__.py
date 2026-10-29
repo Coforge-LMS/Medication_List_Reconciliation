@@ -1,4 +1,4 @@
-"""Reconciliation rules (TECHNICAL_PLAN §4.6, §7). Records arrive already normalized."""
+"""Reconciliation rules. Records arrive already normalized."""
 
 from rules.base import ReconciliationRule
 from rules.dosage import DosageMismatchRule
