@@ -41,7 +41,7 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
   - CASE-CLEAN: one alias match, otherwise identical.
   - CASE-MIXED: duplicate + dosage mismatch on the same drug, one missing on each side, 500 mg vs 0.5 g, a frequency difference, and a drug whose only pharmacy row is invalid.
   - CASE-BRAND: a brand not in the alias list.
-- Write `infra/hapi.env` and the stdlib `infra/import_fhir.py`. Load order is hospital → practitioner → patients → cases. The script skips the import if CASE-BRAND exists and fails loudly on any transaction error.
+- Write `infra/hapi.env` (shipped in PR #12; B9 later moves the DB passwords out of it into a gitignored `.env`) and the stdlib `infra/import_fhir.py`. Load order is hospital → practitioner → patients → cases. The script skips the import if CASE-BRAND exists and fails loudly on any transaction error.
 - Record real HAPI responses for the case patients into `tests/fixtures/hapi/`.
 - AC:
   - [ ] Against a local HAPI, the import gives `Patient?_summary=count` = 13, and a second run is a no-op.
@@ -112,7 +112,7 @@ Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two relea
 **B9 · Dockerfile + Compose stack**
 - Owner Devang · V1 · P1 · 2.5 h · due 16:00 · blocked by B1, B2 · `devang/compose`
 - `infra/Dockerfile`: `python:3.12.16-slim-trixie`, `uv sync --locked`, non-root, urllib healthcheck. It bakes in app code, `pyproject.toml`, `data/aliases.json` and `data/pharmacy/`.
-- `compose.yaml` per §8: hapi-db, hapi, importer, app-db, app. Includes healthchecks (`pg_isready -h 127.0.0.1`), depends_on conditions, named volumes at `/var/lib/postgresql`, ports on 127.0.0.1, `image: medrec-app:${APP_VERSION:?}`, and `.env.example` with `APP_VERSION=dev`.
+- Extend `infra/docker-compose.yml` (from PR #12) with app-db, app and the one-shot app-seed, plus a root `compose.yaml` that `include`s it. Move the DB passwords out of `infra/hapi.env` into a gitignored `.env`; `hapi.env` keeps the non-secret HAPI settings. Includes healthchecks (`pg_isready -h 127.0.0.1`), depends_on conditions, named volumes at `/var/lib/postgresql`, ports on 127.0.0.1, `image: medrec-app:${APP_VERSION:?}`, and a committed `.env.example` with `APP_VERSION=dev` and the DB passwords.
 - AC:
   - [ ] On a clean clone, `cp .env.example .env && docker compose up -d --build` brings every service healthy with the importer exited 0. Timings logged.
   - [ ] `down` then `up` keeps data; `down -v` resets it. The app service has no hapi-db credentials.
@@ -222,34 +222,38 @@ B2 is on the path for B3, B9 and B10. B12 must merge before B11.
 - **Retitle** TEA-39 (dry run) and TEA-40 (presentation) and attach them under B14.
 - **Create** B1–B17 in dependency order, with owner, estimate, due date, priority, labels (`V1`/`V2` + area) and blocked-by relations.
 
-## Intake update (2026-10-29)
+## Intake update and Monday re-plan (2026-10-29)
 
-Patient intake history becomes a third source, stored in the app DB and reconciled three-way (TECHNICAL_PLAN §16). Linear is already updated: the two new tickets are below, and each changed ticket has an "Intake (added 2026-10-29)" section.
+Patient intake history is a third source with the final 7-table schema (TECHNICAL_PLAN §16). The presentation moved to **Mon 2026-11-02**. Linear is already updated: dates, intake sections, the two new tickets below, and closed coordination threads.
 
-**B1b · Contract: intake as a third source** (TEA-59)
-- Owner Vedant · V1 · P1 · 0.5 h · due 18:00 · blocked by B0 · blocks B4, B5, B6b, B7, B8 · `vedant/contract-intake`
-- Additive changes: `Source` gains `"intake"`, plus `ReconciliationInput.intake`, `Finding.intake_value` and `RunDetail.intake`, all defaulting to empty.
-- AC:
-  - [ ] Contract tests cover the new fields and defaults.
-  - [ ] Existing tests, including B6's, pass unchanged.
+**B1b · Contract: intake as a third source**
+- Owner Vedant · V1 · P1 · 0.5 h · due **Fri 10/30 10:00** · blocks B4, B5, B6b, B7, B8.
+- `Source` gains `"intake"`; `ReconciliationInput.intake: list | None` (None = no interview, `[]` = takes nothing); `Finding.intake_value`; `IntakeInterviewInfo`; `RunDetail.intake` + `intake_interview`.
+- It was auto-closed by a docs PR title and has been reopened.
 
-**B6b · Three-way rules: intake + FHIR + pharmacy** (TEA-60)
-- Owner Sarthak · V1 · P1 · 1 h · due 19:00 · blocked by B1b · blocks B10, B11 · `feature/tea-60-three-way-rules`
-- Rework the merged two-source rules to work over whichever sources have data.
-- `missing` reports `present_in` / `missing_from` lists with pattern wording; `dosage_mismatch` fires when the dose sets differ across 2 or more sources; `duplicate` is checked per source.
-- AC:
-  - [ ] Intake-only, not-reported and three-way dosage tests.
-  - [ ] An empty intake list gives exactly the old results.
-  - [ ] The wording test covers the new summaries.
+**B6b · Three-way rules**
+- Owner Sarthak · V1 · P1 · 1 h · due **Fri 10/30** · blocked by B1b · blocks B10, B11.
+- Intake takes part when it isn't None. `missing` reports `present_in` / `missing_from` lists; `dosage_mismatch` fires across 2 or more sources; `duplicate` is per source.
+- AC includes a None-vs-`[]` test.
 
-| Changed ticket | Intake delta | Extra |
-|---|---|---|
-| B3 (TEA-43) | `make_intake.py` → `data/intake/intake_records.csv`; case intake rows; full three-way expected findings in data/README | +1 h |
-| B4 (TEA-44) | `validate(rows, source=...)`; unknown intake dose rejected ("patient unsure of dose") | +0.25 h |
-| B5 (TEA-45) | `intake_medication` table, `finding.intake_value`, `db/seed.py`, `intake_rows_for`, intake snapshot per run, tests | +1 h |
-| B7 (TEA-47) | pipeline step; three columns; "No intake history recorded" | +0.5 h |
-| B8 (TEA-48) | patient-reported table and value in the PDF | +0.5 h |
-| B9 (TEA-49) | one-shot `app-seed` service before `app` | +0.25 h |
-| B10 (TEA-50) | E2E seeds intake; asserts CASE-MIXED three-way findings | +0.25 h |
+**B0b · Finish branch protection** (new)
+- Owner Devang · 0.25 h · due **Fri 10/30 12:00**.
+- Turn on stale-review dismissal and conversation resolution (still off after B0).
 
-Critical path addition: **B1b** → B4/B5/B6b → B7 → B10.
+| Changed ticket | Intake / decision delta | Extra | Due |
+|---|---|---|---|
+| B3 | two CSVs (interviews + medications); one `no_medications` and one un-interviewed Synthea patient; name-coverage test; three-way expectations in data/README | +1.25 h | Fri 10/30 |
+| B4 | `validate(rows, source="intake")`, rows dated by interview; unknown dose rejected | +0.25 h | Fri 10/30 |
+| B5 | 7-table schema, `db/seed.py`, `latest_intake_for`, `intake_interview_id` on run, tests | +1.5 h | Fri 10/30 |
+| B7 | decided request shapes; pipeline step; three columns; interview line (3 states) | +0.5 h | Fri 10/30 |
+| B8 | interview line, patient-reported table, three values | +0.5 h | Fri 10/30 |
+| B9 | extend `infra/docker-compose.yml` (app-db, app, app-seed); root `compose.yaml` include; passwords out of `hapi.env` | +0.5 h | Fri 10/30 |
+| B10 | decided fixture keys; E2E starts at `/patients/2178`; seeds intake; three-way assertions | +0.25 h | Sat 10/31 |
+| B11 | unchanged scope | — | Sat 10/31 |
+| B12 / B13 | unchanged scope | — | Fri 10/30 / Sun 11/1 |
+| B14 | dry run moved to Mon AM | — | Sun 11/1 |
+| B15 / B16 / B17 | RxNorm back in scope | — | Sun 11/1 |
+
+Critical path: **B1b (Fri 10:00)** → B4 / B5 / B6b → B7 → B10 (Sat) → B11 **v1.0.0** (Sat) → B15 + B16 → B17 **v1.1.0 + rollback** (Sun) → dry run (Mon AM).
+
+Updated workload (hours): Rachit 10.0 · Vedant 9.5 · Sarthak 14.5 ⚠ · Devang 11.0. Sarthak's load is still the highest; with the weekend, V2 work spreads to Sunday.
