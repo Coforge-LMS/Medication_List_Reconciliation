@@ -221,3 +221,5 @@ __marimo__/
 
 # Claude Code local worktrees and settings
 .claude/
+misc/
+.DS_Store
