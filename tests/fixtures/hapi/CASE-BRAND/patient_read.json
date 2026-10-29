@@ -1,0 +1,25 @@
+{
+  "resourceType": "Patient",
+  "id": "2184",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+  },
+  "identifier": [
+    {
+      "system": "urn:medrec:case",
+      "value": "CASE-BRAND"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Brandt",
+      "given": [
+        "Beatrice"
+      ]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1964-07-21"
+}

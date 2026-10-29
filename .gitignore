@@ -223,3 +223,5 @@ __marimo__/
 .claude/
 misc/
 .DS_Store
+# Synthea tooling (jar + scratch output; committed data lives in data/fhir/synthea/)
+tools/

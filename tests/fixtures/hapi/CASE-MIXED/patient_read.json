@@ -1,0 +1,25 @@
+{
+  "resourceType": "Patient",
+  "id": "2178",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+  },
+  "identifier": [
+    {
+      "system": "urn:medrec:case",
+      "value": "CASE-MIXED"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Mixton",
+      "given": [
+        "Marcus"
+      ]
+    }
+  ],
+  "gender": "male",
+  "birthDate": "1951-11-30"
+}

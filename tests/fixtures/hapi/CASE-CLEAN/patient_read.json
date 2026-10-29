@@ -1,0 +1,25 @@
+{
+  "resourceType": "Patient",
+  "id": "2174",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+  },
+  "identifier": [
+    {
+      "system": "urn:medrec:case",
+      "value": "CASE-CLEAN"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Cleary",
+      "given": [
+        "Clara"
+      ]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1958-04-12"
+}

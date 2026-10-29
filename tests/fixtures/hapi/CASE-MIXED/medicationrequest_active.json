@@ -1,0 +1,312 @@
+{
+  "resourceType": "Bundle",
+  "id": "b6125417-6050-404b-8eea-68ea5b7dd988",
+  "meta": {
+    "lastUpdated": "2026-10-29T17:42:43.693+00:00"
+  },
+  "type": "searchset",
+  "total": 5,
+  "link": [
+    {
+      "relation": "self",
+      "url": "http://localhost:8080/fhir/MedicationRequest?patient=2178&status=active"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "http://localhost:8080/fhir/MedicationRequest/2179",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2179",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "861004",
+              "display": "metformin hydrochloride 500 MG Oral Tablet"
+            }
+          ],
+          "text": "metformin hydrochloride 500 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-02-10T08:30:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Twice daily",
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1.0,
+                "periodUnit": "d"
+              },
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+                    "code": "BID"
+                  }
+                ]
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8080/fhir/MedicationRequest/2180",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2180",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "866924",
+              "display": "metoprolol tartrate 25 MG Oral Tablet"
+            }
+          ],
+          "text": "metoprolol tartrate 25 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-02-10T08:30:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Twice daily",
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1.0,
+                "periodUnit": "d"
+              },
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+                    "code": "BID"
+                  }
+                ]
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8080/fhir/MedicationRequest/2181",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2181",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "198440",
+              "display": "acetaminophen 500 MG Oral Tablet"
+            }
+          ],
+          "text": "acetaminophen 500 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-02-10T08:30:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Twice daily",
+            "timing": {
+              "repeat": {
+                "frequency": 2,
+                "period": 1.0,
+                "periodUnit": "d"
+              },
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+                    "code": "BID"
+                  }
+                ]
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8080/fhir/MedicationRequest/2182",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2182",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "312940",
+              "display": "sertraline 50 MG Oral Tablet"
+            }
+          ],
+          "text": "sertraline 50 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-02-10T08:30:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              },
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+                    "code": "QD"
+                  }
+                ]
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8080/fhir/MedicationRequest/2183",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "2183",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T17:42:41.831+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "855332",
+              "display": "warfarin sodium 5 MG Oral Tablet"
+            }
+          ],
+          "text": "warfarin sodium 5 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/2178"
+        },
+        "authoredOn": "2026-02-10T08:30:00+00:00",
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Once daily",
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              },
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v3-GTSAbbreviation",
+                    "code": "QD"
+                  }
+                ]
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    }
+  ]
+}
