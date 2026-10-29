@@ -1,0 +1,51 @@
+# HAPI FHIR server, its Postgres, and the one-shot Synthea/case importer.
+# Run from the repo root: docker compose -f infra/docker-compose.yml up -d
+name: medrec-hapi
+
+services:
+  hapi-db:
+    image: postgres:18.6-alpine
+    restart: unless-stopped
+    env_file: hapi.env
+    volumes:
+      - hapi-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  hapi:
+    image: hapiproject/hapi:v8.12.0-2
+    restart: on-failure
+    env_file: hapi.env
+    depends_on:
+      hapi-db:
+        condition: service_healthy
+    mem_limit: 2g
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      # distroless image: no shell, curl or wget; use the probe compiled into the image
+      test: ["CMD", "java", "-cp", "/app", "HealthCheck"]
+      interval: 15s
+      timeout: 10s
+      start_period: 120s
+      retries: 12
+
+  importer:
+    image: python:3.12.16-slim-trixie
+    restart: "no"
+    depends_on:
+      hapi:
+        condition: service_healthy
+    environment:
+      HAPI_BASE_URL: http://hapi:8080/fhir
+      FHIR_DATA_DIR: /data/fhir
+    volumes:
+      - ../data/fhir:/data/fhir:ro
+      - ./import_fhir.py:/import_fhir.py:ro
+    command: ["python", "/import_fhir.py"]
+
+volumes:
+  hapi-db-data:
