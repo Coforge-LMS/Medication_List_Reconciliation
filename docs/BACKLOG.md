@@ -240,10 +240,6 @@ Patient intake history is a third source with the final 7-table schema (TECHNICA
 - Owner Devang · 0.25 h · due **Fri 10/30 12:00**.
 - Turn on stale-review dismissal and conversation resolution (still off after B0).
 
-**B18 · Instructor sign-off on deviations** (new)
-- Owner Vedant · 0.5 h · due **Fri 10/30 17:00**.
-- Written OK for TECHNICAL_PLAN §14, including the intake, three-source and 7-table changes; record it in ASSUMPTIONS A23.
-
 | Changed ticket | Intake / decision delta | Extra | Due |
 |---|---|---|---|
 | B3 | two CSVs (interviews + medications); one `no_medications` and one un-interviewed Synthea patient; name-coverage test; three-way expectations in data/README | +1.25 h | Fri 10/30 |

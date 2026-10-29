@@ -183,7 +183,7 @@ EOF
 ## Rejected alternatives
 - **A (full compose in every PR):** slow, large pull, JVM boot, flaky on required checks. Kept as manual `compose-e2e` / demo rehearsal only.
 - **Transaction-per-test with SAVEPOINT (`join_transaction_mode="create_savepoint"`):** faster, but `commit()` never really commits, so the rollback/persistence tests would prove nothing; also the app's own sessions in `TestClient` calls would not share the test's transaction without extra wiring.
-- **SQLite instead of Postgres:** cannot validate real commit/rollback semantics or Postgres types; contradicts the assignment's real-Postgres requirement.
+- **SQLite instead of Postgres:** cannot validate real commit/rollback semantics or Postgres types; contradicts the real-Postgres requirement.
 - **respx, testcontainers, pytest-postgresql, tox/nox, coverage gates, Python version matrix:** extra dependencies or ceremony for no gain; a service container and one Python version suffice.
 - **uv as default:** faster installs, but only worth it if `uv.lock` already exists; pip + `setup-python` cache needs nothing else.
 

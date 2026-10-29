@@ -4,7 +4,7 @@ Format: decision / assumption · status · source or reason · owner. Rows are g
 
 Status values:
 - `Decided`: agreed in the technical plan.
-- `Assumed`: our best guess, to confirm with the customer or instructor.
+- `Assumed`: our best guess, to confirm with the customer.
 - `Open`: needs an answer.
 
 Research citations: [R01]…[R11] = `docs/research/NN-*.md`.
@@ -37,7 +37,6 @@ OWNER: Vedant Misra, to review and finalize
 | A16 | Schema is applied with `create_all()`, no Alembic. The schema is frozen at 1.0.0 and V2 ships zero DDL. | Decided | [R05], [R10] |
 | A17 | History is append-only, with no delete endpoint. It is keyed on the stable patient identifier, so it survives HAPI re-imports. | Decided | Auditability: NPSG.03.06.01 documentation [R11]; [R01] |
 | A33 | Intake is two tables: `intake_interview` (who, when, informant, `no_medications`) and `intake_medication` (raw rows as said). Both hang off `patient` by a real FK, and the patient's FHIR columns become nullable. That is 7 tables, one over the brief's "~4–6", because the interview is a real event. It makes "takes nothing" vs "not taken" and who took the history explicit. Intake is snapshotted per run, and each run records which interview it compared. | Decided | Schema decided by the lead's delegate 2026-10-29; brief requires enforced FKs; [R05] snapshot-per-run |
-| A23 | The Coforge assignment and rubric are not in the repo. The deviation list is inferred from the closed PR #1 plan. B18 tracks the sign-off and records the response here. | Open | Ask the instructor for the rubric |
 | A26 | Ownership split: FHIR → contract mapping and pharmacy **validation** go to Rachit ("ingestion validation"). Sarthak keeps the FHIR REST **client** and pharmacy record **access**. This balances an overloaded stream; the brief gave both to Sarthak. | Assumed | BACKLOG workload table; needs sign-off from Rachit and Sarthak |
 
 ## Sarthak Kakkar: rules, UI, PDF

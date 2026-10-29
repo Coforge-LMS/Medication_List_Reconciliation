@@ -39,11 +39,11 @@ Sources for each decision: `docs/research/NN-*.md` (cited as [R01]…[R11]). Dec
 
 Friday morning, before the presentation: dry run (runbook item).
 
-**Scope-cut ladder** (cut from the top; each cut is reported to the lead with the rubric items it affects):
-1. RxNorm live lookup → committed cache only. No rubric impact.
-2. HTMX partial swaps → plain forms with full-page reloads. No rubric impact.
-3. JSON API → keep only `POST /api/patients/{id}/reconcile` and `GET /api/runs/{id}`. Already the minimum. No rubric impact.
-4. pre-commit hook → ruff runs in CI only. No rubric impact.
+**Scope-cut ladder** (cut from the top; each cut is reported to the lead with the requirements it affects):
+1. RxNorm live lookup → committed cache only. No requirement impact.
+2. HTMX partial swaps → plain forms with full-page reloads. No requirement impact.
+3. JSON API → keep only `POST /api/patients/{id}/reconcile` and `GET /api/runs/{id}`. Already the minimum. No requirement impact.
+4. pre-commit hook → ruff runs in CI only. No requirement impact.
 5. RxNorm normalization slips out of 1.1.0 → affects "V2: two additions" (1.1.0 = frequency rule only).
 6. If v1.0.0 isn't tagged by 21:00 → **1.1.0 = frequency rule only**, kept so the rollback demo still happens.
 
@@ -380,7 +380,7 @@ docs/research/ (section owners) · TECHNICAL_PLAN, ASSUMPTIONS, BACKLOG (Vedant)
 
 ## 10. Requirements traceability matrix
 
-| # | Requirement (brief / DoD / rubric) | Ticket | Test or evidence | Owner |
+| # | Requirement (brief / DoD) | Ticket | Test or evidence | Owner |
 |---|---|---|---|---|
 | 1 | Synthea data generated (deterministic) | B2 | committed bundles; command in `data/README.md`; re-run gives the same identifiers | Rachit |
 | 2 | Pharmacy data generated (dupes, missing, dose, freq, brand/generic, invalid) | B3 | `tests/data/test_data_pharmacy.py` (regenerate == committed; every scenario present) | Rachit |
@@ -478,19 +478,17 @@ Run with `uv run pytest`. DB tests need `TEST_DATABASE_URL`:
 
 ---
 
-## 14. Deviations from the Coforge Week 3 assignment
+## 14. Scope decisions
 
-| # | Assignment | This project | Instructor approval? |
-|---|---|---|---|
-| 1 | CLI tool | Web app (FastAPI, server-rendered) + small REST API | **Yes**: changes the interface the rubric may test |
-| 2 | SQLite database | Two PostgreSQL databases (HAPI-owned + app-owned) | **Yes** |
-| 3 | Two input files (clinic + pharmacy CSV) | FHIR REST (HAPI) + synthetic pharmacy JSON + **patient intake history seeded in the app DB** (§16; restores the clinic intake input) | **Yes** |
-| 4 | Custom synthetic data generator | Synthea for EHR data + seeded pharmacy generator (+ small deliberate-case FHIR bundle) | Recommended (FYI) |
-| 5 | SQLite backup API | `pg_dump` / `pg_restore` with verified restore | FYI (equivalent) |
-| 6 | One new rule in 1.1.0 | Two additions: frequency-mismatch rule + RxNorm normalization | FYI (superset) |
-| 7 | Printed text report | Web page + PDF export | FYI (superset) |
-
-The assignment and rubric documents are **not in this repo**. This list is inferred from the closed PR #1 plan and the brief, and must be checked against the actual rubric (ASSUMPTIONS A23).
+| # | Alternative | This project |
+|---|---|---|
+| 1 | CLI tool | Web app (FastAPI, server-rendered) + small REST API |
+| 2 | SQLite database | Two PostgreSQL databases (HAPI-owned + app-owned) |
+| 3 | Two input files (clinic + pharmacy CSV) | FHIR REST (HAPI) + synthetic pharmacy JSON + **patient intake history seeded in the app DB** (§16; restores the clinic intake input) |
+| 4 | Custom synthetic data generator | Synthea for EHR data + seeded pharmacy generator (+ small deliberate-case FHIR bundle) |
+| 5 | SQLite backup API | `pg_dump` / `pg_restore` with verified restore |
+| 6 | One new rule in 1.1.0 | Two additions: frequency-mismatch rule + RxNorm normalization |
+| 7 | Printed text report | Web page + PDF export |
 
 ---
 
@@ -602,7 +600,7 @@ erDiagram
 
 | Day | Goal |
 |---|---|
-| **Fri 10/30** | Contract first (10:00), then ingest, DB + seed, three-way rules, web, PDF, Compose; finish branch protection; client brief; instructor sign-off on §14 |
+| **Fri 10/30** | Contract first (10:00), then ingest, DB + seed, three-way rules, web, PDF, Compose; finish branch protection; client brief |
 | **Sat 10/31** | Clean `docker compose up` end to end, E2E green, **v1.0.0** + verified backup/restore |
 | **Sun 11/1** | V2: frequency rule + RxNorm → **v1.1.0** → rollback demo; presentation page and checklist; owner sign-offs |
 | **Mon 11/2** | Dry run with the fallback plan, then present |
