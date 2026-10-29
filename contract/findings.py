@@ -17,6 +17,7 @@ class Finding(BaseModel):
     summary: str  # factual sentence; never a treatment recommendation
     fhir_value: str | None = None
     pharmacy_value: str | None = None
+    intake_value: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -27,4 +28,5 @@ class ReconciliationInput(BaseModel):
 
     fhir: list[MedicationRecord]
     pharmacy: list[MedicationRecord]
+    intake: list[MedicationRecord] | None = None  # None = no interview; [] = patient reports none
     rejected: list[Rejection] = Field(default_factory=list)

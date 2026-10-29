@@ -8,12 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from contract.units import Unit
 
-Source = Literal["fhir", "pharmacy"]
+Source = Literal["fhir", "pharmacy", "intake"]
 ReasonCode = Literal["missing_field", "unreadable_dosage", "invalid_date", "future_date"]
 
 
 class MedicationRecord(BaseModel):
-    """One accepted medication from either source; dose is per administration."""
+    """One accepted medication from any source; dose is per administration."""
 
     model_config = ConfigDict(frozen=True)
 

@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from contract.findings import Finding
 from contract.medication import MedicationRecord, Rejection
@@ -18,6 +18,17 @@ class PatientInfo(BaseModel):
     name: str | None = None
     birth_date: date | None = None
     gender: str | None = None
+
+
+class IntakeInterviewInfo(BaseModel):
+    """The arrival interview a run compared against."""
+
+    model_config = ConfigDict(frozen=True)
+
+    taken_at: datetime
+    taken_by: str
+    informant: str
+    no_medications: bool
 
 
 class RunSummary(BaseModel):
@@ -45,3 +56,5 @@ class RunDetail(BaseModel):
     pharmacy: list[MedicationRecord]
     rejected: list[Rejection]
     findings: list[Finding]
+    intake: list[MedicationRecord] = Field(default_factory=list)
+    intake_interview: IntakeInterviewInfo | None = None
