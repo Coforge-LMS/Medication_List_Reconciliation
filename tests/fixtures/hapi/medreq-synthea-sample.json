@@ -1,0 +1,571 @@
+{
+  "resourceType": "Bundle",
+  "id": "1eef67c3-3c50-498a-a7c1-71c4ea0d5e35",
+  "meta": {
+    "lastUpdated": "2026-10-29T14:48:59.522+00:00"
+  },
+  "type": "searchset",
+  "total": 12,
+  "link": [
+    {
+      "relation": "self",
+      "url": "http://localhost:18080/fhir/MedicationRequest?_count=100&patient=1119&status=active"
+    }
+  ],
+  "entry": [
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1126",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1126",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "312961",
+              "display": "Simvastatin 20 MG Oral Tablet"
+            }
+          ],
+          "text": "Simvastatin 20 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1124"
+        },
+        "authoredOn": "1994-01-17T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1079",
+          "display": "Dr. Edith654 Beier427"
+        }
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1127",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1127",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "866412",
+              "display": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet"
+            }
+          ],
+          "text": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1124"
+        },
+        "authoredOn": "1994-01-17T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1079",
+          "display": "Dr. Edith654 Beier427"
+        }
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1128",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1128",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "705129",
+              "display": "Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray"
+            }
+          ],
+          "text": "Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1124"
+        },
+        "authoredOn": "1994-01-17T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1079",
+          "display": "Dr. Edith654 Beier427"
+        }
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1143",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1143",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "243670",
+              "display": "aspirin 81 MG Oral Tablet"
+            }
+          ],
+          "text": "aspirin 81 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1141"
+        },
+        "authoredOn": "2007-02-27T02:34:15+00:00",
+        "requester": {
+          "reference": "Practitioner/1060",
+          "display": "Dr. Gabriel934 Reilly981"
+        }
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1144",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1144",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "866436",
+              "display": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet"
+            }
+          ],
+          "text": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1141"
+        },
+        "authoredOn": "2007-02-27T02:34:15+00:00",
+        "requester": {
+          "reference": "Practitioner/1060",
+          "display": "Dr. Gabriel934 Reilly981"
+        },
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Take as needed.",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1145",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1145",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "617310",
+              "display": "atorvastatin 20 MG Oral Tablet"
+            }
+          ],
+          "text": "atorvastatin 20 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1141"
+        },
+        "authoredOn": "2007-02-27T02:34:15+00:00",
+        "requester": {
+          "reference": "Practitioner/1060",
+          "display": "Dr. Gabriel934 Reilly981"
+        },
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Take as needed.",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1146",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1146",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "855812",
+              "display": "prasugrel 10 MG Oral Tablet"
+            }
+          ],
+          "text": "prasugrel 10 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1141"
+        },
+        "authoredOn": "2007-02-27T02:34:15+00:00",
+        "requester": {
+          "reference": "Practitioner/1060",
+          "display": "Dr. Gabriel934 Reilly981"
+        }
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1261",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1261",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "314231",
+              "display": "Simvastatin 10 MG Oral Tablet"
+            }
+          ],
+          "text": "Simvastatin 10 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1260"
+        },
+        "authoredOn": "2026-06-09T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1097",
+          "display": "Dr. Gaston250 Grimes165"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/1159",
+            "display": "Hyperlipidemia (disorder)"
+          }
+        ],
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "type": {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                      "code": "ordered",
+                      "display": "Ordered"
+                    }
+                  ]
+                },
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1266",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1266",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "310798",
+              "display": "Hydrochlorothiazide 25 MG Oral Tablet"
+            }
+          ],
+          "text": "Hydrochlorothiazide 25 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1262"
+        },
+        "authoredOn": "2026-07-27T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1109",
+          "display": "Dr. Tracie996 Lesch175"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/1132",
+            "display": "Essential hypertension (disorder)"
+          }
+        ],
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "timing": {
+              "repeat": {
+                "frequency": 1,
+                "period": 1.0,
+                "periodUnit": "d"
+              }
+            },
+            "asNeededBoolean": false,
+            "doseAndRate": [
+              {
+                "type": {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/dose-rate-type",
+                      "code": "ordered",
+                      "display": "Ordered"
+                    }
+                  ]
+                },
+                "doseQuantity": {
+                  "value": 1.0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1267",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1267",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "206905",
+              "display": "Ibuprofen 400 MG Oral Tablet [Ibu]"
+            }
+          ],
+          "text": "Ibuprofen 400 MG Oral Tablet [Ibu]"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1262"
+        },
+        "authoredOn": "2026-07-27T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1109",
+          "display": "Dr. Tracie996 Lesch175"
+        },
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Take as needed.",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1268",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1268",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "314076",
+              "display": "lisinopril 10 MG Oral Tablet"
+            }
+          ],
+          "text": "lisinopril 10 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1262"
+        },
+        "authoredOn": "2026-07-27T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1109",
+          "display": "Dr. Tracie996 Lesch175"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/1132",
+            "display": "Essential hypertension (disorder)"
+          }
+        ],
+        "dosageInstruction": [
+          {
+            "sequence": 1,
+            "text": "Take as needed.",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:18080/fhir/MedicationRequest/1269",
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "1269",
+        "meta": {
+          "versionId": "1",
+          "lastUpdated": "2026-10-29T14:48:01.358+00:00"
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "904419",
+              "display": "Alendronic acid 10 MG Oral Tablet"
+            }
+          ],
+          "text": "Alendronic acid 10 MG Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/1119"
+        },
+        "encounter": {
+          "reference": "Encounter/1262"
+        },
+        "authoredOn": "2026-07-27T06:23:21+00:00",
+        "requester": {
+          "reference": "Practitioner/1109",
+          "display": "Dr. Tracie996 Lesch175"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/1138",
+            "display": "Osteoporosis (disorder)"
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    }
+  ]
+}

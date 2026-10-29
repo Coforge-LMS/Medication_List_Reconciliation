@@ -1,0 +1,25 @@
+{
+  "resourceType": "Patient",
+  "id": "2184",
+  "meta": {
+    "versionId": "1",
+    "lastUpdated": "2026-10-29T14:48:02.924+00:00"
+  },
+  "identifier": [
+    {
+      "system": "urn:medrec:case",
+      "value": "CASE-BRAND"
+    }
+  ],
+  "name": [
+    {
+      "use": "official",
+      "family": "Brand",
+      "given": [
+        "Riley"
+      ]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1968-02-03"
+}
