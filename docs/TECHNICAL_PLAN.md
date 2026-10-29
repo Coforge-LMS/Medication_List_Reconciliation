@@ -114,7 +114,7 @@ Used by: the pharmacy generator, FHIR mapping, validation, DB rows, rules and te
 | `date_recorded` | date | yes | Pharmacy `date_recorded`, FHIR `authoredOn`. ISO date, not in the future. |
 | `normalized_name` | str \| None | no | Identity key. V1: alias-normalized (§4.3). V2: may become the RxNorm ingredient name. |
 | `rxcui` | str \| None | no | **V2 only.** Sorted ingredient RxCUIs, comma-joined |
-| `raw` | dict | yes | Original FHIR resource or pharmacy row, for traceability. Excluded from equality. |
+| `raw` | dict | no (default `{}`) | Original FHIR resource or pharmacy row, for traceability. Never used by rules. |
 
 Other contract types:
 - `Reason(field, code, message)`.

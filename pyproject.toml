@@ -1,0 +1,44 @@
+[project]
+name = "medrec"
+# Single version source: shown in the footer and /healthz; Devang bumps it at release.
+version = "0.1.0"
+description = "Medication reconciliation web app: FHIR vs synthetic pharmacy records (synthetic data only)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.162.0",
+    "uvicorn==0.54.0",
+    "jinja2==3.1.6",
+    "python-multipart==0.0.32",
+    "pydantic==2.14.1",
+    "sqlalchemy==2.0.55",
+    "psycopg[binary]==3.3.6",
+    "httpx==0.28.1",
+    "fpdf2==2.8.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.3",
+    "pypdf==6.21.4",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    # Starlette's TestClient prefers httpx2; plain httpx 0.28.1 is our pinned choice (R04).
+    "ignore:Using .httpx. with .starlette.testclient. is deprecated",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["docs"]  # ruff would rewrite code blocks in the Markdown docs
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
