@@ -1,0 +1,209 @@
+# Backlog (Linear-ready)
+
+Project: **Team 1: Medication List Reconciliation** (Linear team TEA). Two release groups: **V1 (1.0.0)**, 14 tickets, and **V2 (1.1.0)**, 3 tickets. IDs `B1…B17` become `TEA-<n>` on sync.
+
+**Conventions:**
+- Due times are Thu 2026-10-29 EDT and assume the plan is approved around 11:15.
+- Priority: P1 urgent, P2 high.
+- Branch `<owner>/<topic>`. PR title starts with the TEA id. The commit author is the owner.
+
+## V1: Release 1.0.0
+
+**B1 · Scaffold + shared contract + alias config schema**
+- Owner Vedant · V1 · P1 · 1.5 h · due 12:45 · blocked by none · `vedant/foundation`
+- Creates `pyproject.toml` + `uv.lock` with the pinned stack, ruff/pytest config, `tests/conftest.py` (lazy engine, TRUNCATE, `_test` guard), and a stub `app/main.py` with `/healthz` and the tomllib version.
+- Implements `contract/` (MedicationRecord, Reason, Rejection, Finding, ReconciliationInput, units, AliasConfig + AliasConfigError) exactly as TECHNICAL_PLAN §4. The contract is frozen after merge.
+- AC:
+  - [ ] `uv lock` resolves and `uv run pytest` passes, including a TestClient `/healthz` smoke test.
+  - [ ] `tests/contract` covers 500 mg == 0.5 g, unit spellings (µg→mcg), unknown-unit rejection and AliasConfig schema errors.
+  - [ ] `ruff check` and `ruff format --check` are clean.
+
+**B2 · Synthea data, deliberate-case bundle, HAPI import, recorded fixtures**
+- Owner Rachit · V1 · P1 · 2.5 h · due 14:30 · blocked by none · `rachit/fhir-data`
+- Run Synthea v4.0.0 once in Docker with seed 42 (10 alive adults aged 45–85, R4 transaction bundles, US Core off, include-list, 5 years of history) and commit `data/fhir/synthea/`.
+- Hand-write `data/fhir/cases/medrec-cases.json`: 3 invented patients (`urn:medrec:case`) with full `dosageInstruction`, covering:
+  - CASE-CLEAN: one alias match, otherwise identical.
+  - CASE-MIXED: duplicate + dosage mismatch on the same drug, one missing on each side, 500 mg vs 0.5 g, a frequency difference, and a drug whose only pharmacy row is invalid.
+  - CASE-BRAND: a brand not in the alias list.
+- Write `infra/hapi.env` and the stdlib `infra/import_fhir.py`. Load order is hospital → practitioner → patients → cases. The script skips the import if CASE-BRAND exists and fails loudly on any transaction error.
+- Record real HAPI responses for the case patients into `tests/fixtures/hapi/`.
+- AC:
+  - [ ] Against a local HAPI, the import gives `Patient?_summary=count` = 13, and a second run is a no-op.
+  - [ ] `data/README.md` holds the exact generation command and a tally of active MedicationRequests with and without dose/timing (this checks A3/A4).
+  - [ ] The fixtures cover the Patient search, `Patient/{id}` and `MedicationRequest?patient=…&status=active` for each case patient.
+
+**B3 · Seeded pharmacy dataset generator**
+- Owner Rachit · V1 · P1 · 1.5 h · due 16:30 · blocked by B1, B2, B4 · `rachit/pharmacy-data`
+- `data/generators/make_pharmacy.py --seed 42` writes `data/pharmacy/pharmacy_records.json`. Rows: `record_id, patient_id, medication_name, dose_amount, dose_unit, frequency, date_recorded`. Values are strings; `dose_amount` is per administration.
+- Synthea patients get seeded perturbations of FHIR meds that pass B4 validation: drop, dose change, duplicate, brand names taken only from `aliases.json`, frequency text. No mL rows.
+- Case patients get scripted rows plus invalid ones: blank name, dose "ten", unit "tab", bad date, future date.
+- AC:
+  - [ ] Re-running produces a byte-identical file (test).
+  - [ ] Every scenario type in the brief appears at least once (test counts them).
+  - [ ] No real patient data.
+
+**B4 · Ingestion: FHIR mapping, pharmacy validation, alias loading, normalization**
+- Owner Rachit · V1 · P1 · 3 h · due 15:30 · blocked by B1 · `rachit/ingest`
+- `ingest/fhir.py` maps Patient and MedicationRequest JSON to records or rejections: strength from the RxNorm display, frequency string, skip inactive.
+- `ingest/pharmacy.py` validates rows. `ingest/aliases.py` loads `data/aliases.json` with clear `AliasConfigError` messages. `ingest/normalize.py` sets `normalized_name` (TECHNICAL_PLAN §4.3).
+- Rejections keep the readable name, so rules can tell "rejected" from "absent".
+- AC:
+  - [ ] Every rejection code has a test, plus one multi-reason record.
+  - [ ] FHIR cases tested: `24 HR … 500 MG …` → 500 mg; `[Lipitor]` stripped; missing dosage; combination product rejected; inactive skipped.
+  - [ ] Missing file, invalid JSON and bad schema each give a distinct, readable error.
+
+**B5 · App DB: schema, atomic save, history, persistence tests**
+- Owner Vedant · V1 · P1 · 3 h · due 15:30 · blocked by B1 · `vedant/db`
+- `db/models.py` has the 5 tables of §5: `discrepancy_type` is TEXT and `patient.identifier` is UNIQUE.
+- `db/session.py` builds the engine lazily and provides the session dependency.
+- `db/repo.py` provides `init_db`, `save_run(...)` (one transaction including the patient upsert on `identifier`), `get_run` and `list_runs(identifier)`.
+- AC:
+  - [ ] Success test asserts exact row counts in all 5 tables.
+  - [ ] NOT NULL failure and exception-after-flush each leave 0 rows in every table, read from a fresh connection. A direct insert with a bad `run_id` raises IntegrityError.
+  - [ ] An unknown `discrepancy_type` round-trips; V2 columns are nullable; history is newest first and survives a changed HAPI id.
+
+**B6 · Rules: ReconciliationRule + Duplicate / Missing / DosageMismatch + runner**
+- Owner Sarthak · V1 · P1 · 2.5 h · due 15:00 · blocked by B1 · `sarthak/rules`
+- `rules/base.py` defines the abstract `evaluate(data: ReconciliationInput) -> list[Finding]`. Three subclasses plus `run_rules` and `DEFAULT_RULES`, with definitions exactly as §4.6, including the rejected-counterpart wording for `missing`.
+- Tests build contract objects directly.
+- AC:
+  - [ ] Each rule has positive and negative tests; 500 mg vs 0.5 g gives no finding.
+  - [ ] One medication yields 2 findings; a no-discrepancy patient yields 0; a rejected counterpart is named in the `missing` summary.
+  - [ ] No finding summary contains increase/decrease/stop/start/discontinue/should/recommend.
+
+**B7 · Web app: FHIR client, pharmacy access, service, pages, JSON API**
+- Owner Sarthak · V1 · P1 · 3.5 h · due 17:00 · blocked by B1 (integrates B4, B5, B6 as they merge) · `sarthak/web`
+- `app/fhir_client.py`: httpx with an injectable transport; follows `next` links.
+- `app/pharmacy.py`: reads the baked dataset.
+- `app/service.reconcile`: the §7.1 pipeline.
+- Routes and templates from §6: list, detail with both lists and rejections, run page grouped by type, per-patient history.
+- `app/labels.py`: `LABELS.get(t, f"Other ({t})")`.
+- Footer carries the version and disclaimer. Frequency is shown as stored; HTMX is optional.
+- AC:
+  - [ ] The pager test passes over a two-page MockTransport bundle.
+  - [ ] The run page groups findings by type with FHIR value vs pharmacy value. An unknown type renders "Other (x)" (test). The disclaimer text is present (test).
+  - [ ] The two JSON endpoints and `/healthz` return the documented shapes.
+
+**B8 · PDF report export**
+- Owner Sarthak · V1 · P1 · 1.5 h · due 16:30 · blocked by B1, B6 · `sarthak/pdf`
+- `app/pdf.py` (fpdf2 + bundled DejaVu regular/bold) contains: patient details, timestamp, version, FHIR and pharmacy tables, rejected records, findings grouped by type with compared values, a summary, and the disclaimer.
+- Route: `GET /runs/{id}/report.pdf`.
+- AC:
+  - [ ] Output starts with `%PDF-`; pypdf text includes the patient name and the exact disclaimer.
+  - [ ] A zero-findings run says "No discrepancies found".
+  - [ ] An unknown type, "µg" and an em dash render correctly.
+
+**B9 · Dockerfile + Compose stack**
+- Owner Devang · V1 · P1 · 2.5 h · due 16:00 · blocked by B1, B2 · `devang/compose`
+- `infra/Dockerfile`: `python:3.12.16-slim-trixie`, `uv sync --locked`, non-root, urllib healthcheck. It bakes in app code, `pyproject.toml`, `data/aliases.json` and `data/pharmacy/`.
+- `compose.yaml` per §8: hapi-db, hapi, importer, app-db, app. Includes healthchecks (`pg_isready -h 127.0.0.1`), depends_on conditions, named volumes at `/var/lib/postgresql`, ports on 127.0.0.1, `image: medrec-app:${APP_VERSION:?}`, and `.env.example` with `APP_VERSION=dev`.
+- AC:
+  - [ ] On a clean clone, `cp .env.example .env && docker compose up -d --build` brings every service healthy with the importer exited 0. Timings logged.
+  - [ ] `down` then `up` keeps data; `down -v` resets it. The app service has no hapi-db credentials.
+  - [ ] No secrets committed.
+
+**B10 · CI, Git workflow, essential-test checklist, end-to-end test**
+- Owner Devang · V1 · P1 · 2.5 h · due 18:00 · blocked by B1 (CI); B2, B4, B5, B6, B7 (E2E) · `devang/ci-e2e`
+- `.github/workflows/ci.yml` runs `lint` + `test` with a Postgres service.
+- Branch protection via `gh api`: both checks required, 1 approval, `strict: false`.
+- Add a PR template (ticket id, test evidence, "I can explain every line").
+- `tests/e2e/test_e2e_reconcile.py`: TestClient + real Postgres + MockTransport serving `tests/fixtures/hapi/` by URL.
+- AC:
+  - [ ] CI is green and main is protected; PR CI takes under 5 min.
+  - [ ] The E2E test covers list → detail → reconcile → run page (CASE-MIXED grouped findings) → history → PDF 200, and asserts persisted rows.
+  - [ ] Checklist in the PR: every QUALITY RULES test maps to a passing test id in the CI log.
+
+**B11 · Release 1.0.0: README, CHANGELOG, tag, image, backup/restore**
+- Owner Devang · V1 · P1 · 1.5 h · due 19:45 · blocked by B2–B10, B12 · `devang/release-1.0.0`
+- README covers prerequisites, startup, usage, release, rollback, and backup/restore with the compatibility rule.
+- CHANGELOG `[1.0.0]`; tag `v1.0.0` + `gh release create`.
+- `scripts/build_release.sh` and `scripts/backup.sh`.
+- AC:
+  - [ ] Every V1 Definition-of-Done item is ticked, with evidence in the release notes.
+  - [ ] The backup restores into `medrec_restore_check` with matching row counts (output in the README).
+  - [ ] README commands were run verbatim on a `down -v` stack; image `medrec-app:1.0.0` carries the tag's revision label.
+
+**B12 · Customer research + client brief**
+- Owner Rachit · V1 · P2 · 1 h · due 19:00 · blocked by none · `rachit/client-brief`
+- Get the research PR merged.
+- Write `docs/CLIENT_BRIEF.md`: one page, citing only sources already fetched in R11 (who reconciles, current workflow, discrepancy types and harm, our scope and safety stance).
+- AC:
+  - [ ] Research docs are on main.
+  - [ ] CLIENT_BRIEF fits on one page, and every claim links to a source.
+
+**B13 · Questions and assumptions log + owner sign-off**
+- Owner Rachit (board owner; tracks each member's sub-item) · V1 · P2 · 0.5 h each · due 23:59 · blocked by none · `<name>/signoff`
+- Each member reviews their `OWNER:` sections in `docs/research/` and `docs/ASSUMPTIONS.md`, corrects them, and replaces the marker with `Reviewed by <name>, <date>`.
+- Each member also writes their own customer question (Q6–Q9).
+- AC:
+  - [ ] No `to review and finalize` markers remain.
+  - [ ] Q6–Q9 are written by their owners (commit author = owner).
+
+**B14 · Presentation page, checklist, demo runbook**
+- Owner Devang (shell + runbook; sub-items for each member's section) · V1 · P2 · 2 h · due 23:59 · blocked by B11 (V2 slides after B17) · `devang/presentation`
+- `docs/presentation/index.html`, in the order Rachit → Vedant → Sarthak → Devang → live demo.
+- `docs/PRESENTATION_CHECKLIST.md`: research, implementation, tests, PRs and likely questions for each member.
+- The demo runbook has a fallback for each failure: HAPI down → pytest E2E on fixtures; app down → saved PDF + screenshots. It also schedules a dry run on Friday morning, before the presentation.
+- AC:
+  - [ ] Each section is authored by its owner.
+  - [ ] The runbook was executed once end to end, including one fallback path.
+
+## V2: Release 1.1.0 (exactly two features)
+
+**B15 · Frequency mismatch: 4th rule + deterministic normalization**
+- Owner Sarthak · V2 · P2 · 2 h · due 21:30 · blocked by B6 (to start, ~15:00) and B11 (to merge) · `sarthak/frequency-rule`
+- `rules/frequency.py` holds the normalizer (`QD|BID|TID|QID|QOD|QW|PRN|n/d`, time-of-day collapses) and `FrequencyMismatchRule`, appended to `DEFAULT_RULES`.
+- `app/labels.py` gains the label and plain-language display. No schema, route or other owners' files change.
+- AC:
+  - [ ] Normalizer table test: BID / "twice daily" / `2/1d` / Q12H → BID; PRN and unknown → not comparable.
+  - [ ] CASE-MIXED yields exactly one `frequency_mismatch`; CASE-CLEAN still yields 0.
+  - [ ] The diff touches only `rules/`, `app/labels.py` and tests.
+
+**B16 · RxNorm normalization with offline cache**
+- Owner Sarthak (terminology review: Rachit) · V2 · P2 · 2.5 h · due 21:30 · blocked by B4 (to start) and B11 (to merge) · `sarthak/rxnorm`
+- `data/generators/build_rxnorm_cache.py` (live RxNav, run once) writes `data/rxnorm_cache.json`.
+- `ingest/rxnorm.refine(records)` resolves cache first (live only when `RXNORM_LIVE=1`), sets `rxcui` and the ingredient `normalized_name`, and keeps original names. It is called from `app/service`.
+- Strength differences stay `dosage_mismatch`. Form/route differences are reported as `dosage_mismatch` ("different form"), never merged [R07]. NLM attribution goes in the footer.
+- AC:
+  - [ ] CASE-BRAND: the brand not in the alias list matches its generic (V1: 2 `missing` → V2: 0).
+  - [ ] Tests: 10 mg vs 20 mg is still a mismatch; ER vs IR is reported, not merged; resolution works offline from the cache.
+  - [ ] Saved rows carry `rxcui`; no new tables or columns.
+
+**B17 · Release 1.1.0 + rollback verification**
+- Owner Devang · V2 · P2 · 1 h · due 22:30 · blocked by B15, B16 (B15 only, if scope-cut step 5 applies) · `devang/release-1.1.0`
+- CHANGELOG `[1.1.0]`; tag `v1.1.0`; rebuild both images from their tags.
+- Run the rollback demo of TECHNICAL_PLAN §12 on the same volume and record it in the README.
+- AC:
+  - [ ] A backup is taken and verified before switching.
+  - [ ] After rollback, `/healthz` says 1.0.0, the image revision equals `git rev-list -n1 v1.0.0`, and the 1.1.0 runs show "Other (frequency_mismatch)" with summaries.
+  - [ ] Rolling forward to 1.1.0 restores the full labels.
+
+---
+
+## Critical path
+B1 → B4 + B5 + B6 (parallel) → B7 → B10 (E2E) → B11 **v1.0.0** → merge B15 + B16 → B17 **v1.1.0 + rollback** → B14.
+B2 is on the path for B3, B9 and B10. B12 must merge before B11.
+
+## What each member can start immediately
+- **Rachit:** B2 (Synthea run, case bundle, importer against a local HAPI) and B12. Neither needs the contract.
+- **Vedant:** B1 now. B5 the moment B1 merges.
+- **Sarthak:** after B1 merges (~12:45), B6 and B7 in parallel streams; B8 after B6.
+- **Devang:** B9 skeleton (HAPI + both DBs need no app code); CI workflow draft for B10.
+
+## Workload (estimated hours)
+| Member | Tickets | Hours |
+|---|---|---|
+| Rachit | B2 2.5, B3 1.5, B4 3, B12 1, B13 0.5 | **8.5** |
+| Vedant | B1 1.5, B5 3, B13 0.5, integration and review ~2 | **7.0** |
+| Sarthak | B6 2.5, B7 3.5, B8 1.5, B15 2, B16 2.5, B13 0.5 | **12.5** ⚠ |
+| Devang | B9 2.5, B10 2.5, B11 1.5, B14 2, B17 1, B13 0.5 | **10.0** |
+
+⚠ Sarthak's load follows the ownership fixed in the brief. Two things keep it in budget:
+- His V1 work runs as two parallel streams with disjoint files (rules + PDF, web + service), and V2 starts from the merged rules before v1.0.0.
+- FHIR → contract mapping and pharmacy validation sit with Rachit, under his "ingestion validation" ownership (ASSUMPTIONS A26, to confirm). Sarthak keeps the FHIR REST client and pharmacy record access.
+
+## Linear sync plan (not executed; waiting for the lead's confirmation)
+- **Mark Done:** TEA-5 (decisions session, superseded by this plan).
+- **Cancel** TEA-7 … TEA-38 with the comment "superseded by the web-app plan, see docs/BACKLOG.md". TEA-7 is the closed PR #1.
+- **Retitle** TEA-39 (dry run) and TEA-40 (presentation) and attach them under B14.
+- **Create** B1–B17 in dependency order, with owner, estimate, due date, priority, labels (`V1`/`V2` + area) and blocked-by relations.
