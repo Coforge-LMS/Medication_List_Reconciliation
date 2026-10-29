@@ -67,3 +67,21 @@ def test_finding_type_is_open_vocabulary():
 
 def test_reconciliation_input_defaults_to_no_rejections():
     assert ReconciliationInput(fhir=[record(source="fhir")], pharmacy=[record()]).rejected == []
+
+
+def test_run_detail_holds_unknown_finding_types():
+    from datetime import datetime
+
+    from contract import PatientInfo, RunDetail
+
+    run = RunDetail(
+        run_id=1,
+        app_version="1.1.0",
+        started_at=datetime(2026, 10, 29, 12, 0),
+        patient=PatientInfo(identifier="CASE-MIXED", fhir_patient_id="42"),
+        fhir=[record(source="fhir")],
+        pharmacy=[record()],
+        rejected=[],
+        findings=[Finding(discrepancy_type="future_type", medication="x", summary="y")],
+    )
+    assert run.findings[0].discrepancy_type == "future_type"
