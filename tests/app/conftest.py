@@ -1,11 +1,15 @@
 """App test helpers: an in-memory RunDetail served without a database."""
 
+import json
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.fhir_client import FhirClient
 from app.main import app
 from contract import (
     Finding,
@@ -18,6 +22,9 @@ from contract import (
 )
 from db import repo
 from db.session import get_session
+
+BASE = "http://hapi.test/fhir"
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "hapi"
 
 INTERVIEW = IntakeInterviewInfo(
     taken_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
@@ -126,3 +133,25 @@ def client():
     """TestClient for the app."""
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def recorded_client():
+    """A FhirClient served from tests/fixtures/hapi by index.json key; unknown URLs give 404.
+
+    client.requested lists every path sent, relative to BASE with percent-encoding kept.
+    """
+    index = json.loads((FIXTURES / "index.json").read_text())
+    requested = []
+
+    def handler(request):
+        """Serve the recorded file for an exact key, or 404 so a wrong shape fails loudly."""
+        key = str(request.url).removeprefix(BASE + "/")
+        requested.append(key)
+        if key not in index:
+            return httpx.Response(404, json={"unexpected": key})
+        return httpx.Response(200, content=(FIXTURES / index[key]).read_bytes())
+
+    client = FhirClient(BASE, transport=httpx.MockTransport(handler))
+    client.requested = requested
+    return client

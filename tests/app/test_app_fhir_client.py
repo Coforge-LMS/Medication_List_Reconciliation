@@ -1,20 +1,12 @@
 """FhirClient: next-link pager, decided request shapes over recorded fixtures, errors."""
 
 import json
-from pathlib import Path
 
 import httpx
 import pytest
 
 from app.fhir_client import FhirClient, patient_row
-
-BASE = "http://hapi.test/fhir"
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "hapi"
-
-
-def _relative(request: httpx.Request) -> str:
-    """The request URL relative to BASE, exactly as sent (percent-encoding kept)."""
-    return str(request.url).removeprefix(BASE + "/")
+from tests.app.conftest import BASE, FIXTURES
 
 
 def _searchset(ids: list[str], next_url: str | None = None) -> dict:
@@ -45,43 +37,24 @@ def test_pager_follows_next_links_across_two_pages():
     assert seen == [f"{BASE}/Patient?_count=50", page2]
 
 
-@pytest.fixture
-def recorded():
-    """A client served from tests/fixtures/hapi by index.json key; unknown URLs fail."""
-    index = json.loads((FIXTURES / "index.json").read_text())
-    requested = []
-
-    def handler(request):
-        """Serve the recorded file for an exact key, or 404 so a wrong shape fails loudly."""
-        key = _relative(request)
-        requested.append(key)
-        if key not in index:
-            return httpx.Response(404, json={"unexpected": key})
-        return httpx.Response(200, content=(FIXTURES / index[key]).read_bytes())
-
-    client = FhirClient(BASE, transport=httpx.MockTransport(handler))
-    client.requested = requested
-    return client
-
-
-def test_read_patient_uses_the_decided_shape(recorded):
+def test_read_patient_uses_the_decided_shape(recorded_client):
     """Patient/{id} returns the recorded CASE-MIXED patient."""
-    patient = recorded.read_patient("2178")
-    assert recorded.requested == ["Patient/2178"]
+    patient = recorded_client.read_patient("2178")
+    assert recorded_client.requested == ["Patient/2178"]
     assert patient["identifier"][0]["value"] == "CASE-MIXED"
 
 
-def test_active_medication_requests_use_the_decided_shape(recorded):
+def test_active_medication_requests_use_the_decided_shape(recorded_client):
     """MedicationRequest?patient={id}&status=active (no _count) returns the five recorded meds."""
-    meds = recorded.active_medication_requests("2178")
-    assert recorded.requested == ["MedicationRequest?patient=2178&status=active"]
+    meds = recorded_client.active_medication_requests("2178")
+    assert recorded_client.requested == ["MedicationRequest?patient=2178&status=active"]
     assert len(meds) == 5 and {m["resourceType"] for m in meds} == {"MedicationRequest"}
 
 
-def test_find_case_patient_encodes_the_identifier_like_the_fixtures(recorded):
+def test_find_case_patient_encodes_the_identifier_like_the_fixtures(recorded_client):
     """Patient?identifier=urn%3Amedrec%3Acase%7C<CASE> finds the case patient."""
-    (patient,) = recorded.find_case_patient("CASE-MIXED")
-    assert recorded.requested == ["Patient?identifier=urn%3Amedrec%3Acase%7CCASE-MIXED"]
+    (patient,) = recorded_client.find_case_patient("CASE-MIXED")
+    assert recorded_client.requested == ["Patient?identifier=urn%3Amedrec%3Acase%7CCASE-MIXED"]
     assert patient["id"] == "2178"
 
 
