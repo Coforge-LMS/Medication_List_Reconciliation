@@ -73,3 +73,65 @@ def test_name_in_one_source_only_is_not_a_dosage_mismatch(rec, data):
         )
         == []
     )
+
+
+def test_three_way_mismatch_names_every_source(rec, data):
+    """Intake, FHIR and pharmacy doses that differ give one finding naming all three."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[rec("intake", "lisinopril", "5")],
+            fhir=[rec("fhir", "lisinopril", "10")],
+            pharmacy=[rec("pharmacy", "lisinopril", "20")],
+        )
+    )
+    assert f.summary == "Patient-reported dose 5 mg; FHIR dose 10 mg; pharmacy dose 20 mg."
+    assert (f.intake_value, f.fhir_value, f.pharmacy_value) == ("5 mg", "10 mg", "20 mg")
+    assert f.details["intake_doses_base"] == ["5 mg"]
+    assert f.details["different_measure"] is False
+
+
+def test_intake_differing_from_two_agreeing_sources_is_a_mismatch(rec, data):
+    """Two agreeing sources do not outvote intake; any difference is reported."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[rec("intake", "metformin", "1", "g")],
+            fhir=[rec("fhir", "metformin", "500")],
+            pharmacy=[rec("pharmacy", "metformin", "0.5", "g")],
+        )
+    )
+    assert f.summary == "Patient-reported dose 1 g; FHIR dose 500 mg; pharmacy dose 0.5 g."
+
+
+def test_intake_and_one_source_are_compared(rec, data):
+    """A name in intake and pharmacy only (2 sources) is still compared; FHIR stays empty."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[rec("intake", "ibuprofen", "400")],
+            pharmacy=[rec("pharmacy", "ibuprofen", "200")],
+        )
+    )
+    assert f.summary == "Patient-reported dose 400 mg; pharmacy dose 200 mg."
+    assert f.fhir_value is None and "fhir_doses_base" not in f.details
+
+
+def test_equivalent_doses_in_all_three_sources_are_not_a_mismatch(rec, data):
+    """500 mg, 0.5 g and 500 mg across the three sources give no finding."""
+    assert (
+        rule.evaluate(
+            data(
+                intake=[rec("intake", "metformin", "500")],
+                fhir=[rec("fhir", "metformin", "0.5", "g")],
+                pharmacy=[rec("pharmacy", "metformin", "500")],
+            )
+        )
+        == []
+    )
+
+
+def test_intake_in_a_different_measure_is_flagged(rec, data):
+    """Patient-reported mL against FHIR mg is a different measure."""
+    (f,) = rule.evaluate(
+        data(intake=[rec("intake", "amoxicillin", "5", "mL")], fhir=[rec("fhir", "amoxicillin")])
+    )
+    assert f.details["different_measure"] is True
+    assert f.summary.startswith("Doses are recorded in a different measure: Patient-reported")
