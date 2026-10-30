@@ -3,7 +3,7 @@
 from typing import ClassVar
 
 from contract import Finding, ReconciliationInput, format_dose
-from rules.base import SOURCE_LABELS, ReconciliationRule, by_name, sentence
+from rules.base import SOURCE_LABELS, ReconciliationRule, by_name, participating, sentence
 
 
 class DuplicateMedicationRule(ReconciliationRule):
@@ -12,9 +12,9 @@ class DuplicateMedicationRule(ReconciliationRule):
     discrepancy_type: ClassVar[str] = "duplicate"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
-        """Flag each (source, name) with 2+ records; source names and doses go in the value."""
+        """Flag each (source, name) with 2+ records, intake included when it takes part."""
         findings = []
-        for source, records in (("fhir", data.fhir), ("pharmacy", data.pharmacy)):
+        for source, records in participating(data).items():
             for name, group in by_name(records).items():
                 if len(group) < 2:
                     continue
@@ -27,8 +27,7 @@ class DuplicateMedicationRule(ReconciliationRule):
                         medication=name,
                         summary=f"{sentence(SOURCE_LABELS[source])} has {len(group)} records "
                         f"for {name}.",
-                        fhir_value=listed if source == "fhir" else None,
-                        pharmacy_value=listed if source == "pharmacy" else None,
+                        **{f"{source}_value": listed},
                         details={
                             "source": source,
                             "count": len(group),

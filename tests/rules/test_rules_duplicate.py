@@ -44,3 +44,20 @@ def test_one_record_per_source_is_not_a_duplicate(rec, data):
         )
         == []
     )
+
+
+def test_intake_duplicate_is_reported_per_source(rec, data):
+    """Two patient-reported records of one name give a patient-reported duplicate."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[rec("fhir", "ibuprofen", "200")],
+            intake=[
+                rec("intake", "Advil", "200", normalized_name="ibuprofen"),
+                rec("intake", "ibuprofen", "400"),
+            ],
+        )
+    )
+    assert f.summary == "Patient-reported has 2 records for ibuprofen."
+    assert f.intake_value == "Advil 200 mg; ibuprofen 400 mg"
+    assert f.fhir_value is None and f.pharmacy_value is None
+    assert f.details["source"] == "intake" and f.details["count"] == 2

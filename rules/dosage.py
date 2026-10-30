@@ -1,30 +1,39 @@
-"""Dosage mismatch rule (TECHNICAL_PLAN §4.2, §4.6)."""
+"""Dosage mismatch rule (TECHNICAL_PLAN §4.2, §4.6, §16)."""
 
 from typing import ClassVar
 
 from contract import Finding, MedicationRecord, ReconciliationInput, format_dose, to_base
-from rules.base import ReconciliationRule, by_name
+from rules.base import (
+    SOURCE_LABELS,
+    ReconciliationRule,
+    all_names,
+    by_name,
+    participating,
+    sentence,
+)
 
 
 class DosageMismatchRule(ReconciliationRule):
-    """A name present in both sources whose sets of base-unit doses differ (500 mg == 0.5 g)."""
+    """A name in 2+ sources whose sets of base-unit doses differ (500 mg == 0.5 g)."""
 
     discrepancy_type: ClassVar[str] = "dosage_mismatch"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
-        """Flag names in both sources whose dose sets differ; mg vs mL is a different measure."""
-        pharmacy = by_name(data.pharmacy)
+        """Flag names in 2+ sources whose dose sets differ; mg vs mL is a different measure."""
+        groups = {source: by_name(records) for source, records in participating(data).items()}
         findings = []
-        for name, fhir_group in by_name(data.fhir).items():
-            pharmacy_group = pharmacy.get(name)
-            if not pharmacy_group:
+        for name in all_names(groups):
+            present = {source: g[name] for source, g in groups.items() if name in g}
+            if len(present) < 2:
                 continue
-            fhir_base, pharmacy_base = _base_doses(fhir_group), _base_doses(pharmacy_group)
-            if fhir_base == pharmacy_base:
+            base = {source: _base_doses(group) for source, group in present.items()}
+            if len({frozenset(doses) for doses in base.values()}) == 1:
                 continue
-            fhir_value, pharmacy_value = _listed(fhir_group), _listed(pharmacy_group)
-            different_measure = {u for _, u in fhir_base} != {u for _, u in pharmacy_base}
-            summary = f"FHIR dose {fhir_value}; pharmacy dose {pharmacy_value}."
+            values = {source: _listed(group) for source, group in present.items()}
+            different_measure = len({frozenset(u for _, u in d) for d in base.values()}) > 1
+            summary = sentence(
+                "; ".join(f"{SOURCE_LABELS[s]} dose {value}" for s, value in values.items()) + "."
+            )
             if different_measure:
                 summary = f"Doses are recorded in a different measure: {summary}"
             findings.append(
@@ -32,11 +41,9 @@ class DosageMismatchRule(ReconciliationRule):
                     discrepancy_type=self.discrepancy_type,
                     medication=name,
                     summary=summary,
-                    fhir_value=fhir_value,
-                    pharmacy_value=pharmacy_value,
+                    **{f"{source}_value": value for source, value in values.items()},
                     details={
-                        "fhir_doses_base": _sorted_base(fhir_base),
-                        "pharmacy_doses_base": _sorted_base(pharmacy_base),
+                        **{f"{s}_doses_base": _sorted_base(doses) for s, doses in base.items()},
                         "different_measure": different_measure,
                     },
                 )

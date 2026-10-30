@@ -55,3 +55,23 @@ def test_rejected_counterpart_stays_missing_not_omitted(rec, rejected, data):
 def test_custom_rule_list_is_honoured(rec, data):
     """An explicit rule list replaces DEFAULT_RULES."""
     assert run_rules(data(fhir=[rec("fhir", "metoprolol")]), rules=[]) == []
+
+
+def test_intake_none_and_empty_intake_differ(rec, data):
+    """None (no interview) gives the two-source result; [] reports every drug as unreported."""
+    fhir = [rec("fhir", "lisinopril", "10"), rec("fhir", "metoprolol", "25")]
+    pharmacy = [rec("pharmacy", "lisinopril", "10")]
+    no_interview = run_rules(data(fhir=fhir, pharmacy=pharmacy))
+    reports_none = run_rules(data(fhir=fhir, pharmacy=pharmacy, intake=[]))
+
+    assert [(f.medication, f.details["missing_from"]) for f in no_interview] == [
+        ("metoprolol", "pharmacy")
+    ]
+    assert no_interview[0].summary == "Listed in FHIR; no pharmacy record."
+
+    assert [(f.medication, f.details["missing_from"]) for f in reports_none] == [
+        ("lisinopril", ["intake"]),
+        ("metoprolol", ["intake", "pharmacy"]),
+    ]
+    assert all("(patient reports no medications)" in f.summary for f in reports_none)
+    assert all(f.intake_value is None for f in reports_none)
