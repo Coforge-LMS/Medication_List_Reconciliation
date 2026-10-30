@@ -53,10 +53,13 @@ def rejected():
 def data():
     """Factory for ReconciliationInput from iterables of records and rejections."""
 
-    def make(fhir=(), pharmacy=(), rejected=()):
-        """Build one patient's reconciliation input."""
+    def make(fhir=(), pharmacy=(), rejected=(), intake=None):
+        """Build one patient's reconciliation input; intake=None means no interview."""
         return ReconciliationInput(
-            fhir=list(fhir), pharmacy=list(pharmacy), rejected=list(rejected)
+            fhir=list(fhir),
+            pharmacy=list(pharmacy),
+            intake=None if intake is None else list(intake),
+            rejected=list(rejected),
         )
 
     return make
