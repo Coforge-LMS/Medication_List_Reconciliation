@@ -8,7 +8,7 @@ from app.labels import DISCLAIMER
 from app.main import app, get_fhir_client
 from db import repo
 from db.session import get_session
-from tests.app.conftest import case_intake
+from tests.app.conftest import case_intake, make_run
 
 
 @pytest.fixture
@@ -90,3 +90,22 @@ def test_missing_pharmacy_dataset_is_503(client, wired, tmp_path, monkeypatch):
     response = client.get("/patients/2178")
     assert response.status_code == 503
     assert "Pharmacy dataset not available" in response.text
+
+
+def test_reconcile_api_returns_201_with_the_run_json(client, wired, monkeypatch):
+    """POST /api/patients/{id}/reconcile saves and returns the run as GET /api/runs/{id} does."""
+    monkeypatch.setattr(repo, "get_run", lambda session, run_id: make_run(run_id=run_id))
+    response = client.post("/api/patients/2178/reconcile")
+    assert response.status_code == 201
+    body = response.json()
+    assert body["run_id"] == 42 and len(wired) == 1
+    assert {"patient", "intake_interview", "intake", "fhir", "pharmacy", "rejected"} <= set(body)
+    assert body == client.get("/api/runs/42").json()
+
+
+def test_reconcile_api_reports_fhir_failures_as_json(client, wired):
+    """An unknown patient is a JSON 404 with a readable detail."""
+    _fhir(lambda request: httpx.Response(404, json={}))
+    response = client.post("/api/patients/9/reconcile")
+    assert response.status_code == 404
+    assert response.json()["detail"].startswith("Patient not found")

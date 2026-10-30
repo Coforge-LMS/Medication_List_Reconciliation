@@ -146,6 +146,17 @@ def run_page(request: Request, run_id: int, session: SessionDep):
     )
 
 
+@app.post("/api/patients/{fhir_id}/reconcile", status_code=201)
+def reconcile_json(fhir_id: str, session: SessionDep, fhir: FhirDep, aliases: AliasesDep) -> dict:
+    """Run and save a reconciliation; 201 with the same JSON as GET /api/runs/{id}."""
+    try:
+        run_id = service.reconcile(fhir_id, session, fhir, aliases)
+    except PIPELINE_ERRORS as exc:
+        status, heading, message = pipeline_error(exc)
+        raise HTTPException(status_code=status, detail=f"{heading}: {message}") from exc
+    return repo.get_run(session, run_id).model_dump(mode="json")
+
+
 @app.get("/api/runs/{run_id}")
 def run_json(run_id: int, session: SessionDep) -> dict:
     """Run JSON: patient, interview, records per source, rejections and findings."""
