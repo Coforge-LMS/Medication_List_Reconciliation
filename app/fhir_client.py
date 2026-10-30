@@ -1,0 +1,91 @@
+"""FHIR REST client for HAPI: patient reads and paged searches (TECHNICAL_PLAN §6, §7.1, §16).
+
+Request shapes are the decided ones, the keys of tests/fixtures/hapi/index.json, so recorded
+fixtures and the E2E test match by exact URL. The transport is injectable for tests.
+"""
+
+import os
+import urllib.parse
+from typing import Any
+
+import httpx
+
+DEFAULT_BASE_URL = "http://localhost:8080/fhir"
+MAX_PAGES = 100  # guards against a next-link loop
+
+
+class FhirClient:
+    """Thin httpx wrapper; every response is checked with raise_for_status()."""
+
+    def __init__(
+        self,
+        base_url: str = DEFAULT_BASE_URL,
+        transport: httpx.BaseTransport | None = None,
+        timeout: float = 10.0,
+    ) -> None:
+        """Build a client for base_url; pass an httpx.MockTransport in tests."""
+        self.base_url = base_url.rstrip("/")
+        self._http = httpx.Client(
+            base_url=self.base_url + "/",
+            transport=transport,
+            timeout=timeout,
+            headers={"Accept": "application/fhir+json"},
+        )
+
+    @classmethod
+    def from_env(cls) -> "FhirClient":
+        """Client for FHIR_BASE_URL (default: HAPI on localhost)."""
+        return cls(os.environ.get("FHIR_BASE_URL", DEFAULT_BASE_URL))
+
+    def close(self) -> None:
+        """Close the underlying connection pool."""
+        self._http.close()
+
+    def read_patient(self, patient_id: str) -> dict[str, Any]:
+        """GET Patient/{id}."""
+        return self._get(f"Patient/{patient_id}")
+
+    def active_medication_requests(self, patient_id: str) -> list[dict[str, Any]]:
+        """GET MedicationRequest?patient={id}&status=active, following next links."""
+        return self._search(f"MedicationRequest?patient={patient_id}&status=active")
+
+    def find_case_patient(self, case: str) -> list[dict[str, Any]]:
+        """GET Patient?identifier=urn:medrec:case|<case> (encoded as the recorded fixtures)."""
+        identifier = urllib.parse.quote(f"urn:medrec:case|{case}", safe="")
+        return self._search(f"Patient?identifier={identifier}")
+
+    def list_patients(self) -> list[dict[str, Any]]:
+        """GET Patient?_count=50, following next links (live only: no recorded fixture)."""
+        return self._search("Patient?_count=50")
+
+    def _get(self, url: str) -> dict[str, Any]:
+        """One GET; url is relative to the base or an absolute next link."""
+        response = self._http.get(url)
+        response.raise_for_status()
+        return response.json()
+
+    def _search(self, url: str) -> list[dict[str, Any]]:
+        """Resources from a searchset, page by page via link[relation=next]."""
+        resources: list[dict[str, Any]] = []
+        for _ in range(MAX_PAGES):
+            bundle = self._get(url)
+            resources += [e["resource"] for e in bundle.get("entry", []) if "resource" in e]
+            url = next(
+                (link["url"] for link in bundle.get("link", []) if link.get("relation") == "next"),
+                None,
+            )
+            if url is None:
+                return resources
+        raise RuntimeError(f"FHIR search exceeded {MAX_PAGES} pages")
+
+
+def patient_row(resource: dict[str, Any]) -> dict[str, str | None]:
+    """Display fields for the patient list: id, 'Given Family', birth date, gender."""
+    names = resource.get("name") or [{}]
+    name = " ".join([*names[0].get("given", []), names[0].get("family", "")]).strip()
+    return {
+        "id": resource.get("id"),
+        "name": name or None,
+        "birth_date": resource.get("birthDate"),
+        "gender": resource.get("gender"),
+    }
