@@ -28,7 +28,8 @@ def wired(monkeypatch, recorded_client):
     app.dependency_overrides[get_session] = no_session
     app.dependency_overrides[get_fhir_client] = lambda: recorded_client
     yield saved
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_session, None)
+    app.dependency_overrides.pop(get_fhir_client, None)
 
 
 def test_patient_page_shows_three_columns_and_the_run_button(client, wired):
@@ -38,7 +39,8 @@ def test_patient_page_shows_three_columns_and_the_run_button(client, wired):
     compared = html[html.index("Medications compared") :]
     assert compared.index("Patient-reported") < compared.index("FHIR") < compared.index("Pharmacy")
     assert "Ibuprofen" in compared and "metoprolol tartrate" in compared
-    assert "Omeprazole" in compared and "Warfarin Sodium" in compared  # rejected row listed
+    assert "Omeprazole" in compared  # an accepted pharmacy-only record
+    assert "Warfarin Sodium" in compared  # the rejected pharmacy row
     assert '<p id="interview">Intake taken 2026-10-28 by RN Okafor (patient)</p>' in html
     assert 'action="/patients/2178/reconcile"' in html and "/patients/2178/history" in html
     assert wired == []  # viewing never saves

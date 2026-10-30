@@ -36,7 +36,6 @@ def interview_line(interview: IntakeInterviewInfo | None) -> str:
         return "No intake history recorded"
     if interview.no_medications:
         return "Patient reports no medications"
-    return (
-        f"Intake taken {interview.taken_at:%Y-%m-%d} by {interview.taken_by} "
-        f"({interview.informant})"
-    )
+    # Local date, the same day latest_intake_for puts on the intake rows.
+    taken_on = interview.taken_at.astimezone()
+    return f"Intake taken {taken_on:%Y-%m-%d} by {interview.taken_by} ({interview.informant})"

@@ -13,7 +13,7 @@
     {% for r in runs %}
     <tr>
       <td><a href="/runs/{{ r.run_id }}">Run {{ r.run_id }}</a></td>
-      <td>{{ r.started_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ r.started_at | utc_time }}</td>
       <td>{{ r.app_version }}</td>
       <td>{{ r.finding_count }}</td>
       <td>{% for t, n in r.counts_by_type.items() %}{{ label_for(t) }}: {{ n }}{% if not loop.last %}; {% endif %}{% endfor %}</td>

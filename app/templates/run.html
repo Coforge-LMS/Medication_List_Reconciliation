@@ -4,7 +4,7 @@
 <h1>Reconciliation run {{ run.run_id }}</h1>
 <p>
   {{ run.patient.name or run.patient.identifier }}
-  <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at.strftime("%Y-%m-%d %H:%M") }} UTC · app {{ run.app_version }}</span>
+  <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at | utc_time }} UTC · app {{ run.app_version }}</span>
 </p>
 <p id="interview">{{ interview }}</p>
 

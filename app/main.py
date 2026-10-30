@@ -3,6 +3,7 @@
 import os
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
 from typing import Annotated
@@ -61,8 +62,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
+def utc_time(moment: datetime) -> str:
+    """'2026-10-30 14:05' in UTC, whatever zone the database session returned."""
+    return f"{moment.astimezone(UTC):%Y-%m-%d %H:%M}"
+
+
 app = FastAPI(title="MedRec", version=__version__, lifespan=lifespan)
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
+templates.env.filters["utc_time"] = utc_time
 templates.env.globals.update(
     version=__version__,
     disclaimer=DISCLAIMER,

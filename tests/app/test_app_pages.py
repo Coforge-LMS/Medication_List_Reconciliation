@@ -1,6 +1,7 @@
 """Run page: grouping, Other (x), three values, columns, interview states, footer, 404."""
 
 import re
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -94,3 +95,10 @@ def test_missing_run_is_404_with_footer(client, serve_run):
     response = client.get("/runs/999")
     assert response.status_code == 404
     assert "Run not found" in response.text and DISCLAIMER in response.text
+
+
+def test_run_time_is_shown_in_utc(client, serve_run):
+    """A started_at returned in another zone (+05:30) is converted before it's labelled UTC."""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    serve_run(make_run(started_at=datetime(2026, 10, 30, 14, 5, tzinfo=ist)))
+    assert "2026-10-30 08:35 UTC" in client.get("/runs/7").text
