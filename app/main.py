@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -48,6 +48,15 @@ def run_page(request: Request, run_id: int, session: SessionDep):
             "columns": _columns(run),
         },
     )
+
+
+@app.get("/api/runs/{run_id}")
+def run_json(run_id: int, session: SessionDep) -> dict:
+    """Run JSON: patient, interview, records per source, rejections and findings."""
+    run = repo.get_run(session, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run.model_dump(mode="json")
 
 
 def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
