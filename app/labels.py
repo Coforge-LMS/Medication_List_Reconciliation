@@ -4,6 +4,8 @@ Unknown finding types render as "Other (x)" so an older release can still show f
 written by a newer one (TECHNICAL_PLAN §5, tolerant reader).
 """
 
+from contract import IntakeInterviewInfo
+
 DISCLAIMER = (
     "Synthetic data. Reports discrepancies between sources for clinician review; "
     "does not recommend treatment."
@@ -18,3 +20,23 @@ LABELS: dict[str, str] = {
 
 def label_for(discrepancy_type: str) -> str:
     return LABELS.get(discrepancy_type, f"Other ({discrepancy_type})")
+
+
+# Medication column headings in display order (TECHNICAL_PLAN §16).
+SOURCE_HEADINGS: dict[str, str] = {
+    "intake": "Patient-reported",
+    "fhir": "FHIR",
+    "pharmacy": "Pharmacy",
+}
+
+
+def interview_line(interview: IntakeInterviewInfo | None) -> str:
+    """One line describing the intake interview a run compared, or its absence."""
+    if interview is None:
+        return "No intake history recorded"
+    if interview.no_medications:
+        return "Patient reports no medications"
+    return (
+        f"Intake taken {interview.taken_at:%Y-%m-%d} by {interview.taken_by} "
+        f"({interview.informant})"
+    )
