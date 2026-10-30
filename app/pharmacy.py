@@ -1,4 +1,4 @@
-"""Read the baked-in synthetic pharmacy dataset (TECHNICAL_PLAN §3, §7.1 step 3).
+"""Read the baked-in synthetic pharmacy dataset.
 
 Rows stay raw, string-valued dicts; ingest.pharmacy.validate turns them into records (B4).
 """
@@ -14,14 +14,10 @@ class PharmacyDataError(ValueError):
     """The dataset file exists but isn't a JSON list of rows."""
 
 
-DEFAULT_PATH = (
-    Path(__file__).resolve().parent.parent / "data" / "pharmacy" / "pharmacy_records.json"
-)
-
-
 def rows_for(patient_id: str, path: Path | str | None = None) -> list[dict[str, str]]:
     """This patient's raw rows in file order; [] when the patient has none."""
-    dataset = Path(path or os.environ.get("PHARMACY_DATA", DEFAULT_PATH))
+    default = Path(__file__).resolve().parents[1] / "data" / "pharmacy" / "pharmacy_records.json"
+    dataset = Path(path or os.environ.get("PHARMACY_DATA") or default)
     return list(_by_patient(dataset).get(patient_id, []))
 
 

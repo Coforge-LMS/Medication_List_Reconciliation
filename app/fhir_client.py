@@ -1,4 +1,4 @@
-"""FHIR REST client for HAPI: patient reads and paged searches (TECHNICAL_PLAN §6, §7.1, §16).
+"""FHIR REST client for HAPI: patient reads and paged searches.
 
 Request shapes are the decided ones, the keys of tests/fixtures/hapi/index.json, so recorded
 fixtures and the E2E test match by exact URL. The transport is injectable for tests.

@@ -1,4 +1,4 @@
-"""App startup: the alias config is checked before the app serves anything (§4.4)."""
+"""App startup: the alias config is checked before the app serves anything."""
 
 import pytest
 from fastapi.testclient import TestClient

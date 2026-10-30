@@ -1,4 +1,4 @@
-"""The reconcile pipeline the HTML and JSON routes share (TECHNICAL_PLAN §7.1, §16)."""
+"""The reconcile pipeline the HTML and JSON routes share."""
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -33,7 +33,7 @@ def build_input(
     intake_rows: Iterable[Mapping[str, Any]] | None,
     aliases: AliasConfig,
 ) -> ReconciliationInput:
-    """Map, validate and normalize the three sources (§7.1 steps 2-5); no I/O.
+    """Map, validate and normalize the three sources; no I/O.
 
     intake_rows=None means no interview was recorded, so intake stays None (two-source result);
     [] means the patient reports no medications. Rejections from every source are normalized
