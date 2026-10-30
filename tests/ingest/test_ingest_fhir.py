@@ -1,6 +1,7 @@
 """ingest.fhir: MedicationRequest and Patient mapping, on built resources and the recorded data."""
 
 import json
+import time
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from contract import MedicationRecord, Rejection
+from ingest import checks
 from ingest.aliases import load_aliases
 from ingest.fhir import (
     PatientMappingError,
@@ -137,6 +139,39 @@ def test_a_non_positive_dose_count_is_unreadable(count):
     assert [r.code for r in rejected(resource).reasons] == ["unreadable_dosage"]
 
 
+# --- malformed values must reject or fall back, never crash the patient
+
+
+@pytest.mark.parametrize("count", ["NaN", "Infinity", "-Infinity", "abc", [1], {"x": 1}])
+def test_a_non_finite_or_non_numeric_dose_count_is_rejected_not_raised(count):
+    resource = mr() | dosage(doseAndRate=[{"doseQuantity": {"value": count}}])
+    rejection = rejected(resource)
+    assert [(r.field, r.code) for r in rejection.reasons] == [("doseQuantity", "unreadable_dosage")]
+
+
+@pytest.mark.parametrize("period", ["one", "NaN", "Infinity", 0, -1, [1], None])
+def test_a_bad_period_falls_back_to_the_dosage_text(period):
+    timing = {"repeat": {"frequency": 1, "period": period, "periodUnit": "d"}}
+    rec = mapped(mr() | dosage(timing=timing, text="Once a day"))
+    assert rec.frequency == "Once a day"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"dosageInstruction": "take daily"},
+        {"dosageInstruction": ["take daily"]},
+        {"dosageInstruction": [{"timing": "daily", "doseAndRate": "1"}]},
+        {"dosageInstruction": [{"timing": {"code": "BID", "repeat": "x"}, "doseAndRate": ["1"]}]},
+        {"dosageInstruction": [{"doseAndRate": [{"doseQuantity": "1"}]}]},
+        {"dosageInstruction": [{"timing": {"code": {"coding": "BID"}}}]},
+    ],
+)
+def test_malformed_dosage_shapes_do_not_crash(bad):
+    rec = mapped(mr() | bad)
+    assert (rec.dose_amount, rec.dose_unit) == (Decimal("10"), "mg")
+
+
 # --- status
 
 
@@ -220,9 +255,42 @@ def test_as_needed_false_adds_nothing():
 # --- date
 
 
-def test_the_date_is_the_utc_date_of_authored_on():
-    assert mapped(mr(authoredOn="2025-12-14T23:30:00-05:00")).date_recorded == date(2025, 12, 15)
+@pytest.fixture
+def clock(monkeypatch):
+    """Pin the process timezone and today's date, then undo both."""
+
+    def set_clock(tz, today):
+        class FakeDate(date):
+            @classmethod
+            def today(cls):
+                return cls(*today)
+
+        monkeypatch.setenv("TZ", tz)
+        time.tzset()
+        monkeypatch.setattr(checks, "date", FakeDate)
+
+    yield set_clock
+    monkeypatch.undo()
+    time.tzset()
+
+
+def test_authored_on_is_the_date_on_the_local_clock(clock):
+    clock("America/New_York", (2025, 12, 14))
+    assert mapped(mr(authoredOn="2025-12-14T23:30:00-05:00")).date_recorded == date(2025, 12, 14)
     assert mapped(mr(authoredOn="2025-12-14")).date_recorded == date(2025, 12, 14)
+
+
+def test_an_evening_timestamp_is_not_future_when_utc_is_already_tomorrow(clock):
+    # 23:30 in New York on Oct 30 is 03:30 UTC on Oct 31; the clinic's clock still says Oct 30
+    clock("America/New_York", (2026, 10, 30))
+    rec = mapped(mr(authoredOn="2026-10-30T23:30:00-04:00"))
+    assert rec.date_recorded == date(2026, 10, 30)
+
+
+def test_a_timestamp_that_is_tomorrow_locally_is_still_future(clock):
+    clock("America/New_York", (2026, 10, 30))
+    reasons = rejected(mr(authoredOn="2026-10-31T00:30:00-04:00")).reasons
+    assert [r.code for r in reasons] == ["future_date"]
 
 
 @pytest.mark.parametrize(

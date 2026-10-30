@@ -1,7 +1,7 @@
 """Field checks shared by the pharmacy/intake validator and the FHIR mapper (§4.5)."""
 
 import re
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import Any
 
 from contract import Reason
@@ -41,7 +41,11 @@ def check_date(text: str, field: str) -> tuple[date | None, Reason | None]:
 
 
 def check_datetime(text: str, field: str) -> tuple[date | None, Reason | None]:
-    """Like check_date, but also accepts a full ISO date-time (UTC date taken), e.g. authoredOn."""
+    """Like check_date, but also accepts a full ISO date-time, e.g. authoredOn.
+
+    A date-time becomes the date on the local clock, the one date.today() and the contract's
+    future-date check use, so an evening timestamp isn't "tomorrow" in UTC.
+    """
     if not text:
         return None, missing(field)
     if _ISO_DATE.fullmatch(text):
@@ -52,7 +56,7 @@ def check_datetime(text: str, field: str) -> tuple[date | None, Reason | None]:
         return None, Reason(
             field=field, code="invalid_date", message=f"{text!r} is not an ISO date"
         )
-    parsed = (moment.astimezone(UTC) if moment.tzinfo else moment).date()
+    parsed = (moment.astimezone() if moment.tzinfo else moment).date()
     return _not_future(parsed, text, field)
 
 

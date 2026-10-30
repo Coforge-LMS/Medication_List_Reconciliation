@@ -145,30 +145,49 @@ def _medication_name(resource: dict[str, Any]) -> str:
     return rxnorm or clean(concept.get("text")) or other
 
 
+def _obj(value: Any) -> dict[str, Any]:
+    """A JSON object, or {} for anything else, so one malformed field can't crash a patient."""
+    return value if isinstance(value, dict) else {}
+
+
+def _first(value: Any) -> dict[str, Any]:
+    return _obj(value[0]) if isinstance(value, list) and value else {}
+
+
+def _finite(value: Any) -> Decimal | None:
+    """The value as a finite Decimal, or None for text, NaN and Infinity."""
+    try:
+        number = Decimal(str(value))
+    except InvalidOperation:
+        return None
+    return number if number.is_finite() else None
+
+
 def _dosage(resource: dict[str, Any]) -> dict[str, Any]:
-    instructions = resource.get("dosageInstruction") or []
-    return instructions[0] if instructions else {}
+    return _first(resource.get("dosageInstruction"))
 
 
 def _dose_quantity(resource: dict[str, Any]) -> dict[str, Any]:
-    rates = _dosage(resource).get("doseAndRate") or []
-    return (rates[0].get("doseQuantity") or {}) if rates else {}
+    return _obj(_first(_dosage(resource).get("doseAndRate")).get("doseQuantity"))
 
 
 def _dose(
     display: str, quantity: dict[str, Any]
 ) -> tuple[Decimal | None, str | None, Reason | None]:
     """Per-administration dose: a real mass/volume unit on doseQuantity, else strength x count."""
-    try:
-        count = Decimal(str(quantity["value"])) if quantity.get("value") is not None else None
-    except InvalidOperation:
-        return (
-            None,
-            None,
-            unreadable("doseQuantity", f"dose count {quantity['value']!r} is not a number"),
-        )
-    if count is not None and count <= 0:
-        return None, None, unreadable("doseQuantity", f"dose count {count} must be positive")
+    count = None
+    if quantity.get("value") is not None:
+        count = _finite(quantity["value"])
+        if count is None:
+            return (
+                None,
+                None,
+                unreadable(
+                    "doseQuantity", f"dose count {quantity['value']!r} is not a finite number"
+                ),
+            )
+        if count <= 0:
+            return None, None, unreadable("doseQuantity", f"dose count {count} must be positive")
     own_unit = normalize_unit(clean(quantity.get("code")) or clean(quantity.get("unit")))
     if count is not None and own_unit:
         return count, own_unit, None
@@ -214,14 +233,15 @@ def _frequency(resource: dict[str, Any]) -> str | None:
     An as-needed order with no timing is just "PRN"; Synthea's "Take as needed." is noise.
     """
     dosage = _dosage(resource)
-    timing = dosage.get("timing") or {}
-    code = timing.get("code") or {}
-    coded = next((clean(c.get("code")) for c in code.get("coding") or [] if c.get("code")), "")
+    timing = _obj(dosage.get("timing"))
+    code = _obj(timing.get("code"))
+    codings = code.get("coding") if isinstance(code.get("coding"), list) else []
+    coded = next((clean(_obj(c).get("code")) for c in codings if _obj(c).get("code")), "")
     base = coded or clean(code.get("text"))
-    repeat = timing.get("repeat") or {}
-    if not base and repeat.get("frequency") and repeat.get("period") and repeat.get("periodUnit"):
-        period = Decimal(str(repeat["period"])).normalize()
-        base = f"{repeat['frequency']}/{period:f}{repeat['periodUnit']}"
+    repeat = _obj(timing.get("repeat"))
+    period = _finite(repeat.get("period"))
+    if not base and repeat.get("frequency") and period and period > 0 and repeat.get("periodUnit"):
+        base = f"{repeat['frequency']}/{period.normalize():f}{repeat['periodUnit']}"
     as_needed = dosage.get("asNeededBoolean") is True or dosage.get("asNeededCodeableConcept")
     if as_needed:
         return f"{base} PRN" if base else "PRN"
