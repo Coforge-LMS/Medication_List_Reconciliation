@@ -10,7 +10,11 @@ from typing import ClassVar
 from contract import Finding, MedicationRecord, ReconciliationInput, Rejection, Source
 
 # Display names used inside finding summaries.
-SOURCE_LABELS: dict[Source, str] = {"fhir": "FHIR", "pharmacy": "pharmacy"}
+SOURCE_LABELS: dict[Source, str] = {
+    "intake": "patient-reported",
+    "fhir": "FHIR",
+    "pharmacy": "pharmacy",
+}
 OTHER_SOURCE: dict[Source, Source] = {"fhir": "pharmacy", "pharmacy": "fhir"}
 
 
@@ -37,6 +41,24 @@ def by_name(records: list[MedicationRecord]) -> dict[str, list[MedicationRecord]
     for rec in records:
         groups[identity(rec)].append(rec)
     return dict(sorted(groups.items()))
+
+
+def participating(data: ReconciliationInput) -> dict[Source, list[MedicationRecord]]:
+    """Sources that take part, in display order; intake only when an interview was recorded.
+
+    intake=None (no interview) leaves intake out; intake=[] (patient reports none) keeps it.
+    """
+    sources: dict[Source, list[MedicationRecord]] = {}
+    if data.intake is not None:
+        sources["intake"] = data.intake
+    sources["fhir"] = data.fhir
+    sources["pharmacy"] = data.pharmacy
+    return sources
+
+
+def all_names(groups: dict[Source, dict[str, list[MedicationRecord]]]) -> list[str]:
+    """Every name across sources: each source's names in order, then names new to the next."""
+    return list(dict.fromkeys(name for by_source in groups.values() for name in by_source))
 
 
 def sentence(text: str) -> str:
