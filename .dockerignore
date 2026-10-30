@@ -1,0 +1,25 @@
+# Allow only application inputs into the build context, excluding local secrets,
+# Git history, virtualenvs, tests, and the much larger FHIR seed bundles.
+**
+!pyproject.toml
+!uv.lock
+!app/
+!app/**
+!contract/
+!contract/**
+!db/
+!db/**
+!ingest/
+!ingest/**
+!rules/
+!rules/**
+!data/
+!data/aliases.json
+!data/intake/
+!data/intake/**
+!data/pharmacy/
+!data/pharmacy/**
+**/__pycache__/
+**/*.py[cod]
+**/.env
+**/.env.*
