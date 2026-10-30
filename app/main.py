@@ -9,10 +9,11 @@ from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app import service
 from app.fhir_client import FhirClient, patient_row
 from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
 from app.version import __version__
@@ -20,6 +21,7 @@ from contract import AliasConfig, Finding, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
 from ingest.aliases import load_aliases
+from ingest.fhir import PatientMappingError
 
 DEFAULT_ALIASES = Path(__file__).resolve().parent.parent / "data" / "aliases.json"
 
@@ -85,6 +87,45 @@ def patient_list(request: Request, fhir: FhirDep):
     return templates.TemplateResponse(request, "patients.html", {"patients": patients})
 
 
+@app.get("/patients/{fhir_id}", response_class=HTMLResponse)
+def patient_page(
+    request: Request, fhir_id: str, session: SessionDep, fhir: FhirDep, aliases: AliasesDep
+):
+    """The three medication lists and rejections as they stand now, with a Run button."""
+    try:
+        prepared = service.collect(fhir_id, session, fhir, aliases)
+    except PIPELINE_ERRORS as exc:
+        return _message(request, *pipeline_error(exc))
+    data = prepared.data
+    return templates.TemplateResponse(
+        request,
+        "patient.html",
+        {
+            "fhir_id": fhir_id,
+            "patient": prepared.patient,
+            "interview": interview_line(prepared.interview),
+            "columns": [
+                (SOURCE_HEADINGS["intake"], data.intake or []),
+                (SOURCE_HEADINGS["fhir"], data.fhir),
+                (SOURCE_HEADINGS["pharmacy"], data.pharmacy),
+            ],
+            "rejected": data.rejected,
+        },
+    )
+
+
+@app.post("/patients/{fhir_id}/reconcile")
+def reconcile_page(
+    request: Request, fhir_id: str, session: SessionDep, fhir: FhirDep, aliases: AliasesDep
+):
+    """Run and save a reconciliation, then 303 to its run page."""
+    try:
+        run_id = service.reconcile(fhir_id, session, fhir, aliases)
+    except PIPELINE_ERRORS as exc:
+        return _message(request, *pipeline_error(exc))
+    return RedirectResponse(f"/runs/{run_id}", status_code=303)
+
+
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_page(request: Request, run_id: int, session: SessionDep):
     """Findings grouped by type, the three medication lists, rejections and the interview."""
@@ -112,6 +153,20 @@ def run_json(run_id: int, session: SessionDep) -> dict:
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return run.model_dump(mode="json")
+
+
+PIPELINE_ERRORS = (httpx.HTTPError, PatientMappingError, FileNotFoundError)
+
+
+def pipeline_error(exc: Exception) -> tuple[int, str, str]:
+    """(status, heading, message) for a failure while fetching or preparing a patient."""
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+        return 404, "Patient not found", "The FHIR server has no such patient."
+    if isinstance(exc, httpx.HTTPError):
+        return 502, "FHIR server unavailable", f"Could not reach the FHIR server ({exc})."
+    if isinstance(exc, PatientMappingError):
+        return 422, "Patient cannot be reconciled", str(exc)
+    return 503, "Pharmacy dataset not available", str(exc)
 
 
 def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
