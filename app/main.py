@@ -1,20 +1,34 @@
 """FastAPI entry point: pages, JSON API and /healthz (TECHNICAL_PLAN §6)."""
 
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.fhir_client import FhirClient, patient_row
 from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
 from app.version import __version__
 from contract import Finding, RunDetail, format_dose
 from db import repo
 from db.session import get_session
 
+
+def get_fhir_client() -> Iterator[FhirClient]:
+    """FastAPI dependency: a FHIR client for FHIR_BASE_URL, closed after the request."""
+    client = FhirClient.from_env()
+    try:
+        yield client
+    finally:
+        client.close()
+
+
 SessionDep = Annotated[Session, Depends(get_session)]
+FhirDep = Annotated[FhirClient, Depends(get_fhir_client)]
 
 app = FastAPI(title="MedRec", version=__version__)
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
@@ -29,6 +43,18 @@ templates.env.globals.update(
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
+
+
+@app.get("/", response_class=HTMLResponse)
+def patient_list(request: Request, fhir: FhirDep):
+    """Live patient list from FHIR; a readable 502 page when the server is unavailable."""
+    try:
+        patients = [patient_row(p) for p in fhir.list_patients()]
+    except httpx.HTTPError as exc:
+        return _message(
+            request, 502, "FHIR server unavailable", f"Could not load patients from FHIR ({exc})."
+        )
+    return templates.TemplateResponse(request, "patients.html", {"patients": patients})
 
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)

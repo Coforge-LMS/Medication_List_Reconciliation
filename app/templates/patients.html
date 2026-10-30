@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Patients · MedRec{% endblock %}
+{% block content %}
+<h1>Patients</h1>
+{% if patients %}
+<table>
+  <thead><tr><th>Name</th><th>Birth date</th><th>Gender</th><th>FHIR id</th></tr></thead>
+  <tbody>
+    {% for p in patients %}
+    <tr>
+      <td><a href="/patients/{{ p.id }}">{{ p.name or "(no name)" }}</a></td>
+      <td>{{ p.birth_date or "—" }}</td>
+      <td>{{ p.gender or "—" }}</td>
+      <td>{{ p.id }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No patients on the FHIR server.</p>
+{% endif %}
+{% endblock %}
