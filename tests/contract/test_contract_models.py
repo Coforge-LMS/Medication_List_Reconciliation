@@ -4,7 +4,14 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from contract import Finding, MedicationRecord, Reason, ReconciliationInput, Rejection
+from contract import (
+    Finding,
+    IntakeInterviewInfo,
+    MedicationRecord,
+    Reason,
+    ReconciliationInput,
+    Rejection,
+)
 
 
 def record(**overrides):
@@ -85,3 +92,60 @@ def test_run_detail_holds_unknown_finding_types():
         findings=[Finding(discrepancy_type="future_type", medication="x", summary="y")],
     )
     assert run.findings[0].discrepancy_type == "future_type"
+
+
+def test_intake_is_a_valid_source():
+    assert record(source="intake").source == "intake"
+
+
+def test_reconciliation_input_intake_none_vs_empty():
+    base = dict(fhir=[record(source="fhir")], pharmacy=[record()])
+    assert ReconciliationInput(**base).intake is None  # no interview recorded
+    assert ReconciliationInput(**base, intake=[]).intake == []  # interview: no medications
+    assert (
+        ReconciliationInput(**base, intake=[record(source="intake")]).intake[0].source == "intake"
+    )
+
+
+def test_finding_intake_value_defaults_to_none():
+    assert Finding(discrepancy_type="x", medication="m", summary="s").intake_value is None
+    assert (
+        Finding(
+            discrepancy_type="x", medication="m", summary="s", intake_value="10 mg"
+        ).intake_value
+        == "10 mg"
+    )
+
+
+def test_intake_interview_info_is_frozen():
+    from datetime import datetime
+
+    info = IntakeInterviewInfo(
+        taken_at=datetime(2026, 10, 28, 9, 30),
+        taken_by="RN Lee",
+        informant="patient",
+        no_medications=False,
+    )
+    assert info.informant == "patient"
+    with pytest.raises(ValidationError):
+        info.taken_by = "other"
+    with pytest.raises(ValidationError):
+        IntakeInterviewInfo(taken_at=datetime(2026, 10, 28), taken_by="x", informant="y")
+
+
+def test_run_detail_intake_defaults():
+    from datetime import datetime
+
+    from contract import PatientInfo, RunDetail
+
+    run = RunDetail(
+        run_id=1,
+        app_version="1.1.0",
+        started_at=datetime(2026, 10, 29, 12, 0),
+        patient=PatientInfo(identifier="CASE-MIXED", fhir_patient_id="42"),
+        fhir=[],
+        pharmacy=[],
+        rejected=[],
+        findings=[],
+    )
+    assert run.intake == [] and run.intake_interview is None
