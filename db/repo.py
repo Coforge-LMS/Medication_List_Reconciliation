@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Engine, func, select
+from sqlalchemy import Engine, func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,17 @@ def save_run(
     latest_intake_for returned.
     """
     if session.in_transaction():
-        session.commit()  # ends a read the caller autobegan (e.g. latest_intake_for)
+        # Only a read may be open here (e.g. latest_intake_for): end it, but never commit or drop
+        # the caller's writes, unflushed (session.new/dirty/deleted) or flushed (Postgres assigns
+        # a transaction id only once the transaction writes).
+        if (
+            session.new
+            or session.dirty
+            or session.deleted
+            or session.scalar(text("SELECT pg_current_xact_id_if_assigned()")) is not None
+        ):
+            raise RuntimeError("save_run needs a session without uncommitted writes")
+        session.rollback()
     with session.begin():
         values = patient.model_dump() | {
             "fhir_base_url": fhir_base_url,

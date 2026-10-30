@@ -1,6 +1,7 @@
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from contract import (
     ReconciliationInput,
     Rejection,
 )
+from db import models
 from db.repo import get_run, latest_intake_for, list_runs, save_run
 
 BASE_URL = "http://hapi:8080/fhir"
@@ -162,6 +164,19 @@ def test_save_run_after_a_read_on_the_same_session(db, seed_intake):
         data = ReconciliationInput(fhir=[], pharmacy=[], intake=[])
         run_id = save_run(session, patient(), BASE_URL, "1.0.0", data, [])
         assert get_run(session, run_id).intake_interview == interview == INTERVIEW
+
+
+@pytest.mark.parametrize("flush", [False, True], ids=["pending", "flushed"])
+def test_save_run_refuses_a_session_with_uncommitted_writes(db, row_counts, flush):
+    with Session(db) as session:
+        session.add(models.Patient(identifier="CASE-OTHER"))
+        if flush:
+            session.flush()
+        with pytest.raises(RuntimeError, match="uncommitted writes"):
+            save_run(
+                session, patient(), BASE_URL, "1.0.0", ReconciliationInput(fhir=[], pharmacy=[]), []
+            )
+    assert set(row_counts().values()) == {0}  # neither committed nor half-saved
 
 
 def test_get_run_of_missing_id_is_none(db):
