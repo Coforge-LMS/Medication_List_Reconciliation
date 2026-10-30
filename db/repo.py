@@ -1,4 +1,4 @@
-"""Persistence: atomic save of one run, and the history reads (TECHNICAL_PLAN §5)."""
+"""Persistence: atomic save of one run, history reads, latest intake (TECHNICAL_PLAN §5, §16)."""
 
 from datetime import UTC, datetime
 
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from contract import (
     Finding,
+    IntakeInterviewInfo,
     MedicationRecord,
     PatientInfo,
     ReconciliationInput,
@@ -34,7 +35,11 @@ def save_run(
     """Upsert the patient and store the run with its records, rejections and findings.
 
     One transaction: any exception rolls back everything, the patient upsert included.
+    When data.intake is not None the run links the patient's latest interview, the one
+    latest_intake_for returned.
     """
+    if session.in_transaction():
+        session.commit()  # ends a read the caller autobegan (e.g. latest_intake_for)
     with session.begin():
         values = patient.model_dump() | {
             "fhir_base_url": fhir_base_url,
@@ -46,8 +51,18 @@ def save_run(
             .on_conflict_do_update(index_elements=["identifier"], set_=values)
             .returning(models.Patient.id)
         )
+        interview = None
+        if data.intake is not None:
+            # shortcut: links the latest interview at save time, so a reseed between the read and
+            # the save would mislink; pass the interview id instead if seeding ever runs live.
+            interview = _latest_interview(session, patient.identifier)
+            if interview is None:
+                raise ValueError(f"intake given but no interview recorded for {patient.identifier}")
         run = models.ReconciliationRun(
-            patient_id=patient_id, app_version=app_version, started_at=datetime.now(UTC)
+            patient_id=patient_id,
+            intake_interview_id=interview.id if interview else None,
+            app_version=app_version,
+            started_at=datetime.now(UTC),
         )
         session.add(run)
         session.flush()
@@ -65,7 +80,7 @@ def save_run(
                 date_recorded=r.date_recorded,
                 raw=r.raw,
             )
-            for r in [*data.fhir, *data.pharmacy]
+            for r in [*data.fhir, *data.pharmacy, *(data.intake or [])]
         )
         session.add_all(
             models.RejectedRecord(
@@ -86,6 +101,7 @@ def save_run(
                 summary=f.summary,
                 fhir_value=f.fhir_value,
                 pharmacy_value=f.pharmacy_value,
+                intake_value=f.intake_value,
                 details=f.details,
             )
             for f in findings
@@ -100,6 +116,9 @@ def get_run(session: Session, run_id: int) -> RunDetail | None:
     if run is None:
         return None
     p = session.get_one(models.Patient, run.patient_id)
+    interview = run.intake_interview_id and session.get(
+        models.IntakeInterview, run.intake_interview_id
+    )
 
     def rows(model):
         return session.scalars(select(model).where(model.run_id == run_id).order_by(model.id))
@@ -133,6 +152,12 @@ def get_run(session: Session, run_id: int) -> RunDetail | None:
         ),
         fhir=[r for r in records if r.source == "fhir"],
         pharmacy=[r for r in records if r.source == "pharmacy"],
+        intake=[r for r in records if r.source == "intake"],
+        intake_interview=(
+            IntakeInterviewInfo.model_validate(interview, from_attributes=True)
+            if interview
+            else None
+        ),
         rejected=[
             Rejection(
                 source=r.source,
@@ -150,6 +175,7 @@ def get_run(session: Session, run_id: int) -> RunDetail | None:
                 summary=f.summary,
                 fhir_value=f.fhir_value,
                 pharmacy_value=f.pharmacy_value,
+                intake_value=f.intake_value,
                 details=f.details,
             )
             for f in rows(models.Finding)
@@ -190,3 +216,46 @@ def list_runs(session: Session, identifier: str) -> list[RunSummary]:
     return [
         RunSummary(**s, finding_count=sum(s["counts_by_type"].values())) for s in summaries.values()
     ]
+
+
+def _latest_interview(session: Session, identifier: str) -> models.IntakeInterview | None:
+    interview = models.IntakeInterview
+    return session.scalar(
+        select(interview)
+        .join(models.Patient)
+        .where(models.Patient.identifier == identifier)
+        .order_by(interview.taken_at.desc(), interview.id.desc())
+        .limit(1)
+    )
+
+
+def latest_intake_for(
+    session: Session, identifier: str
+) -> tuple[IntakeInterviewInfo, list[dict[str, str | None]]] | None:
+    """The newest interview and its raw rows, shaped like pharmacy rows for ingest validation.
+
+    None means no interview was taken; no_medications with [] means the patient takes nothing.
+    Each row is dated by its interview (date_recorded = taken_at's date).
+    """
+    interview = _latest_interview(session, identifier)
+    if interview is None:
+        return None
+    meds = session.scalars(
+        select(models.IntakeMedication)
+        .where(models.IntakeMedication.interview_id == interview.id)
+        .order_by(models.IntakeMedication.id)
+    )
+    taken_on = interview.taken_at.date().isoformat()
+    rows = [
+        {
+            "record_id": m.record_id,
+            "patient_id": identifier,
+            "medication_name": m.medication_name,
+            "dose_amount": m.dose_amount,
+            "dose_unit": m.dose_unit,
+            "frequency": m.frequency,
+            "date_recorded": taken_on,
+        }
+        for m in meds
+    ]
+    return IntakeInterviewInfo.model_validate(interview, from_attributes=True), rows

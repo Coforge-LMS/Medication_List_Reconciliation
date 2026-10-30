@@ -1,4 +1,4 @@
-"""App database schema: five tables, V2-ready, applied with create_all (TECHNICAL_PLAN §5)."""
+"""App database schema: seven tables, V2-ready, applied by create_all (TECHNICAL_PLAN §5, §16)."""
 
 from datetime import date, datetime
 from decimal import Decimal
@@ -36,18 +36,51 @@ def _run_fk() -> Mapped[int]:
 
 
 class Patient(Base):
-    """FHIR patient snapshot; identifier is the stable key, fhir_patient_id the latest HAPI id."""
+    """identifier is the stable key; FHIR columns stay NULL until the first fetch (intake seed)."""
 
     __tablename__ = "patient"
 
     id: Mapped[int] = _pk()
     identifier: Mapped[str] = mapped_column(unique=True)
-    fhir_base_url: Mapped[str]
-    fhir_patient_id: Mapped[str]
+    fhir_base_url: Mapped[str | None]
+    fhir_patient_id: Mapped[str | None]  # latest HAPI id
     name: Mapped[str | None]
     birth_date: Mapped[date | None]
     gender: Mapped[str | None]
-    fetched_at: Mapped[datetime]
+    fetched_at: Mapped[datetime | None]
+
+
+class IntakeInterview(Base):
+    """One arrival interview; no_medications=True with no rows means "takes nothing"."""
+
+    __tablename__ = "intake_interview"
+
+    id: Mapped[int] = _pk()
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patient.id", ondelete="RESTRICT"))
+    interview_ref: Mapped[str] = mapped_column(unique=True)  # seed key
+    taken_at: Mapped[datetime]
+    taken_by: Mapped[str]
+    informant: Mapped[str]  # patient | caregiver, app-validated (no CHECK)
+    no_medications: Mapped[bool] = mapped_column(server_default=text("false"))
+
+
+Index("ix_intake_patient_taken", IntakeInterview.patient_id, IntakeInterview.taken_at.desc())
+
+
+class IntakeMedication(Base):
+    """One medication as the patient said it: raw text, validated only when a run uses it."""
+
+    __tablename__ = "intake_medication"
+    __table_args__ = (UniqueConstraint("interview_id", "record_id"),)
+
+    id: Mapped[int] = _pk()
+    interview_id: Mapped[int] = mapped_column(ForeignKey("intake_interview.id", ondelete="CASCADE"))
+    record_id: Mapped[str]
+    medication_name: Mapped[str | None]
+    dose_amount: Mapped[str | None]
+    dose_unit: Mapped[str | None]
+    frequency: Mapped[str | None]
+    raw: Mapped[dict[str, Any]]
 
 
 class ReconciliationRun(Base):
@@ -56,6 +89,9 @@ class ReconciliationRun(Base):
 
     id: Mapped[int] = _pk()
     patient_id: Mapped[int] = mapped_column(ForeignKey("patient.id", ondelete="RESTRICT"))
+    intake_interview_id: Mapped[int | None] = mapped_column(  # NULL = no interview recorded
+        ForeignKey("intake_interview.id", ondelete="RESTRICT")
+    )
     app_version: Mapped[str]
     started_at: Mapped[datetime]
 
@@ -68,7 +104,7 @@ class MedicationRecord(Base):
 
     id: Mapped[int] = _pk()
     run_id: Mapped[int] = _run_fk()
-    source: Mapped[str]  # fhir | pharmacy, app-validated (no CHECK)
+    source: Mapped[str]  # fhir | pharmacy | intake, app-validated (no CHECK)
     source_record_id: Mapped[str]
     original_name: Mapped[str]
     normalized_name: Mapped[str | None]
@@ -90,6 +126,7 @@ class Finding(Base):
     summary: Mapped[str]
     fhir_value: Mapped[str | None]
     pharmacy_value: Mapped[str | None]
+    intake_value: Mapped[str | None]
     details: Mapped[dict[str, Any]] = mapped_column(server_default=text("'{}'::jsonb"))
 
 

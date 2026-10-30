@@ -1,13 +1,27 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from contract import Finding, MedicationRecord, PatientInfo, Reason, ReconciliationInput, Rejection
-from db.repo import get_run, list_runs, save_run
+from contract import (
+    Finding,
+    IntakeInterviewInfo,
+    MedicationRecord,
+    PatientInfo,
+    Reason,
+    ReconciliationInput,
+    Rejection,
+)
+from db.repo import get_run, latest_intake_for, list_runs, save_run
 
 BASE_URL = "http://hapi:8080/fhir"
+INTERVIEW = IntakeInterviewInfo(
+    taken_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
+    taken_by="RN Okafor",
+    informant="patient",
+    no_medications=False,
+)
 
 
 def patient(fhir_patient_id="1"):
@@ -81,25 +95,41 @@ def test_history_survives_a_changed_hapi_id(db):
         assert get_run(session, run_id).patient.fhir_patient_id == "99"
 
 
-def test_get_run_round_trips_contract_objects_and_unknown_type(db):
+def test_get_run_round_trips_contract_objects_and_unknown_type(db, seed_intake):
+    seed_intake(medications=[{"record_id": "IN-1"}, {"record_id": "IN-2"}])
     unknown = Finding(
         discrepancy_type="frequency_mismatch",
         medication="lisinopril",
         summary="Frequency differs between sources.",
         fhir_value="Zestril 0.5 g",
         pharmacy_value="Zestril 0.5 g",
+        intake_value="Zestril 0.5 g",
         details={"records": [{"source": "fhir", "source_record_id": "mr-1"}]},
     )
     data = ReconciliationInput(
         fhir=[record("fhir", "mr-1"), record("fhir", "mr-2")],
         pharmacy=[record("pharmacy", "PH-1")],
+        intake=[record("intake", "IN-1")],
         rejected=[
             Rejection(
                 source="pharmacy",
                 name="Amlodipine",
                 raw={"dose_amount": "ten"},
                 reasons=[Reason(field="dose_amount", code="unreadable_dosage", message="bad")],
-            )
+            ),
+            Rejection(
+                source="intake",
+                source_record_id="IN-2",
+                name="warfarin",
+                raw={"dose_amount": "not sure"},
+                reasons=[
+                    Reason(
+                        field="dose_amount",
+                        code="unreadable_dosage",
+                        message="patient unsure of dose",
+                    )
+                ],
+            ),
         ],
     )
     findings = [Finding(discrepancy_type="missing", medication="x", summary="s"), unknown]
@@ -108,9 +138,30 @@ def test_get_run_round_trips_contract_objects_and_unknown_type(db):
         run = get_run(session, run_id)
     assert run.run_id == run_id and run.app_version == "1.0.0"
     assert run.patient == patient()
-    assert run.fhir == data.fhir and run.pharmacy == data.pharmacy
+    assert run.fhir == data.fhir and run.pharmacy == data.pharmacy and run.intake == data.intake
+    assert run.intake_interview == INTERVIEW
     assert run.rejected == data.rejected
     assert run.findings == findings
+
+
+def test_takes_nothing_and_not_taken_round_trip_apart(db, seed_intake):
+    not_taken = save(db)
+    seed_intake([{"no_medications": "true"}])
+    takes_nothing = save(db, data=ReconciliationInput(fhir=[], pharmacy=[], intake=[]))
+    with Session(db) as session:
+        first, second = get_run(session, not_taken), get_run(session, takes_nothing)
+    assert first.intake == [] and first.intake_interview is None
+    assert second.intake == []
+    assert second.intake_interview == INTERVIEW.model_copy(update={"no_medications": True})
+
+
+def test_save_run_after_a_read_on_the_same_session(db, seed_intake):
+    seed_intake()
+    with Session(db) as session:  # the service reads intake, then saves, on one session
+        interview, _ = latest_intake_for(session, "CASE-MIXED")
+        data = ReconciliationInput(fhir=[], pharmacy=[], intake=[])
+        run_id = save_run(session, patient(), BASE_URL, "1.0.0", data, [])
+        assert get_run(session, run_id).intake_interview == interview == INTERVIEW
 
 
 def test_get_run_of_missing_id_is_none(db):
