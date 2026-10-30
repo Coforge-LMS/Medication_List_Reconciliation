@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.run_id }} · MedRec{% endblock %}
+{% block content %}
+<h1>Reconciliation run {{ run.run_id }}</h1>
+<p>
+  {{ run.patient.name or run.patient.identifier }}
+  <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at.strftime("%Y-%m-%d %H:%M") }} UTC · app {{ run.app_version }}</span>
+</p>
+<p id="interview">{{ interview }}</p>
+
+<h2>Findings</h2>
+{% if not groups %}
+<p>No discrepancies found</p>
+{% else %}
+<ul>
+  {% for label, findings in groups %}<li>{{ label }}: {{ findings | length }}</li>{% endfor %}
+</ul>
+{% for label, findings in groups %}
+<section>
+  <h3>{{ label }}</h3>
+  <table>
+    <thead>
+      <tr><th>Medication</th><th>Summary</th>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for f in findings %}
+      <tr>
+        <td>{{ f.medication }}</td>
+        <td>{{ f.summary }}</td>
+        <td>{{ f.intake_value or "—" }}</td>
+        <td>{{ f.fhir_value or "—" }}</td>
+        <td>{{ f.pharmacy_value or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% endif %}
+
+<h2>Medications compared</h2>
+<div class="columns">
+  {% for heading, records in columns %}
+  <section>
+    <h3>{{ heading }}</h3>
+    {% if records %}
+    <table>
+      <thead><tr><th>Name</th><th>Dose</th><th>Frequency</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr><td>{{ r.name }}</td><td>{{ format_dose(r.dose_amount, r.dose_unit) }}</td><td>{{ r.frequency or "—" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No accepted records</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+<h2>Rejected records</h2>
+{% if run.rejected %}
+<table>
+  <thead><tr><th>Source</th><th>Name</th><th>Reasons</th></tr></thead>
+  <tbody>
+    {% for r in run.rejected %}
+    <tr>
+      <td>{{ source_headings.get(r.source, r.source) }}</td>
+      <td>{{ r.name or "—" }}</td>
+      <td>{% for reason in r.reasons %}{{ reason.field }}: {{ reason.message }}{% if not loop.last %}; {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">None</p>
+{% endif %}
+{% endblock %}
