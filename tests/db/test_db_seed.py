@@ -1,3 +1,4 @@
+import time
 from datetime import UTC, datetime
 
 import pytest
@@ -74,6 +75,23 @@ def test_latest_intake_for_returns_newest_interview_as_pharmacy_shaped_rows(db, 
         {"record_id": "IN-1", **base},
         {**base, "record_id": "IN-2", "dose_amount": "not sure", "frequency": ""},
     ]
+
+
+@pytest.fixture
+def eastern_clock(monkeypatch):
+    """Run the app process in US Eastern while the DB session stays in UTC."""
+    monkeypatch.setenv("TZ", "America/New_York")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
+
+
+def test_evening_interview_is_dated_by_the_local_day(db, seed_intake, eastern_clock):
+    seed_intake([{"taken_at": "2026-10-01T20:00:00-04:00"}], [{}])  # 00:00 UTC on 10-02
+    with Session(db) as session:
+        _, rows = latest_intake_for(session, "CASE-MIXED")
+    assert rows[0]["date_recorded"] == "2026-10-01"  # the date ingest's future check compares
 
 
 def test_latest_intake_for_takes_nothing(db, seed_intake):

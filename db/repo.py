@@ -245,7 +245,7 @@ def latest_intake_for(
     """The newest interview and its raw rows, shaped like pharmacy rows for ingest validation.
 
     None means no interview was taken; no_medications with [] means the patient takes nothing.
-    Each row is dated by its interview (date_recorded = taken_at's date).
+    Each row is dated by its interview (date_recorded = taken_at's local date).
     """
     interview = _latest_interview(session, identifier)
     if interview is None:
@@ -255,7 +255,9 @@ def latest_intake_for(
         .where(models.IntakeMedication.interview_id == interview.id)
         .order_by(models.IntakeMedication.id)
     )
-    taken_on = interview.taken_at.date().isoformat()
+    # Local date, the clock ingest's future-date check (date.today()) uses; taken_at arrives in
+    # the DB session's zone (UTC), where an evening interview is already tomorrow.
+    taken_on = interview.taken_at.astimezone().date().isoformat()
     rows = [
         {
             "record_id": m.record_id,
