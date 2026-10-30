@@ -15,7 +15,6 @@ SOURCE_LABELS: dict[Source, str] = {
     "fhir": "FHIR",
     "pharmacy": "pharmacy",
 }
-OTHER_SOURCE: dict[Source, Source] = {"fhir": "pharmacy", "pharmacy": "fhir"}
 
 
 class ReconciliationRule(ABC):
