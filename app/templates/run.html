@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.run_id }} · MedRec{% endblock %}
+{% block content %}
+<h1>Reconciliation run {{ run.run_id }}</h1>
+<p>
+  {{ run.patient.name or run.patient.identifier }}
+  <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at | utc_time }} UTC · app {{ run.app_version }}</span>
+</p>
+<p id="interview">{{ interview }}</p>
+
+<h2>Findings</h2>
+{% if not groups %}
+<p>No discrepancies found</p>
+{% else %}
+<ul>
+  {% for label, findings in groups %}<li>{{ label }}: {{ findings | length }}</li>{% endfor %}
+</ul>
+{% for label, findings in groups %}
+<section>
+  <h3>{{ label }}</h3>
+  <table>
+    <thead>
+      <tr><th>Medication</th><th>Summary</th>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for f in findings %}
+      <tr>
+        <td>{{ f.medication }}</td>
+        <td>{{ f.summary }}</td>
+        <td>{{ f.intake_value or "—" }}</td>
+        <td>{{ f.fhir_value or "—" }}</td>
+        <td>{{ f.pharmacy_value or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% endif %}
+
+{% include "_records.html" %}
+{% endblock %}
