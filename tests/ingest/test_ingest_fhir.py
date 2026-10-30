@@ -387,10 +387,10 @@ def case_inputs(case):
             "CASE-MIXED",
             [
                 ("metformin", "500", "BID"),
-                ("metoprolol tartrate", "25", "BID"),
+                ("metoprolol", "25", "BID"),
                 ("acetaminophen", "500", "BID"),
                 ("sertraline", "50", "QD"),
-                ("warfarin sodium", "5", "QD"),
+                ("warfarin", "5", "QD"),
             ],
         ),
         ("CASE-BRAND", [("rosuvastatin calcium", "10", "QD")]),

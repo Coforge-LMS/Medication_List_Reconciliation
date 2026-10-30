@@ -20,6 +20,11 @@ CONFIG = load_aliases(Path(__file__).parents[2] / "data" / "aliases.json")
         ("atorvastatin 20 MG Oral Tablet [Lipitor]", "atorvastatin"),
         ("Zestril", "lisinopril"),
         ("Norvasc 5 mg", "amlodipine"),
+        ("warfarin sodium 5 MG Oral Tablet", "warfarin"),
+        ("metoprolol tartrate 25 MG Oral Tablet", "metoprolol"),
+        ("Warfarin", "warfarin"),
+        ("metoprolol", "metoprolol"),
+        ("24 HR metoprolol succinate 100 MG Extended Release Oral Tablet", "metoprolol succinate"),
         ("LISINOPRIL 10 MG Oral Tablet", "lisinopril"),
         ("hydrochlorothiazide 25 MG Oral Tablet", "hydrochlorothiazide"),
         ("Vitamin B12 Injectable Solution", "vitamin b12 injectable"),  # b12 is not a bare number

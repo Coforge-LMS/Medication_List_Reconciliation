@@ -19,6 +19,8 @@ def write(tmp_path, text):
 def test_shipped_config_loads():
     cfg = load_aliases(REPO_CONFIG)
     assert cfg.aliases["zestril"] == "lisinopril"
+    assert cfg.aliases["warfarin sodium"] == "warfarin"
+    assert cfg.aliases["metoprolol tartrate"] == "metoprolol"
     assert "oral" in cfg.ignore_tokens
 
 
