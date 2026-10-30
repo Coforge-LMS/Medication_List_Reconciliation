@@ -1,0 +1,39 @@
+{# Three medication columns and the rejected records; expects `columns` and `rejected`. #}
+<h2>Medications compared</h2>
+<div class="columns">
+  {% for heading, records in columns %}
+  <section>
+    <h3>{{ heading }}</h3>
+    {% if records %}
+    <table>
+      <thead><tr><th>Name</th><th>Dose</th><th>Frequency</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr><td>{{ r.name }}</td><td>{{ format_dose(r.dose_amount, r.dose_unit) }}</td><td>{{ r.frequency or "—" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No accepted records</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+<h2>Rejected records</h2>
+{% if rejected %}
+<table>
+  <thead><tr><th>Source</th><th>Name</th><th>Reasons</th></tr></thead>
+  <tbody>
+    {% for r in rejected %}
+    <tr>
+      <td>{{ source_headings.get(r.source, r.source) }}</td>
+      <td>{{ r.name or "—" }}</td>
+      <td>{% for reason in r.reasons %}{{ reason.field }}: {{ reason.message }}{% if not loop.last %}; {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">None</p>
+{% endif %}
