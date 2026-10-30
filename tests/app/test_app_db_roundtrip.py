@@ -1,13 +1,15 @@
-"""Run page and run JSON served from a real Postgres run (skipped without TEST_DATABASE_URL)."""
+"""Pages and JSON served from real Postgres runs (skipped without TEST_DATABASE_URL)."""
 
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.main import app, get_fhir_client
 from contract import ReconciliationInput
 from db import models
 from db.repo import save_run
-from tests.app.conftest import make_run
+from db.seed import seed
+from tests.app.conftest import INTAKE_DIR, make_run
 
 
 def test_saved_three_way_run_renders_from_the_database(db, client):
@@ -52,3 +54,26 @@ def test_saved_three_way_run_renders_from_the_database(db, client):
     ]
     assert body["intake"][0]["name"] == "ibuprofen"
     assert body["intake_interview"]["no_medications"] is False
+
+
+def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
+    """Seed the committed intake, reconcile CASE-MIXED over recorded FHIR, then read it back."""
+    with Session(db) as session:
+        seed(session, INTAKE_DIR)
+    app.dependency_overrides[get_fhir_client] = lambda: recorded_client
+    try:
+        response = client.post("/api/patients/2178/reconcile")
+        assert response.status_code == 201
+        body = response.json()
+        assert len(body["findings"]) == 7  # data/README's CASE-MIXED table
+        assert body["intake_interview"]["taken_by"] == "RN Okafor"
+        assert {r["source"] for r in body["rejected"]} == {"pharmacy", "intake"}
+
+        run_page = client.get(f"/runs/{body['run_id']}").text
+        assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
+        assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
+
+        history = client.get("/patients/2178/history").text
+        assert f'href="/runs/{body["run_id"]}"' in history
+    finally:
+        app.dependency_overrides.pop(get_fhir_client, None)
