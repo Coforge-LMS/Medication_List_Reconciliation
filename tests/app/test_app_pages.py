@@ -4,9 +4,11 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER
 from app.version import __version__
+from db import repo
 from tests.app.conftest import INTERVIEW, make_run
 
 
@@ -102,3 +104,26 @@ def test_run_time_is_shown_in_utc(client, serve_run):
     ist = timezone(timedelta(hours=5, minutes=30))
     serve_run(make_run(started_at=datetime(2026, 10, 30, 14, 5, tzinfo=ist)))
     assert "2026-10-30 08:35 UTC" in client.get("/runs/7").text
+
+
+def _db_down(session, run_id):
+    """Stand-in for repo.get_run when Postgres refuses connections."""
+    raise OperationalError("SELECT 1", {}, ConnectionRefusedError("connection refused"))
+
+
+def test_database_down_is_a_503_page(client, serve_run, monkeypatch):
+    """With the app database unreachable the run page is a readable 503, not a traceback."""
+    serve_run(None)
+    monkeypatch.setattr(repo, "get_run", _db_down)
+    response = client.get("/runs/7")
+    assert response.status_code == 503
+    assert "Database unavailable" in response.text and DISCLAIMER in response.text
+
+
+def test_database_down_is_a_503_json_for_the_api(client, serve_run, monkeypatch):
+    """The JSON API reports the same outage as JSON."""
+    serve_run(None)
+    monkeypatch.setattr(repo, "get_run", _db_down)
+    response = client.get("/api/runs/7")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database unavailable"}

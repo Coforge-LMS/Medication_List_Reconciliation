@@ -10,8 +10,9 @@ from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app import service
@@ -76,6 +77,19 @@ templates.env.globals.update(
     format_dose=format_dose,
     source_headings=SOURCE_HEADINGS,
 )
+
+
+@app.exception_handler(OperationalError)
+def database_unavailable(request: Request, exc: OperationalError):
+    """The app database can't be reached: a 503 page (or JSON for /api) instead of a traceback."""
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "Database unavailable"}, status_code=503)
+    return _message(
+        request,
+        503,
+        "Database unavailable",
+        "The app database can't be reached; try again shortly.",
+    )
 
 
 @app.get("/healthz")
