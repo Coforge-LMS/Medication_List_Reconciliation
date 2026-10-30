@@ -1,5 +1,6 @@
 """App test helpers: an in-memory RunDetail served without a database."""
 
+import csv
 import json
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -25,6 +26,7 @@ from db.session import get_session
 
 BASE = "http://hapi.test/fhir"
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "hapi"
+INTAKE_DIR = Path(__file__).resolve().parents[2] / "data" / "intake"
 
 INTERVIEW = IntakeInterviewInfo(
     taken_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
@@ -155,3 +157,32 @@ def recorded_client():
     client = FhirClient(BASE, transport=httpx.MockTransport(handler))
     client.requested = requested
     return client
+
+
+def case_intake(identifier):
+    """The committed interview and rows for identifier, shaped like repo.latest_intake_for."""
+    with (INTAKE_DIR / "intake_interviews.csv").open(newline="", encoding="utf-8") as f:
+        interview = next(i for i in csv.DictReader(f) if i["patient_identifier"] == identifier)
+    with (INTAKE_DIR / "intake_medications.csv").open(newline="", encoding="utf-8") as f:
+        meds = [m for m in csv.DictReader(f) if m["interview_ref"] == interview["interview_ref"]]
+    taken_at = datetime.fromisoformat(interview["taken_at"])
+    info = IntakeInterviewInfo(
+        taken_at=taken_at,
+        taken_by=interview["taken_by"],
+        informant=interview["informant"],
+        no_medications=interview["no_medications"] == "true",
+    )
+    taken_on = taken_at.astimezone().date().isoformat()  # as latest_intake_for dates rows
+    rows = [
+        {
+            "record_id": m["record_id"],
+            "patient_id": identifier,
+            "medication_name": m["medication_name"],
+            "dose_amount": m["dose_amount"],
+            "dose_unit": m["dose_unit"],
+            "frequency": m["frequency"],
+            "date_recorded": taken_on,
+        }
+        for m in meds
+    ]
+    return info, rows
