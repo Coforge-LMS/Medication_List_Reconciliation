@@ -9,6 +9,11 @@ from collections import defaultdict
 from functools import cache
 from pathlib import Path
 
+
+class PharmacyDataError(ValueError):
+    """The dataset file exists but isn't a JSON list of rows."""
+
+
 DEFAULT_PATH = (
     Path(__file__).resolve().parent.parent / "data" / "pharmacy" / "pharmacy_records.json"
 )
@@ -28,7 +33,13 @@ def _by_patient(path: Path) -> dict[str, list[dict[str, str]]]:
             f"pharmacy dataset not found at {path} "
             "(generate it with data/generators/make_pharmacy.py)"
         )
+    try:
+        rows = json.loads(path.read_text())
+    except ValueError as exc:
+        raise PharmacyDataError(f"pharmacy dataset {path} is not valid JSON: {exc}") from exc
+    if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+        raise PharmacyDataError(f"pharmacy dataset {path} is not a JSON list of rows")
     groups: dict[str, list[dict[str, str]]] = defaultdict(list)
-    for row in json.loads(path.read_text()):
+    for row in rows:
         groups[row.get("patient_id")].append(row)
     return dict(groups)

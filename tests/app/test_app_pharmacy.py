@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from app.pharmacy import rows_for
+from app.pharmacy import PharmacyDataError, rows_for
 
 
 def _row(record_id, patient_id, name):
@@ -59,3 +59,12 @@ def test_missing_file_names_the_path(tmp_path):
     missing = tmp_path / "nope.json"
     with pytest.raises(FileNotFoundError, match="nope.json"):
         rows_for("CASE-MIXED", missing)
+
+
+@pytest.mark.parametrize("content", ["{not json", '{"rows": []}', '["a row as text"]'])
+def test_corrupt_dataset_names_the_path(tmp_path, content):
+    """Invalid JSON, or JSON that isn't a list of rows, raises PharmacyDataError with the path."""
+    path = tmp_path / "corrupt.json"
+    path.write_text(content)
+    with pytest.raises(PharmacyDataError, match="corrupt.json"):
+        rows_for("CASE-MIXED", path)

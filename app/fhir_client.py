@@ -5,6 +5,7 @@ fixtures and the E2E test match by exact URL. The transport is injectable for te
 """
 
 import os
+import re
 import urllib.parse
 from typing import Any
 
@@ -12,6 +13,22 @@ import httpx
 
 DEFAULT_BASE_URL = "http://localhost:8080/fhir"
 MAX_PAGES = 100  # guards against a next-link loop
+FHIR_ID = re.compile(r"[A-Za-z0-9\-.]{1,64}")  # FHIR R4 id datatype
+
+
+class InvalidFhirId(ValueError):
+    """An id that isn't a valid FHIR id, refused before any request is sent."""
+
+
+class FhirError(Exception):
+    """A FHIR response the client can't use: not JSON, or a search that never ends."""
+
+
+def _checked(patient_id: str) -> str:
+    """The id unchanged when it is a valid FHIR id, so it can't alter the request URL."""
+    if not FHIR_ID.fullmatch(patient_id):
+        raise InvalidFhirId(f"{patient_id!r} is not a FHIR id")
+    return patient_id
 
 
 class FhirClient:
@@ -43,11 +60,11 @@ class FhirClient:
 
     def read_patient(self, patient_id: str) -> dict[str, Any]:
         """GET Patient/{id}."""
-        return self._get(f"Patient/{patient_id}")
+        return self._get(f"Patient/{_checked(patient_id)}")
 
     def active_medication_requests(self, patient_id: str) -> list[dict[str, Any]]:
         """GET MedicationRequest?patient={id}&status=active, following next links."""
-        return self._search(f"MedicationRequest?patient={patient_id}&status=active")
+        return self._search(f"MedicationRequest?patient={_checked(patient_id)}&status=active")
 
     def find_case_patient(self, case: str) -> list[dict[str, Any]]:
         """GET Patient?identifier=urn:medrec:case|<case> (encoded as the recorded fixtures)."""
@@ -62,7 +79,10 @@ class FhirClient:
         """One GET; url is relative to the base or an absolute next link."""
         response = self._http.get(url)
         response.raise_for_status()
-        return response.json()
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise FhirError(f"FHIR server sent a non-JSON response for {url}") from exc
 
     def _search(self, url: str) -> list[dict[str, Any]]:
         """Resources from a searchset, page by page via link[relation=next]."""
@@ -76,7 +96,7 @@ class FhirClient:
             )
             if url is None:
                 return resources
-        raise RuntimeError(f"FHIR search exceeded {MAX_PAGES} pages")
+        raise FhirError(f"FHIR search exceeded {MAX_PAGES} pages")
 
 
 def patient_row(resource: dict[str, Any]) -> dict[str, str | None]:

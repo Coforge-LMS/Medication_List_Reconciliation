@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from app.fhir_client import FhirClient, patient_row
+from app.fhir_client import MAX_PAGES, FhirClient, FhirError, InvalidFhirId, patient_row
 from tests.app.conftest import BASE, FIXTURES
 
 
@@ -75,3 +75,39 @@ def test_patient_row_formats_display_fields():
         "gender": "male",
     }
     assert patient_row({"id": "9"})["name"] is None
+
+
+@pytest.mark.parametrize(
+    "bad_id", ["2178?_elements=id", "2178&status=x", "../Patient", "", "a" * 65]
+)
+def test_malformed_id_is_refused_before_any_request(bad_id):
+    """An id outside the FHIR id rule never reaches the server, so it can't reshape the query."""
+    sent = []
+    client = FhirClient(BASE, transport=httpx.MockTransport(lambda r: sent.append(r) or None))
+    with pytest.raises(InvalidFhirId):
+        client.read_patient(bad_id)
+    with pytest.raises(InvalidFhirId):
+        client.active_medication_requests(bad_id)
+    assert sent == []
+
+
+def test_non_json_reply_raises_fhir_error():
+    """A 200 HTML page (a proxy, HAPI starting up) is a FhirError, not a JSONDecodeError."""
+    html = httpx.MockTransport(lambda r: httpx.Response(200, text="<html>starting</html>"))
+    with pytest.raises(FhirError, match="non-JSON"):
+        FhirClient(BASE, transport=html).read_patient("2178")
+
+
+def test_endless_next_links_stop_at_max_pages():
+    """A next link that points back to itself raises after MAX_PAGES requests."""
+    sent = []
+    loop = {"resourceType": "Bundle", "link": [{"relation": "next", "url": f"{BASE}/Patient?p=1"}]}
+
+    def handler(request):
+        """Always answer with a page whose next link is the same page."""
+        sent.append(request)
+        return httpx.Response(200, json=loop)
+
+    with pytest.raises(FhirError, match="exceeded"):
+        FhirClient(BASE, transport=httpx.MockTransport(handler)).list_patients()
+    assert len(sent) == MAX_PAGES

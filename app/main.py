@@ -14,8 +14,9 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app import service
-from app.fhir_client import FhirClient, patient_row
+from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
 from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
+from app.pharmacy import PharmacyDataError
 from app.version import __version__
 from contract import AliasConfig, Finding, RunDetail, format_dose
 from db import repo
@@ -80,7 +81,7 @@ def patient_list(request: Request, fhir: FhirDep):
     """Live patient list from FHIR; a readable 502 page when the server is unavailable."""
     try:
         patients = [patient_row(p) for p in fhir.list_patients()]
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, FhirError) as exc:
         return _message(
             request, 502, "FHIR server unavailable", f"Could not load patients from FHIR ({exc})."
         )
@@ -181,13 +182,24 @@ def run_json(run_id: int, session: SessionDep) -> dict:
     return run.model_dump(mode="json")
 
 
-PIPELINE_ERRORS = (httpx.HTTPError, PatientMappingError, FileNotFoundError)
+PIPELINE_ERRORS = (
+    httpx.HTTPError,
+    FhirError,
+    InvalidFhirId,
+    PatientMappingError,
+    FileNotFoundError,
+    PharmacyDataError,
+)
 
 
 def pipeline_error(exc: Exception) -> tuple[int, str, str]:
     """(status, heading, message) for a failure while fetching or preparing a patient."""
-    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404:
+    if isinstance(exc, InvalidFhirId) or (
+        isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404
+    ):
         return 404, "Patient not found", "The FHIR server has no such patient."
+    if isinstance(exc, FhirError):
+        return 502, "FHIR server unavailable", str(exc)
     if isinstance(exc, httpx.HTTPError):
         return 502, "FHIR server unavailable", f"Could not reach the FHIR server ({exc})."
     if isinstance(exc, PatientMappingError):

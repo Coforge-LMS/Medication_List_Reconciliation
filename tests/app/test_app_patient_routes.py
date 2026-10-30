@@ -156,3 +156,29 @@ def test_history_of_unknown_patient_is_404(client, wired):
     """The identifier can't be resolved, so the page is a 404."""
     _fhir(lambda request: httpx.Response(404, json={}))
     assert client.get("/patients/9/history").status_code == 404
+
+
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_malformed_fhir_id_is_404_without_saving(client, wired, recorded_client, method):
+    """An encoded '?' in the id is refused: 404, nothing sent to FHIR, nothing saved."""
+    path = "/patients/2178%3F_elements=id" + ("" if method == "get" else "/reconcile")
+    response = getattr(client, method)(path)
+    assert response.status_code == 404 and "Patient not found" in response.text
+    assert recorded_client.requested == [] and wired == []
+
+
+def test_non_json_fhir_reply_is_a_502_page(client, wired):
+    """A 200 HTML reply from FHIR renders the readable 502 page, not a traceback."""
+    _fhir(lambda request: httpx.Response(200, text="<html>starting</html>"))
+    response = client.get("/patients/2178")
+    assert response.status_code == 502 and "FHIR server unavailable" in response.text
+
+
+def test_corrupt_pharmacy_dataset_is_503(client, wired, tmp_path, monkeypatch):
+    """A pharmacy file that isn't valid JSON gives the 503 page."""
+    corrupt = tmp_path / "corrupt.json"
+    corrupt.write_text("{not json")
+    monkeypatch.setenv("PHARMACY_DATA", str(corrupt))
+    response = client.get("/patients/2178")
+    assert response.status_code == 503
+    assert "Pharmacy dataset not available" in response.text

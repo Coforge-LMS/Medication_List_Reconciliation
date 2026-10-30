@@ -61,3 +61,10 @@ def test_fhir_unavailable_is_a_502_page(client, fhir):
     response = client.get("/")
     assert response.status_code == 502
     assert "FHIR server unavailable" in response.text and DISCLAIMER in response.text
+
+
+def test_non_json_fhir_reply_is_a_502_page(client, fhir):
+    """A 200 HTML reply on the patient search renders the 502 page."""
+    fhir(lambda request: httpx.Response(200, text="<html>starting</html>"))
+    response = client.get("/")
+    assert response.status_code == 502 and "FHIR server unavailable" in response.text
