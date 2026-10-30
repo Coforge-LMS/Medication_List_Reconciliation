@@ -4,9 +4,9 @@ import re
 from collections.abc import Iterable
 
 from contract import AliasConfig, MedicationRecord, Rejection
+from ingest.checks import BRACKETED, KNOWN_UNITS, strength_pattern
 
-_BRACKETED = re.compile(r"\[[^\]]*\]")
-_STRENGTH_OR_QUANTITY = re.compile(r"\d+(\.\d+)?\s*(mg|mcg|ug|g|ml|hr|actuat)\b")
+_STRENGTH = strength_pattern(KNOWN_UNITS, re.IGNORECASE)
 _TOKEN = re.compile(r"[^\W_]+")
 
 
@@ -15,7 +15,7 @@ def normalize_name(name: str, config: AliasConfig) -> str:
 
     Returns "" when nothing is left (a name made only of strengths and ignored words).
     """
-    text = _STRENGTH_OR_QUANTITY.sub(" ", _BRACKETED.sub(" ", name.lower()))
+    text = _STRENGTH.sub(" ", BRACKETED.sub(" ", name.lower()))
     ignored = set(config.ignore_tokens)
     tokens = [t for t in _TOKEN.findall(text) if t not in ignored and not t.isdigit()]
     key = " ".join(tokens)

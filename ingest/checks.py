@@ -9,6 +9,23 @@ from contract import Reason
 ACCEPTED_UNITS = "mg, g, mcg, mL"
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
+# Medication-name patterns shared by the FHIR mapper and the normalizer, so they can't drift.
+BRACKETED = re.compile(r"\[[^\]]*\]")
+_NUMBER = r"\d+(?:\.\d+)?"
+ANY_UNIT = r"[^\W\d_]+"  # the mapper must see unknown units to reject them
+KNOWN_UNITS = "mg|mcg|ug|µg|μg|g|ml|unt|iu|meq|hr|actuat"  # free text: only words that are units
+# a package quantity ("24 HR", "120 ACTUAT", "1 ML"), not a strength; "5 MG/ML" is left alone
+QUANTITY = re.compile(rf"(?<!/)\b{_NUMBER}\s*(?:hr|actuat|ml)\b(?!\s*/)", re.IGNORECASE)
+
+
+def strength_pattern(unit: str, flags: int = 0) -> re.Pattern[str]:
+    """Number, unit and an optional attached denominator: "10 MG", "5 MG/ML", "250 MG/5ML".
+
+    Groups: number, unit, denominator unit (empty when absent). A spaced slash, as in
+    "25 MG / losartan 100 MG", is not a denominator.
+    """
+    return re.compile(rf"\b({_NUMBER})\s*({unit})(?:/(?:{_NUMBER})?({unit}))?\b", flags)
+
 
 def clean(value: Any) -> str:
     """Trimmed text of a raw field; None becomes an empty string."""

@@ -28,6 +28,10 @@ CONFIG = load_aliases(Path(__file__).parents[2] / "data" / "aliases.json")
         ("LISINOPRIL 10 MG Oral Tablet", "lisinopril"),
         ("hydrochlorothiazide 25 MG Oral Tablet", "hydrochlorothiazide"),
         ("Vitamin B12 Injectable Solution", "vitamin b12 injectable"),  # b12 is not a bare number
+        ("Hydrocortisone 10 MG/ML Topical Cream", "hydrocortisone topical cream"),
+        ("amoxicillin 250 MG/5ML Oral Suspension", "amoxicillin suspension"),
+        ("1 ML heparin sodium, porcine 5000 UNT/ML Injection", "heparin sodium porcine injection"),
+        ("vitamin d3 1000 IU", "vitamin d3"),
         ("Crestor 10 mg", "crestor"),  # a brand outside the alias list stays as it is
         ("rosuvastatin calcium 10 MG Oral Tablet [Crestor]", "rosuvastatin calcium"),
     ],

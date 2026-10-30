@@ -5,24 +5,29 @@ Synthea sends no unit on doseQuantity, so the strength comes from the RxNorm dis
 Only the first dosageInstruction is read.
 """
 
-import re
 from collections.abc import Iterable
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from contract import MedicationRecord, PatientInfo, Reason, Rejection, normalize_unit
-from ingest.checks import ACCEPTED_UNITS, check_datetime, clean, missing, unreadable
+from ingest.checks import (
+    ACCEPTED_UNITS,
+    ANY_UNIT,
+    BRACKETED,
+    QUANTITY,
+    check_datetime,
+    clean,
+    missing,
+    strength_pattern,
+    unreadable,
+)
 
 RXNORM = "http://www.nlm.nih.gov/research/umls/rxnorm"
 SYNTHEA_ID_SYSTEM = "https://github.com/synthetichealth/synthea"
 CASE_ID_SYSTEM = "urn:medrec:case"
 
-_BRACKETED = re.compile(r"\[[^\]]*\]")
-# "24 HR" / "120 ACTUAT" are quantities, not strengths; "0.044 MG/ACTUAT" is left alone
-_QUANTITY = re.compile(r"\b\d+(?:\.\d+)?\s*(?:hr|actuat)\b(?!\s*/)", re.IGNORECASE)
-# number, unit, optional attached denominator ("5 MG/ML"); \b keeps the 12 in "B12" out
-_STRENGTH = re.compile(r"\b(\d+(?:\.\d+)?)\s*([^\W\d_]+)(?:/([^\W\d_]+))?\b")
+_STRENGTH = strength_pattern(ANY_UNIT)
 
 
 class PatientMappingError(ValueError):
@@ -192,7 +197,7 @@ def _dose(
     if count is not None and own_unit:
         return count, own_unit, None
 
-    text = _QUANTITY.sub(" ", _BRACKETED.sub(" ", display))
+    text = QUANTITY.sub(" ", BRACKETED.sub(" ", display))
     strengths = _STRENGTH.findall(text)
     if not strengths:
         return None, None, unreadable("medicationCodeableConcept", f"no strength in {display!r}")
