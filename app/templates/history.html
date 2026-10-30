@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}History · {{ patient.name or patient.identifier }} · MedRec{% endblock %}
+{% block content %}
+<h1>Reconciliation history</h1>
+<p>
+  <a href="/patients/{{ fhir_id }}">{{ patient.name or patient.identifier }}</a>
+  <span class="muted">· {{ patient.identifier }}</span>
+</p>
+{% if runs %}
+<table>
+  <thead><tr><th>Run</th><th>Started (UTC)</th><th>App version</th><th>Findings</th><th>By type</th></tr></thead>
+  <tbody>
+    {% for r in runs %}
+    <tr>
+      <td><a href="/runs/{{ r.run_id }}">Run {{ r.run_id }}</a></td>
+      <td>{{ r.started_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ r.app_version }}</td>
+      <td>{{ r.finding_count }}</td>
+      <td>{% for t, n in r.counts_by_type.items() %}{{ label_for(t) }}: {{ n }}{% if not loop.last %}; {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No runs yet</p>
+{% endif %}
+{% endblock %}

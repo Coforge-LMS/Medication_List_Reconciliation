@@ -21,7 +21,7 @@ from contract import AliasConfig, Finding, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
 from ingest.aliases import load_aliases
-from ingest.fhir import PatientMappingError
+from ingest.fhir import PatientMappingError, map_patient
 
 DEFAULT_ALIASES = Path(__file__).resolve().parent.parent / "data" / "aliases.json"
 
@@ -124,6 +124,21 @@ def reconcile_page(
     except PIPELINE_ERRORS as exc:
         return _message(request, *pipeline_error(exc))
     return RedirectResponse(f"/runs/{run_id}", status_code=303)
+
+
+@app.get("/patients/{fhir_id}/history", response_class=HTMLResponse)
+def history_page(request: Request, fhir_id: str, session: SessionDep, fhir: FhirDep):
+    """This patient's runs, newest first, keyed by the stable identifier (survives re-imports)."""
+    try:
+        patient = map_patient(fhir.read_patient(fhir_id))
+    except PIPELINE_ERRORS as exc:
+        return _message(request, *pipeline_error(exc))
+    runs = repo.list_runs(session, patient.identifier)
+    return templates.TemplateResponse(
+        request,
+        "history.html",
+        {"fhir_id": fhir_id, "patient": patient, "runs": runs, "label_for": label_for},
+    )
 
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
