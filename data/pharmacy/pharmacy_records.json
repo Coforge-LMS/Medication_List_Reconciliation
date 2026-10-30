@@ -1,0 +1,524 @@
+[
+  {
+    "record_id": "PH-0001",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Verapamil Hydrochloride",
+    "dose_amount": "80",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-10-17"
+  },
+  {
+    "record_id": "PH-0002",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Warfarin",
+    "dose_amount": "2.5",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-08"
+  },
+  {
+    "record_id": "PH-0003",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Alendronic Acid",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-09-16"
+  },
+  {
+    "record_id": "PH-0004",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Simvastatin",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-28"
+  },
+  {
+    "record_id": "PH-0005",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Simvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-28"
+  },
+  {
+    "record_id": "PH-0006",
+    "patient_id": "46ee9d82-b52c-856d-069b-5064ff052225",
+    "medication_name": "Pantoprazole",
+    "dose_amount": "40",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-04"
+  },
+  {
+    "record_id": "PH-0007",
+    "patient_id": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+    "medication_name": "Clopidogrel",
+    "dose_amount": "75",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-09-10"
+  },
+  {
+    "record_id": "PH-0008",
+    "patient_id": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+    "medication_name": "Simvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-10-26"
+  },
+  {
+    "record_id": "PH-0009",
+    "patient_id": "4f083ce3-f12b-bb4b-7353-e17f0cd55b0a",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "100",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-10-18"
+  },
+  {
+    "record_id": "PH-0010",
+    "patient_id": "5a3596ef-07d3-5463-e76d-96dedbb0e2cf",
+    "medication_name": "Clopidogrel",
+    "dose_amount": "75",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-09-15"
+  },
+  {
+    "record_id": "PH-0011",
+    "patient_id": "5a3596ef-07d3-5463-e76d-96dedbb0e2cf",
+    "medication_name": "Simvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-20"
+  },
+  {
+    "record_id": "PH-0012",
+    "patient_id": "5a3596ef-07d3-5463-e76d-96dedbb0e2cf",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "200",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-12"
+  },
+  {
+    "record_id": "PH-0013",
+    "patient_id": "5a3596ef-07d3-5463-e76d-96dedbb0e2cf",
+    "medication_name": "Acetaminophen",
+    "dose_amount": "162.5",
+    "dose_unit": "mg",
+    "frequency": "four times daily",
+    "date_recorded": "2026-10-23"
+  },
+  {
+    "record_id": "PH-0014",
+    "patient_id": "5a3596ef-07d3-5463-e76d-96dedbb0e2cf",
+    "medication_name": "Tramadol Hydrochloride",
+    "dose_amount": "50",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-09-18"
+  },
+  {
+    "record_id": "PH-0015",
+    "patient_id": "5e688e99-61b3-5c88-3f60-21df8aaced27",
+    "medication_name": "Hydrochlorothiazide",
+    "dose_amount": "25",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-28"
+  },
+  {
+    "record_id": "PH-0016",
+    "patient_id": "87f32e4c-f0e3-ba38-8864-d18d2698a070",
+    "medication_name": "Clopidogrel",
+    "dose_amount": "75",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-09-22"
+  },
+  {
+    "record_id": "PH-0017",
+    "patient_id": "87f32e4c-f0e3-ba38-8864-d18d2698a070",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "100",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-13"
+  },
+  {
+    "record_id": "PH-0018",
+    "patient_id": "87f32e4c-f0e3-ba38-8864-d18d2698a070",
+    "medication_name": "Loratadine",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-25"
+  },
+  {
+    "record_id": "PH-0019",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Naproxen Sodium",
+    "dose_amount": "220",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-10-06"
+  },
+  {
+    "record_id": "PH-0020",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Aspirin",
+    "dose_amount": "81",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-09-27"
+  },
+  {
+    "record_id": "PH-0021",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "25",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-09-12"
+  },
+  {
+    "record_id": "PH-0022",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Rosuvastatin Calcium",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-11"
+  },
+  {
+    "record_id": "PH-0023",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Prasugrel",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-10"
+  },
+  {
+    "record_id": "PH-0024",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Ibuprofen",
+    "dose_amount": "400",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-09-07"
+  },
+  {
+    "record_id": "PH-0025",
+    "patient_id": "8c42357f-b924-9f38-d09a-007250c16c6f",
+    "medication_name": "Metformin",
+    "dose_amount": "0.5",
+    "dose_unit": "g",
+    "frequency": "twice daily",
+    "date_recorded": "2026-10-17"
+  },
+  {
+    "record_id": "PH-0026",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Simvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-11"
+  },
+  {
+    "record_id": "PH-0027",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "100",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-10-09"
+  },
+  {
+    "record_id": "PH-0028",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Aspirin",
+    "dose_amount": "81",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-10-27"
+  },
+  {
+    "record_id": "PH-0029",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Aspirin",
+    "dose_amount": "162",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-10-27"
+  },
+  {
+    "record_id": "PH-0030",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Lipitor",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-09-24"
+  },
+  {
+    "record_id": "PH-0031",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Prasugrel",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-09-20"
+  },
+  {
+    "record_id": "PH-0032",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Hydrochlorothiazide",
+    "dose_amount": "25",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-22"
+  },
+  {
+    "record_id": "PH-0033",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Ibuprofen",
+    "dose_amount": "400",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-09-13"
+  },
+  {
+    "record_id": "PH-0034",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Lisinopril",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "as needed",
+    "date_recorded": "2026-10-17"
+  },
+  {
+    "record_id": "PH-0035",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Alendronic Acid",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-19"
+  },
+  {
+    "record_id": "PH-0036",
+    "patient_id": "98ff8f7e-7b14-79a9-04ea-aceff31a2328",
+    "medication_name": "Loratadine",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-14"
+  },
+  {
+    "record_id": "PH-0037",
+    "patient_id": "aa616abe-1761-0c9a-7959-07544679dafd",
+    "medication_name": "Naproxen Sodium",
+    "dose_amount": "440",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-09-09"
+  },
+  {
+    "record_id": "PH-0038",
+    "patient_id": "aa616abe-1761-0c9a-7959-07544679dafd",
+    "medication_name": "Cetirizine",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-12"
+  },
+  {
+    "record_id": "PH-0039",
+    "patient_id": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+    "medication_name": "Clopidogrel",
+    "dose_amount": "75",
+    "dose_unit": "mg",
+    "frequency": "",
+    "date_recorded": "2026-10-22"
+  },
+  {
+    "record_id": "PH-0040",
+    "patient_id": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+    "medication_name": "Simvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-28"
+  },
+  {
+    "record_id": "PH-0041",
+    "patient_id": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+    "medication_name": "Metoprolol Succinate",
+    "dose_amount": "100",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-03"
+  },
+  {
+    "record_id": "PH-0042",
+    "patient_id": "c86c400e-ff88-a1e3-2e23-caa4d8311f47",
+    "medication_name": "Omeprazole",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-12"
+  },
+  {
+    "record_id": "PH-0043",
+    "patient_id": "e74367bd-7385-97dc-2c7f-251b4cd9fe29",
+    "medication_name": "Hydrochlorothiazide",
+    "dose_amount": "25",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-10-14"
+  },
+  {
+    "record_id": "PH-0044",
+    "patient_id": "e74367bd-7385-97dc-2c7f-251b4cd9fe29",
+    "medication_name": "Lisinopril",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-09-19"
+  },
+  {
+    "record_id": "PH-0045",
+    "patient_id": "CASE-CLEAN",
+    "medication_name": "Zestril",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-03-02"
+  },
+  {
+    "record_id": "PH-0046",
+    "patient_id": "CASE-CLEAN",
+    "medication_name": "Atorvastatin",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-03-02"
+  },
+  {
+    "record_id": "PH-0047",
+    "patient_id": "CASE-CLEAN",
+    "medication_name": "Amlodipine",
+    "dose_amount": "5",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-03-02"
+  },
+  {
+    "record_id": "PH-0048",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Metformin Hydrochloride",
+    "dose_amount": "500",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0049",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Acetaminophen",
+    "dose_amount": "500",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0050",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Acetaminophen",
+    "dose_amount": "1000",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-02-19"
+  },
+  {
+    "record_id": "PH-0051",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Sertraline",
+    "dose_amount": "50",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0052",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Omeprazole",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0053",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Warfarin Sodium",
+    "dose_amount": "ten",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0054",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "",
+    "dose_amount": "5",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0055",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Pravastatin",
+    "dose_amount": "40",
+    "dose_unit": "tab",
+    "frequency": "once daily",
+    "date_recorded": "2026-02-12"
+  },
+  {
+    "record_id": "PH-0056",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Tamsulosin",
+    "dose_amount": "0.4",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "03/02/2026"
+  },
+  {
+    "record_id": "PH-0057",
+    "patient_id": "CASE-MIXED",
+    "medication_name": "Famotidine",
+    "dose_amount": "20",
+    "dose_unit": "mg",
+    "frequency": "twice daily",
+    "date_recorded": "2999-01-01"
+  },
+  {
+    "record_id": "PH-0058",
+    "patient_id": "CASE-BRAND",
+    "medication_name": "Crestor",
+    "dose_amount": "10",
+    "dose_unit": "mg",
+    "frequency": "once daily",
+    "date_recorded": "2026-01-20"
+  }
+]
