@@ -1,0 +1,13 @@
+interview_ref,patient_identifier,taken_at,taken_by,informant,no_medications
+INT-46ee9d82,46ee9d82-b52c-856d-069b-5064ff052225,2026-10-19T09:30:00+00:00,RN Alvarez,patient,false
+INT-4f083ce3,4f083ce3-f12b-bb4b-7353-e17f0cd55b0a,2026-10-24T16:15:00+00:00,RN Okafor,patient,false
+INT-5a3596ef,5a3596ef-07d3-5463-e76d-96dedbb0e2cf,2026-10-29T13:00:00+00:00,RN Okafor,patient,false
+INT-5e688e99,5e688e99-61b3-5c88-3f60-21df8aaced27,2026-10-17T09:30:00+00:00,RN Alvarez,caregiver,false
+INT-87f32e4c,87f32e4c-f0e3-ba38-8864-d18d2698a070,2026-10-19T10:00:00+00:00,RN Alvarez,patient,false
+INT-8c42357f,8c42357f-b924-9f38-d09a-007250c16c6f,2026-10-27T09:00:00+00:00,RN Alvarez,patient,false
+INT-98ff8f7e,98ff8f7e-7b14-79a9-04ea-aceff31a2328,2026-10-17T09:00:00+00:00,RN Alvarez,patient,false
+INT-aa616abe,aa616abe-1761-0c9a-7959-07544679dafd,2026-10-28T14:15:00+00:00,RN Alvarez,patient,true
+INT-e74367bd,e74367bd-7385-97dc-2c7f-251b4cd9fe29,2026-10-27T13:15:00+00:00,RN Okafor,patient,false
+INT-CASE-CLEAN,CASE-CLEAN,2026-10-28T14:00:00+00:00,RN Okafor,patient,false
+INT-CASE-MIXED,CASE-MIXED,2026-10-28T14:00:00+00:00,RN Okafor,patient,false
+INT-CASE-BRAND,CASE-BRAND,2026-10-28T14:00:00+00:00,RN Okafor,patient,false

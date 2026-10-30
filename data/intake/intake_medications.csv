@@ -1,0 +1,48 @@
+interview_ref,record_id,medication_name,dose_amount,dose_unit,frequency
+INT-46ee9d82,INT-46ee9d82-01,Naproxen,not sure,,
+INT-46ee9d82,INT-46ee9d82-02,Digoxin,0.125,mg,once a day
+INT-46ee9d82,INT-46ee9d82-03,Warfarin,10,mg,once a day
+INT-46ee9d82,INT-46ee9d82-04,Alendronic Acid,10,mg,once a day
+INT-46ee9d82,INT-46ee9d82-05,Simvastatin,10,mg,once a day
+INT-46ee9d82,INT-46ee9d82-06,Loratadine,10,mg,once a day
+INT-4f083ce3,INT-4f083ce3-01,Simvastatin,20,mg,
+INT-4f083ce3,INT-4f083ce3-02,Metoprolol Succinate,200,mg,once a day
+INT-4f083ce3,INT-4f083ce3-03,Loratadine,10,mg,once a day
+INT-5a3596ef,INT-5a3596ef-01,Clopidogrel,not sure,,
+INT-5a3596ef,INT-5a3596ef-02,Simvastatin,20,mg,
+INT-5a3596ef,INT-5a3596ef-03,Metoprolol Succinate,50,mg,once a day
+INT-5a3596ef,INT-5a3596ef-04,Acetaminophen,325,mg,four times a day
+INT-5a3596ef,INT-5a3596ef-05,Magnesium,250,mg,once a day
+INT-5e688e99,INT-5e688e99-01,Hydrochlorothiazide,25,mg,once a day
+INT-5e688e99,INT-5e688e99-02,Melatonin,3,mg,at bedtime
+INT-87f32e4c,INT-87f32e4c-01,Clopidogrel,37.5,mg,once a day
+INT-87f32e4c,INT-87f32e4c-02,Simvastatin,20,mg,once a day
+INT-87f32e4c,INT-87f32e4c-03,Loratadine,10,mg,once a day
+INT-8c42357f,INT-8c42357f-01,Naproxen Sodium,220,mg,once a day
+INT-8c42357f,INT-8c42357f-02,Aspirin,not sure,,
+INT-8c42357f,INT-8c42357f-03,Metoprolol Succinate,25,mg,as needed
+INT-8c42357f,INT-8c42357f-04,Rosuvastatin Calcium,20,mg,as needed
+INT-8c42357f,INT-8c42357f-05,Prasugrel,5,mg,
+INT-8c42357f,INT-8c42357f-06,Metformin Hydrochloride,500,mg,
+INT-8c42357f,INT-8c42357f-07,Fish Oil,1000,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-01,Simvastatin,20,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-02,Metoprolol Succinate,50,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-03,Lipitor,20,mg,as needed
+INT-98ff8f7e,INT-98ff8f7e-04,Prasugrel,10,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-05,Hydrochlorothiazide,25,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-06,Ibuprofen,400,mg,as needed
+INT-98ff8f7e,INT-98ff8f7e-07,Lisinopril,not sure,,
+INT-98ff8f7e,INT-98ff8f7e-08,Alendronic Acid,10,mg,once a day
+INT-98ff8f7e,INT-98ff8f7e-09,Fish Oil,1000,mg,once a day
+INT-e74367bd,INT-e74367bd-01,Zestril,10,mg,once a day
+INT-e74367bd,INT-e74367bd-02,Loratadine,10,mg,once a day
+INT-CASE-CLEAN,INT-CASE-CLEAN-01,Zestril,10,mg,once a day
+INT-CASE-CLEAN,INT-CASE-CLEAN-02,Atorvastatin,20,mg,once a day
+INT-CASE-CLEAN,INT-CASE-CLEAN-03,Norvasc,5,mg,once a day
+INT-CASE-MIXED,INT-CASE-MIXED-01,Metformin,0.5,g,twice a day
+INT-CASE-MIXED,INT-CASE-MIXED-02,Acetaminophen,1000,mg,twice a day
+INT-CASE-MIXED,INT-CASE-MIXED-03,Sertraline,50,mg,once a day
+INT-CASE-MIXED,INT-CASE-MIXED-04,Sertraline,50,mg,at bedtime
+INT-CASE-MIXED,INT-CASE-MIXED-05,Warfarin,not sure,,
+INT-CASE-MIXED,INT-CASE-MIXED-06,Ibuprofen,200,mg,as needed
+INT-CASE-BRAND,INT-CASE-BRAND-01,Crestor,10,mg,once a day

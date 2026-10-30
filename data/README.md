@@ -56,17 +56,62 @@ Counted over the 10 committed Synthea patients, `status == active` only.
 - **A3 holds:** none of the `doseQuantity` values carries a unit. Strength exists only in the RxNorm display (`lisinopril 10 MG Oral Tablet`).
 - **A4 holds:** 85% of active Synthea meds have no dose or timing, so frequency must stay optional and PRN or unknown must mean "not comparable". The 14 as-needed rows are the Synthea presence-based `asNeededBoolean` behaviour (R01 gotcha 3).
 
-## Deliberate cases (`fhir/cases/medrec-cases.json`)
+## Pharmacy dataset (`data/pharmacy/pharmacy_records.json`)
 
-The pharmacy side lives in B3's generator, which must emit these rows for the case patients:
+```bash
+python -m data.generators.make_pharmacy --seed 42      # from the repo root
+```
 
-| Patient | FHIR (active) | Pharmacy rows the generator must pair | Exercises |
-|---|---|---|---|
-| CASE-CLEAN | lisinopril 10 MG, atorvastatin 20 MG, amlodipine 5 MG (all once daily) | `Zestril 10 mg`, `atorvastatin 20 mg`, `amlodipine 5 mg` | alias match, otherwise no discrepancy |
-| CASE-MIXED | metformin hydrochloride 500 MG BID, metoprolol tartrate 25 MG BID, acetaminophen 500 MG BID, sertraline 50 MG once daily, warfarin sodium 5 MG once daily | metformin 500 mg **and** metformin 1000 mg (duplicate + dosage mismatch); **no** metoprolol (missing in pharmacy); a pharmacy-only drug, e.g. omeprazole (missing in FHIR); acetaminophen `0.5 g` (equal to 500 mg, not a mismatch); sertraline 50 mg twice daily (frequency difference, V2); warfarin with an invalid row only (e.g. `dose_amount` not a number), so "missing" says the pharmacy record was rejected | each V1 rule, unit equivalence, rejected-counterpart wording, V2 frequency |
-| CASE-BRAND | rosuvastatin calcium 10 MG `[Crestor]` | `Crestor 10 mg` | brand not in `aliases.json`: both sides normalize differently until V2 RxNorm |
+A JSON array of 58 flat rows with string values: `record_id, patient_id, medication_name, dose_amount, dose_unit, frequency, date_recorded`. `patient_id` is the stable identifier (the Synthea UUID, or `CASE-*`); `dose_amount` is per administration. The file is **not** FHIR and never goes through HAPI; the app bakes it into its image.
+
+- **Synthea patients (44 rows, all valid):** seeded perturbations of the FHIR medications that pass `ingest` validation, one scenario per medication: kept as is, a brand name from `aliases.json` (`Zestril` for lisinopril), 500 mg written as `0.5 g`, a different frequency text, a doubled or halved dose, dropped, or a duplicate row. Some patients also get a drug the hospital list doesn't have. Every scenario is guaranteed at least once; the generator fails loudly if the data can't show one. Fills are dated within 60 days of Synthea's end date, never in the future. No mL rows.
+- **Case patients (14 rows):** scripted below, including the invalid rows the rules must reject.
+
+## Patient intake (`data/intake/`)
+
+```bash
+python -m data.generators.make_intake --seed 42        # from the repo root
+python -m db.seed data/intake                           # loads it into the app DB (idempotent)
+```
+
+Two CSVs in the format `db.seed` reads: `intake_interviews.csv` (`interview_ref, patient_identifier, taken_at, taken_by, informant, no_medications`) and `intake_medications.csv` (`interview_ref, record_id, medication_name, dose_amount, dose_unit, frequency`), raw strings as the patient said them. 12 interviews, 47 medication rows.
+
+- **Synthea patients:** 8 interviewed with patient-report patterns (brand names, one OTC drug or supplement each, a prescribed drug not reported, a dose difference, a "not sure" dose); 1 patient who says they take nothing (`no_medications = true`, no rows); 1 with no interview at all. Which patients get which role is decided by the seed.
+- **Case patients:** scripted interviews, below.
+- Every seeded name normalizes to a FHIR or pharmacy name for that patient, or is one of the deliberate OTC drugs (a test checks this), so no false "missing" appears by accident.
+- Interview times are mid-day UTC with an explicit offset, so their local date doesn't depend on the machine's timezone. `db.seed` upserts and never deletes, so after regenerating, reset a persistent app DB with `docker compose down -v`.
+
+## Deliberate cases (`fhir/cases/medrec-cases.json` + the rows below)
+
+What each source says, and the findings the real ingest and rules produce (`tests/data/test_data_cases.py` checks every line):
+
+| Patient | FHIR (active) | Pharmacy | Intake | Expected findings |
+|---|---|---|---|---|
+| CASE-CLEAN | lisinopril 10, atorvastatin 20, amlodipine 5 mg (once daily) | Zestril 10, Atorvastatin 20, Amlodipine 5 mg | Zestril 10, Atorvastatin 20, Norvasc 5 mg | none (alias matches) |
+| CASE-MIXED | metformin 500 mg, metoprolol 25 mg, acetaminophen 500 mg, sertraline 50 mg, warfarin 5 mg | Metformin Hydrochloride 500 mg; Acetaminophen 500 mg and 1000 mg; Sertraline 50 mg twice daily; Omeprazole 20 mg; Warfarin Sodium dose "ten"; four more invalid rows | Metformin 0.5 g; Acetaminophen 1000 mg; Sertraline 50 mg twice; Warfarin "not sure"; Ibuprofen 200 mg as needed | **7 findings** (below) |
+| CASE-BRAND | rosuvastatin calcium 10 mg `[Crestor]` | Crestor 10 mg | Crestor 10 mg | **2 `missing`** in V1; 0 after V2 RxNorm |
+
+CASE-MIXED's 7 findings:
+
+| Type | Medication | Why |
+|---|---|---|
+| `duplicate` | acetaminophen | pharmacy lists 500 mg and 1000 mg |
+| `duplicate` | sertraline | intake lists it twice |
+| `dosage_mismatch` | acetaminophen | FHIR 500 mg, pharmacy 500 + 1000 mg, intake 1000 mg |
+| `missing` | ibuprofen | reported by the patient only |
+| `missing` | metoprolol | on the FHIR list; not in pharmacy records, not reported |
+| `missing` | omeprazole | in pharmacy records only |
+| `missing` | warfarin | on the FHIR list; the pharmacy row and the intake entry were rejected, so the summary names 2 rejected records |
+
+- Metformin gives **no** finding: 500 mg = 0.5 g.
+- Sertraline's once daily (FHIR) vs twice daily (pharmacy) is a V2 `frequency_mismatch`; V1 stores and shows frequency, never compares it.
+- With no interview, CASE-MIXED gives the two-source result (`missing_from` is a single source).
+- The six rejected records (five invalid pharmacy rows and the intake warfarin) sit on drugs that appear nowhere else, so they show as rejected without changing any finding: a blank name, a unit `tab`, a date `03/02/2026`, a future date, and the unreadable warfarin dose.
+- CASE-BRAND's `Crestor` is deliberately not in `aliases.json`: FHIR normalizes to `rosuvastatin calcium` while pharmacy and intake say `crestor`.
 
 `CASE-BRAND` is the last patient in the bundle and the importer's "already imported" marker.
+
+Run the data tests with `pytest tests/data`. The seed test needs `TEST_DATABASE_URL` (CI sets it) and skips without it.
 
 ## Loading into HAPI
 
