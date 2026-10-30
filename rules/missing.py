@@ -40,6 +40,8 @@ class MissingMedicationRule(ReconciliationRule):
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
         """Flag each name missing from a participating source; details name present and absent."""
         groups = {source: by_name(records) for source, records in participating(data).items()}
+        # A rejected intake entry means the patient did name a drug, so "reports none" is false.
+        reports_none = data.intake == [] and not any(r.source == "intake" for r in data.rejected)
         findings = []
         for name in all_names(groups):
             present = [s for s, g in groups.items() if name in g]
@@ -56,7 +58,7 @@ class MissingMedicationRule(ReconciliationRule):
                 summary = _two_source_summary(listed, other, len(rejected))
                 where = {"missing_from": other}
             else:
-                summary = _pattern_summary(present, absent, rejected, data.intake == [])
+                summary = _pattern_summary(present, absent, rejected, reports_none)
                 where = {"present_in": present, "missing_from": absent}
             findings.append(
                 Finding(

@@ -148,12 +148,24 @@ def test_rejected_intake_counterpart_is_named(rec, rejected, data):
         )
     )
     assert f.summary == (
-        "On the FHIR list and in pharmacy records; not reported by the patient "
-        "(patient reports no medications). 1 patient-reported record with this name was "
-        "rejected (see Rejected records)."
+        "On the FHIR list and in pharmacy records; not reported by the patient. "
+        "1 patient-reported record with this name was rejected (see Rejected records)."
     )
     assert f.details["rejected_count"] == 1
     assert f.details["rejected_record_ids"] == [rejection.source_record_id]
+
+
+def test_rejected_intake_entry_drops_reports_no_medications_note(rec, rejected, data):
+    """An empty intake with a rejected intake entry (another drug) omits the reports-none note."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[],
+            fhir=[rec("fhir", "ibuprofen")],
+            pharmacy=[rec("pharmacy", "ibuprofen")],
+            rejected=[rejected("intake", "aspirin")],
+        )
+    )
+    assert f.summary == "On the FHIR list and in pharmacy records; not reported by the patient."
 
 
 def test_rejections_in_several_absent_sources_are_each_named(rec, rejected, data):
