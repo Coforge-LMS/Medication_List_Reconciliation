@@ -1,6 +1,9 @@
 """FastAPI entry point: pages, JSON API and /healthz (TECHNICAL_PLAN §6)."""
 
-from collections.abc import Iterator
+import os
+from collections.abc import AsyncIterator, Iterator
+from contextlib import asynccontextmanager
+from functools import cache
 from pathlib import Path
 from typing import Annotated
 
@@ -13,9 +16,23 @@ from sqlalchemy.orm import Session
 from app.fhir_client import FhirClient, patient_row
 from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
 from app.version import __version__
-from contract import Finding, RunDetail, format_dose
+from contract import AliasConfig, Finding, RunDetail, format_dose
 from db import repo
-from db.session import get_session
+from db.session import get_engine, get_session
+from ingest.aliases import load_aliases
+
+DEFAULT_ALIASES = Path(__file__).resolve().parent.parent / "data" / "aliases.json"
+
+
+@cache
+def _aliases_at(path: Path) -> AliasConfig:
+    """Load and validate one alias file once."""
+    return load_aliases(path)
+
+
+def get_aliases() -> AliasConfig:
+    """FastAPI dependency: the alias config at ALIASES_PATH (default data/aliases.json)."""
+    return _aliases_at(Path(os.environ.get("ALIASES_PATH", DEFAULT_ALIASES)))
 
 
 def get_fhir_client() -> Iterator[FhirClient]:
@@ -29,8 +46,19 @@ def get_fhir_client() -> Iterator[FhirClient]:
 
 SessionDep = Annotated[Session, Depends(get_session)]
 FhirDep = Annotated[FhirClient, Depends(get_fhir_client)]
+AliasesDep = Annotated[AliasConfig, Depends(get_aliases)]
 
-app = FastAPI(title="MedRec", version=__version__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Refuse to start on a bad alias config (§4.4); create missing tables when a DB is set."""
+    get_aliases()
+    if os.environ.get("DATABASE_URL"):
+        repo.init_db(get_engine())
+    yield
+
+
+app = FastAPI(title="MedRec", version=__version__, lifespan=lifespan)
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
 templates.env.globals.update(
     version=__version__,
