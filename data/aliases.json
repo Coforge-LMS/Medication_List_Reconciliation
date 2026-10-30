@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "aliases": {
+    "zestril": "lisinopril",
+    "lipitor": "atorvastatin",
+    "metformin hydrochloride": "metformin",
+    "warfarin sodium": "warfarin",
+    "metoprolol tartrate": "metoprolol",
+    "norvasc": "amlodipine"
+  },
+  "ignore_tokens": [
+    "oral",
+    "tablet",
+    "tab",
+    "capsule",
+    "cap",
+    "extended",
+    "release",
+    "er",
+    "xr",
+    "film",
+    "coated",
+    "chewable",
+    "solution",
+    "hr"
+  ]
+}
