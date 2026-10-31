@@ -1,24 +1,43 @@
 # Medication List Reconciliation
 
-Medication reconciliation using synthetic FHIR and pharmacy data.
+Compare synthetic FHIR, pharmacy and patient-reported medication lists to find
+duplicates, missing medications and dosage differences. View saved runs and
+export findings to PDF. Findings support review; they never recommend treatment.
 
-## Local Compose Architecture
+## Prerequisites
 
-Requires Docker with Compose v2.20+ and enough memory for HAPI (2 GiB container
-limit) plus two Postgres instances. Run commands from the repository root.
+- Git and Docker with Compose v2.20 or newer.
+- Enough memory for HAPI's 2 GiB container limit, two PostgreSQL databases and the app.
+- Ports 8000, 8080 and 5433 available.
 
-The root `compose.yaml` includes `infra/docker-compose.yml`, which starts HAPI and two databases, imports the FHIR bundles and seeds the intake CSVs before starting the app.
+## Run locally
+
+From the repository root, copy the example configuration once and start the app:
 
 ```sh
 cp .env.example .env
-docker compose config --quiet
-docker compose up -d --build
-docker compose ps -a
-docker compose logs --timestamps importer app-seed
-curl --fail http://127.0.0.1:8000/healthz
+docker compose up -d --build --wait --wait-timeout 300
 ```
 
-## Container architecture
+Open http://127.0.0.1:8000. Startup loads the synthetic patients and medication data.
+The example configuration contains public demo passwords; keep local changes in
+`.env`, which is ignored by Git.
+
+## Use the app
+
+Search for `Mixton` or `Cleary`, open a patient and review the three medication
+lists. Click **Run** to see findings, open saved runs in **History**, or download
+a PDF report. The [demo patient guide](docs/DEMO_PATIENTS.md) describes more examples.
+
+## Stop the app
+
+```sh
+docker compose down
+```
+
+Saved data remains in the database volumes.
+
+## Architecture
 
 All six services share the Compose network. Solid arrows below show startup
 gates, pointing from a prerequisite to the service that waits for it. Dashed
@@ -52,12 +71,10 @@ flowchart TB
   bundles -.->|read-only| importer
 ```
 
-HAPI stores FHIR resources in `hapi-db`; the importer writes bundles through
-`http://hapi:8080/fhir`. The seeder writes intake records to `app-db`. The app
-receives `FHIR_BASE_URL=http://hapi:8080/fhir` and a `DATABASE_URL` pointing to
-`app-db:5432`.
+## Documentation
 
-`app` and `app-seed` use the same image built from `infra/Dockerfile`. App code,
-aliases, pharmacy data, and intake CSVs are baked into that image. Passwords
-come from the gitignored `.env`; `infra/hapi.env` holds non-secret HAPI settings.
-Both database volumes survive `docker compose down`; `down -v` deletes them.
+- [Architecture and API](docs/ARCHITECTURE.md)
+- [Testing](docs/TEST_CHECKLIST.md)
+- [Release images, backups and rollback](docs/OPERATIONS.md)
+- [Publishing a release](docs/RELEASING.md)
+- [Changelog](CHANGELOG.md)

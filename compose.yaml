@@ -2,3 +2,12 @@ name: medrec
 
 include:
   - infra/docker-compose.yml
+
+# Development entry point. Release startup uses compose.release.yaml instead.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+      args:
+        VCS_REF: ${VCS_REF:-unknown}
