@@ -116,8 +116,9 @@ Run the data tests with `pytest tests/data`. The seed test needs `TEST_DATABASE_
 ## Loading into HAPI
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d hapi     # HAPI + its Postgres, ~1 min to healthy
-docker compose -f infra/docker-compose.yml run --rm importer
+cp .env.example .env                  # once, from the repo root
+docker compose up -d hapi             # HAPI + its Postgres, ~1 min to healthy
+docker compose run --rm importer
 curl -s -H 'Cache-Control: no-cache' 'http://localhost:8080/fhir/Patient?_summary=count'   # total: 13
 ```
 
@@ -125,7 +126,7 @@ HAPI caches search counts for 60 s, so a plain `Patient?_summary=count` right af
 
 Order: hospital, practitioner, Synthea patients, cases. A second run finds `CASE-BRAND` and does nothing; any failed transaction exits non-zero.
 
-Reset HAPI to empty: `docker compose -f infra/docker-compose.yml down -v`.
+Reset HAPI to empty: `docker compose down -v` (this also wipes the app DB).
 
 ## Recorded HAPI responses (`tests/fixtures/hapi/`)
 
