@@ -117,3 +117,34 @@ def test_non_json_fhir_reply_is_a_502_page(client, home):
     home(lambda request: httpx.Response(200, text="<html>starting</html>"))
     response = client.get("/", params={"q": "mix"})
     assert response.status_code == 502 and "FHIR server unavailable" in response.text
+
+
+def test_full_name_reaches_fhir_as_separate_name_values(client, home):
+    """Searching a full name, as the results table displays it, sends one name value per word."""
+    sent = []
+
+    def handler(request):
+        """Record the query and answer with the patient."""
+        sent.append(str(request.url))
+        return httpx.Response(200, json=_bundle(MIXTON))
+
+    home(handler)
+    html = client.get("/", params={"q": "Marcus Mixton"}).text
+    assert '<a href="/patients/2178">Marcus Mixton</a>' in html
+    assert "name=Marcus&name=Mixton" in sent[0]
+
+
+def test_control_characters_show_no_matches_without_calling_fhir(client, home):
+    """A NUL in the query is a plain no-match, not a FHIR outage."""
+    home(_no_fhir)
+    response = client.get("/?q=%00")
+    assert response.status_code == 200 and "No patients match" in response.text
+
+
+def test_fhir_error_page_hides_the_internal_url(client, home):
+    """A FHIR 500 says so by status, without showing the server's address."""
+    home(lambda request: httpx.Response(500))
+    response = client.get("/", params={"q": "mix"})
+    assert response.status_code == 502
+    assert "answered with status 500" in response.text
+    assert "hapi.test" not in response.text

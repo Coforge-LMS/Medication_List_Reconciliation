@@ -256,3 +256,13 @@ def test_fhir_and_pharmacy_without_an_interview_can_still_run(client, wired, mon
 def test_patient_with_full_data_shows_no_no_data_marker(client, wired):
     """All three sources present: nothing says No data."""
     assert "No data" not in client.get("/patients/2178").text
+
+
+def test_fhir_failure_on_the_patient_page_hides_the_internal_url(client, wired):
+    """Neither a refused connection nor a FHIR 500 shows the server's address."""
+    _fhir(_down)
+    down = client.get("/patients/9")
+    assert "could not be reached" in down.text and "hapi.test" not in down.text
+    _fhir(lambda request: httpx.Response(500))
+    error = client.get("/patients/9")
+    assert "answered with status 500" in error.text and "hapi.test" not in error.text

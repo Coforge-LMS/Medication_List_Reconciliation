@@ -143,3 +143,54 @@ def test_search_query_cannot_add_parameters():
         "Patient?name=a%26_id%3D2178&_count=50",
         "Patient?identifier=a%26_id%3D2178",
     ]
+
+
+def _recording_client(bundle=None):
+    """A client that records each request path and answers with bundle (empty by default)."""
+    sent = []
+
+    def handler(request):
+        """Record the URL relative to BASE and answer."""
+        sent.append(str(request.url).removeprefix(BASE + "/"))
+        return httpx.Response(200, json=bundle or _searchset([]))
+
+    return FhirClient(BASE, transport=httpx.MockTransport(handler)), sent
+
+
+def test_full_name_search_sends_each_word_as_its_own_name_value():
+    """HAPI ANDs repeated name values, so a full name finds the patient; each word is encoded."""
+    client, sent = _recording_client()
+    client.search_patients("Marcus  O&Brien")
+    assert sent == [
+        "Patient?name=Marcus&name=O%26Brien&_count=50",
+        "Patient?identifier=Marcus%20%20O%26Brien",
+    ]
+
+
+@pytest.mark.parametrize("query", ["a\x00b", "\x7f", "", "   "])
+def test_query_that_cannot_match_never_reaches_the_server(query):
+    """Control characters or an empty query return no results without a request."""
+    client, sent = _recording_client()
+    assert client.search_patients(query) == []
+    assert sent == []
+
+
+def test_search_keeps_only_patients_with_an_id():
+    """An OperationOutcome entry or an id-less resource doesn't reach the results."""
+    bundle = {
+        "resourceType": "Bundle",
+        "entry": [
+            {"resource": {"resourceType": "OperationOutcome"}},
+            {"resource": {"resourceType": "Patient"}},
+            {"resource": {"resourceType": "Patient", "id": "7"}},
+        ],
+    }
+    client, _ = _recording_client(bundle)
+    assert [p["id"] for p in client.search_patients("x")] == ["7"]
+
+
+def test_patient_row_tolerates_null_name_parts():
+    """Null given or family, as FHIR JSON can carry, doesn't crash the row."""
+    row = patient_row({"id": "9", "name": [{"given": None, "family": "Solo"}]})
+    assert row["name"] == "Solo"
+    assert patient_row({"id": "9", "name": [{"family": None}]})["name"] is None

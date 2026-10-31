@@ -1,5 +1,6 @@
 """FastAPI entry point: pages, JSON API and /healthz."""
 
+import logging
 import os
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
@@ -33,6 +34,8 @@ from db import repo
 from db.session import get_engine, get_session
 from ingest.aliases import load_aliases
 from ingest.fhir import PatientMappingError, map_patient
+
+log = logging.getLogger(__name__)
 
 
 @cache
@@ -112,9 +115,7 @@ def home(request: Request, session: SessionDep, fhir: FhirDep, q: str = ""):
         try:
             results = [patient_row(p) for p in fhir.search_patients(query)]
         except (httpx.HTTPError, FhirError) as exc:
-            return _message(
-                request, 502, "FHIR server unavailable", f"Could not search FHIR ({exc})."
-            )
+            return _message(request, 502, "FHIR server unavailable", _fhir_problem(exc))
     return templates.TemplateResponse(
         request,
         "patients.html",
@@ -247,16 +248,24 @@ PIPELINE_ERRORS = (
 )
 
 
+def _fhir_problem(exc: Exception) -> str:
+    """A message for the page, free of internal URLs; the full error goes to the log."""
+    log.warning("FHIR request failed: %s", exc)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"The FHIR server answered with status {exc.response.status_code}."
+    if isinstance(exc, httpx.HTTPError):
+        return "The FHIR server could not be reached."
+    return str(exc)
+
+
 def pipeline_error(exc: Exception) -> tuple[int, str, str]:
     """(status, heading, message) for a failure while fetching or preparing a patient."""
     if isinstance(exc, InvalidFhirId) or (
         isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404
     ):
         return 404, "Patient not found", "The FHIR server has no such patient."
-    if isinstance(exc, FhirError):
-        return 502, "FHIR server unavailable", str(exc)
-    if isinstance(exc, httpx.HTTPError):
-        return 502, "FHIR server unavailable", f"Could not reach the FHIR server ({exc})."
+    if isinstance(exc, (FhirError, httpx.HTTPError)):
+        return 502, "FHIR server unavailable", _fhir_problem(exc)
     if isinstance(exc, PatientMappingError):
         return 422, "Patient cannot be reconciled", str(exc)
     if isinstance(exc, service.NoPharmacyData):
