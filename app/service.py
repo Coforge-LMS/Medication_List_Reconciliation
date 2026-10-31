@@ -75,7 +75,7 @@ def reconcile(fhir_id: str, session: Session, client: FhirClient, aliases: Alias
     """Run the full pipeline for one patient and save it in one transaction; returns the run id."""
     prepared = collect(fhir_id, session, client, aliases)
     if not prepared.has_pharmacy_data:
-        raise NoPharmacyData(f"No pharmacy records on file for {prepared.patient.identifier}.")
+        raise NoPharmacyData(f"Nothing to compare for {prepared.patient.identifier}.")
     findings = run_rules(prepared.data)
     return repo.save_run(
         session, prepared.patient, client.base_url, __version__, prepared.data, findings

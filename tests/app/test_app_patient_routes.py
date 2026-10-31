@@ -217,7 +217,9 @@ def test_reconcile_without_pharmacy_data_is_refused_and_saves_nothing(
     assert page.status_code == 409 and "No pharmacy records on file" in page.text
     api = client.post("/api/patients/2178/reconcile")
     assert api.status_code == 409
-    assert api.json()["detail"].startswith("No pharmacy records on file")
+    assert api.json() == {
+        "detail": "No pharmacy records on file: Nothing to compare for CASE-MIXED."
+    }
     assert wired == []
 
 
