@@ -4,10 +4,12 @@ import io
 
 import pytest
 from pypdf import PdfReader
+from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER
 from app.pdf import build_report
 from contract import Finding
+from db import repo
 from tests.app.conftest import INTERVIEW, make_run
 
 
@@ -122,3 +124,43 @@ def test_every_page_of_a_long_report_carries_the_disclaimer():
     assert len(report) > 1
     for number, page in enumerate(report, start=1):
         assert DISCLAIMER in page and f"Page {number}" in page
+
+
+def test_report_route_returns_a_pdf_download(client, serve_run):
+    """GET /runs/{id}/report.pdf is a PDF attachment with the run's content."""
+    serve_run(make_run())
+    response = client.get("/runs/7/report.pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.headers["content-disposition"] == (
+        'attachment; filename="reconciliation-run-7.pdf"'
+    )
+    assert response.content.startswith(b"%PDF-")
+    assert "Marcus Mixton" in " ".join(pages(response.content))
+
+
+def test_report_of_a_missing_run_is_the_404_page(client, serve_run):
+    """An unknown run id gives the readable 404 page, not a PDF."""
+    serve_run(None)
+    response = client.get("/runs/999/report.pdf")
+    assert response.status_code == 404
+    assert "Run not found" in response.text and DISCLAIMER in response.text
+
+
+def test_run_page_links_to_the_report(client, serve_run):
+    """The run page offers the PDF download."""
+    serve_run(make_run())
+    assert 'href="/runs/7/report.pdf"' in client.get("/runs/7").text
+
+
+def test_report_with_the_database_down_is_a_503_page(client, serve_run, monkeypatch):
+    """A database outage reaches the shared 503 page rather than a broken download."""
+
+    def down(session, run_id):
+        """Stand-in for repo.get_run when Postgres refuses connections."""
+        raise OperationalError("SELECT 1", {}, ConnectionRefusedError("connection refused"))
+
+    serve_run(None)
+    monkeypatch.setattr(repo, "get_run", down)
+    response = client.get("/runs/7/report.pdf")
+    assert response.status_code == 503 and "Database unavailable" in response.text

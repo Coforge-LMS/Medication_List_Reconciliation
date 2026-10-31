@@ -9,7 +9,7 @@ from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -24,6 +24,7 @@ from app.labels import (
     label_for,
     utc_time,
 )
+from app.pdf import build_report
 from app.pharmacy import PharmacyDataError
 from app.version import __version__
 from contract import AliasConfig, RunDetail, format_dose
@@ -180,6 +181,19 @@ def run_page(request: Request, run_id: int, session: SessionDep):
             "columns": _columns(run),
             "rejected": run.rejected,
         },
+    )
+
+
+@app.get("/runs/{run_id}/report.pdf")
+def run_report(request: Request, run_id: int, session: SessionDep):
+    """The saved run as a PDF download; an unknown run gets the usual 404 page."""
+    run = repo.get_run(session, run_id)
+    if run is None:
+        return _message(request, 404, "Run not found", f"No reconciliation run {run_id}.")
+    return Response(
+        build_report(run),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="reconciliation-run-{run_id}.pdf"'},
     )
 
 

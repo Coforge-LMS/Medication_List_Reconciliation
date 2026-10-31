@@ -7,6 +7,7 @@
   <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at | utc_time }} UTC · app {{ run.app_version }}</span>
 </p>
 <p id="interview">{{ interview }}</p>
+<p><a href="/runs/{{ run.run_id }}/report.pdf">Download PDF report</a></p>
 
 <h2>Findings</h2>
 {% if not groups %}
