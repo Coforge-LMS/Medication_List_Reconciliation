@@ -200,6 +200,7 @@ def run_page(request: Request, run_id: int, session: SessionDep):
             "headings": list(SOURCE_HEADINGS.values()),
             "columns": _columns(run),
             "rejected": run.rejected,
+            "no_data": [SOURCE_HEADINGS["intake"]] if run.intake_interview is None else [],
         },
     )
 

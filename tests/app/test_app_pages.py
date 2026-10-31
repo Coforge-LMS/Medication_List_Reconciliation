@@ -155,3 +155,18 @@ def test_run_page_links_back_to_the_patient(client, serve_run):
     serve_run(make_run())
     html = client.get("/runs/7").text
     assert 'href="/patients/2178"' in html and 'href="/patients/2178/history"' in html
+
+
+def test_run_without_an_interview_says_no_data_for_the_patient_side(client, serve_run):
+    """No interview isn't an empty list, so the column doesn't imply records were checked."""
+    serve_run(make_run(intake_interview=None, intake=[]))
+    column = _section(client.get("/runs/7").text, "Patient-reported")
+    assert "No data" in column and "No accepted records" not in column
+
+
+def test_run_with_a_no_medications_interview_keeps_its_wording(client, serve_run):
+    """The patient was asked and reports nothing, so this is not missing data."""
+    interview = INTERVIEW.model_copy(update={"no_medications": True})
+    serve_run(make_run(intake_interview=interview, intake=[]))
+    column = _section(client.get("/runs/7").text, "Patient-reported")
+    assert "No accepted records" in column and "No data" not in column

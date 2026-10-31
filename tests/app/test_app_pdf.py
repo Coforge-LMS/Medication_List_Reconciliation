@@ -164,3 +164,18 @@ def test_report_with_the_database_down_is_a_503_page(client, serve_run, monkeypa
     monkeypatch.setattr(repo, "get_run", down)
     response = client.get("/runs/7/report.pdf")
     assert response.status_code == 503 and "Database unavailable" in response.text
+
+
+def test_report_without_an_interview_says_no_data_for_the_patient_side():
+    """No interview isn't an empty list: the table says No data and the count isn't a false 0."""
+    content = text(make_run(intake_interview=None, intake=[]))
+    assert "Patient-reported medications No data" in content
+    assert "Records compared: 2 FHIR, 1 pharmacy. Rejected: 1." in content
+
+
+def test_report_with_a_no_medications_interview_keeps_the_count_and_none():
+    """The patient was asked and reports nothing, so that source did take part."""
+    interview = INTERVIEW.model_copy(update={"no_medications": True})
+    content = text(make_run(intake_interview=interview, intake=[]))
+    assert "Patient-reported medications (none)" in content
+    assert "Records compared: 0 patient-reported, 2 FHIR, 1 pharmacy." in content

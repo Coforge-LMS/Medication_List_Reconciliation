@@ -37,12 +37,14 @@ def build_report(run: RunDetail) -> bytes:
     _header(pdf, run)
     _summary(pdf, run)
     _findings(pdf, run)
-    for source, title in (
-        ("intake", "Patient-reported medications"),
-        ("fhir", "FHIR medications"),
-        ("pharmacy", "Pharmacy medications"),
-    ):
-        _medications(pdf, title, getattr(run, source))
+    _medications(
+        pdf,
+        "Patient-reported medications",
+        run.intake,
+        empty="(none)" if run.intake_interview else "No data",
+    )
+    _medications(pdf, "FHIR medications", run.fhir)
+    _medications(pdf, "Pharmacy medications", run.pharmacy)
     _rejected(pdf, run)
     return bytes(pdf.output())
 
@@ -70,11 +72,12 @@ def _summary(pdf: FPDF, run: RunDetail) -> None:
     _heading(pdf, "Summary")
     groups = group_findings(run.findings)
     counts = [f"{label}: {len(findings)}" for label, findings in groups]
+    intake = f"{len(run.intake)} patient-reported, " if run.intake_interview else ""
     _lines(
         pdf,
         *(counts or ["No discrepancies found"]),
-        f"Records compared: {len(run.intake)} patient-reported, {len(run.fhir)} FHIR, "
-        f"{len(run.pharmacy)} pharmacy. Rejected: {len(run.rejected)}.",
+        f"Records compared: {intake}{len(run.fhir)} FHIR, {len(run.pharmacy)} pharmacy. "
+        f"Rejected: {len(run.rejected)}.",
     )
 
 
@@ -99,14 +102,17 @@ def _findings(pdf: FPDF, run: RunDetail) -> None:
         )
 
 
-def _medications(pdf: FPDF, title: str, records: list[MedicationRecord]) -> None:
-    """One source's accepted records; frequency is shown as stored."""
+def _medications(
+    pdf: FPDF, title: str, records: list[MedicationRecord], empty: str = "(none)"
+) -> None:
+    """One source's accepted records, or empty when it has none; frequency is shown as stored."""
     _heading(pdf, title)
     _table(
         pdf,
         ["Medication", "Dose", "Frequency"],
         [[r.name, format_dose(r.dose_amount, r.dose_unit), r.frequency or EMPTY] for r in records],
         widths=(55, 15, 30),
+        empty=empty,
     )
 
 
@@ -144,10 +150,16 @@ def _lines(pdf: FPDF, *lines: str) -> None:
         pdf.multi_cell(0, 5, line, align="L", **NEXT_LINE)
 
 
-def _table(pdf: FPDF, header: list[str], rows: list[list[str]], widths: tuple[int, ...]) -> None:
-    """A table with wrapping cells and headings repeated per page, or (none) when it's empty."""
+def _table(
+    pdf: FPDF,
+    header: list[str],
+    rows: list[list[str]],
+    widths: tuple[int, ...],
+    empty: str = "(none)",
+) -> None:
+    """A table with wrapping cells and headings repeated per page, or the empty text."""
     if not rows:
-        _lines(pdf, "(none)")
+        _lines(pdf, empty)
         return
     pdf.set_font(FAMILY, size=8)
     with pdf.table(col_widths=widths, text_align="LEFT") as table:
