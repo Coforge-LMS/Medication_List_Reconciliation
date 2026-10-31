@@ -67,7 +67,7 @@ jobs:
           enable-cache: true
       - name: Install locked dependencies
         run: uv sync --locked
-      # Current tests are pure; prove the database is reachable before B5 lands.
+      
       - name: Verify Postgres connection
         run: |
           uv run --locked python - <<'PY'
@@ -83,4 +83,4 @@ jobs:
               engine.dispose()
           PY
       - name: Run tests
-        run: uv run --locked pytest
+        run: uv run --locked pytest -vv --durations=10
