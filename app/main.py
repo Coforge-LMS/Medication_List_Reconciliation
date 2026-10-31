@@ -3,7 +3,6 @@
 import os
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
 from typing import Annotated
@@ -17,10 +16,17 @@ from sqlalchemy.orm import Session
 
 from app import service
 from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
-from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
+from app.labels import (
+    DISCLAIMER,
+    SOURCE_HEADINGS,
+    group_findings,
+    interview_line,
+    label_for,
+    utc_time,
+)
 from app.pharmacy import PharmacyDataError
 from app.version import __version__
-from contract import AliasConfig, Finding, RunDetail, format_dose
+from contract import AliasConfig, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
 from ingest.aliases import load_aliases
@@ -60,11 +66,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if os.environ.get("DATABASE_URL"):
         repo.init_db(get_engine())
     yield
-
-
-def utc_time(moment: datetime) -> str:
-    """'2026-10-30 14:05' in UTC, whatever zone the database session returned."""
-    return f"{moment.astimezone(UTC):%Y-%m-%d %H:%M}"
 
 
 app = FastAPI(title="MedRec", version=__version__, lifespan=lifespan)
@@ -225,14 +226,6 @@ def pipeline_error(exc: Exception) -> tuple[int, str, str]:
     if isinstance(exc, PatientMappingError):
         return 422, "Patient cannot be reconciled", str(exc)
     return 503, "Pharmacy dataset not available", str(exc)
-
-
-def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
-    """(label, findings) per discrepancy type, types in first-seen order; unknown -> Other (x)."""
-    groups: dict[str, list[Finding]] = {}
-    for f in findings:
-        groups.setdefault(f.discrepancy_type, []).append(f)
-    return [(label_for(t), fs) for t, fs in groups.items()]
 
 
 def _columns(run: RunDetail) -> list[tuple[str, list]]:

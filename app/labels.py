@@ -4,7 +4,9 @@ Unknown finding types render as "Other (x)" so an older release can still show f
 written by a newer one (tolerant reader).
 """
 
-from contract import IntakeInterviewInfo
+from datetime import UTC, datetime
+
+from contract import Finding, IntakeInterviewInfo
 
 DISCLAIMER = (
     "Synthetic data. Reports discrepancies between sources for clinician review; "
@@ -39,3 +41,16 @@ def interview_line(interview: IntakeInterviewInfo | None) -> str:
     # Local date, the same day latest_intake_for puts on the intake rows.
     taken_on = interview.taken_at.astimezone()
     return f"Intake taken {taken_on:%Y-%m-%d} by {interview.taken_by} ({interview.informant})"
+
+
+def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
+    """(label, findings) per discrepancy type, types in first-seen order; unknown -> Other (x)."""
+    groups: dict[str, list[Finding]] = {}
+    for f in findings:
+        groups.setdefault(f.discrepancy_type, []).append(f)
+    return [(label_for(t), fs) for t, fs in groups.items()]
+
+
+def utc_time(moment: datetime) -> str:
+    """'2026-10-30 14:05' in UTC, whatever zone the database session returned."""
+    return f"{moment.astimezone(UTC):%Y-%m-%d %H:%M}"
