@@ -127,3 +127,31 @@ def test_database_down_is_a_503_json_for_the_api(client, serve_run, monkeypatch)
     response = client.get("/api/runs/7")
     assert response.status_code == 503
     assert response.json() == {"detail": "Database unavailable"}
+
+
+def test_stylesheet_is_served_and_linked(client, serve_run):
+    """Pages link the bundled stylesheet, and it is served as CSS with no external host."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert f'href="/static/app.css?v={__version__}"' in html
+    assert 'class="topbar"' in html and "<footer>" in html
+    response = client.get("/static/app.css")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert "http://" not in response.text and "https://" not in response.text
+
+
+def test_run_page_marks_each_finding_type_for_styling(client, serve_run):
+    """Summary cards and finding groups carry a per-type class; unknown types get one too."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert 'class="card finding-group type-missing"' in html
+    assert 'class="card finding-group type-frequency_mismatch"' in html
+    assert '<span class="count">2</span> Missing medication' in html
+
+
+def test_run_page_links_back_to_the_patient(client, serve_run):
+    """The run page links to the patient and their history by FHIR id."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert 'href="/patients/2178"' in html and 'href="/patients/2178/history"' in html
