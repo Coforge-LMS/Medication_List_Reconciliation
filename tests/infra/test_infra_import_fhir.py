@@ -30,6 +30,12 @@ def test_load_order_is_hospital_practitioner_patients_cases():
     assert len(names) == 13  # hospital + practitioner + 10 Synthea patients + cases
 
 
+def test_demo_bundle_is_never_imported():
+    """The live-demo patient stays out of the import, so the count and recorded ids don't move."""
+    assert "new-patient.json" not in [p.name for p in imp.load_order()]
+    assert (imp.DATA_DIR / "demo" / "new-patient.json").is_file()
+
+
 def test_imports_every_bundle_when_marker_absent(server):
     assert imp.main() == 0
     assert len(server["posted"]) == 13

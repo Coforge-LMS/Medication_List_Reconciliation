@@ -128,6 +128,17 @@ Order: hospital, practitioner, Synthea patients, cases. A second run finds `CASE
 
 Reset HAPI to empty: `docker compose down -v` (this also wipes the app DB).
 
+### Adding a patient live
+
+`fhir/demo/new-patient.json` is a small bundle for showing ingestion on screen: `CASE-DEMO` (Dana Demopoulos) with two active medications. The importer never reads this folder, so the 13-patient count and the recorded ids don't change.
+
+```bash
+curl -s -X POST -H 'Content-Type: application/fhir+json' \
+  --data @data/fhir/demo/new-patient.json http://localhost:8080/fhir
+```
+
+Search `Demopoulos` or `CASE-DEMO` on the app's home page and open the patient. Their FHIR medications show, but we hold no pharmacy or intake data for them, so the page says so and offers no reconciliation run. Posting again changes nothing. The patient stays until `docker compose down -v`.
+
 ## Recorded HAPI responses (`tests/fixtures/hapi/`)
 
 `python infra/record_fixtures.py` (against a populated HAPI) writes, per case patient, the Patient search by identifier, `Patient/{id}` and `MedicationRequest?patient={id}&status=active`. `index.json` maps each request path and query to its file. HAPI assigns sequential numeric ids, so a fresh volume and the documented load order reproduce the recorded ids (`2174`, `2178`, `2184`).
