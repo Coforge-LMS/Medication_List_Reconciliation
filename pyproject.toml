@@ -1,7 +1,7 @@
 [project]
 name = "medrec"
 # Single version source: shown in the footer and /healthz; Devang bumps it at release.
-version = "0.1.0"
+version = "1.0.0"
 description = "Medication reconciliation web app: FHIR vs synthetic pharmacy records (synthetic data only)"
 requires-python = ">=3.12,<3.13"
 dependencies = [

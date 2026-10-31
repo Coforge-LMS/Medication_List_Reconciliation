@@ -1,0 +1,5 @@
+name: medrec
+
+# Image-only entry point: even `up --build` cannot relabel a different checkout.
+include:
+  - infra/docker-compose.yml

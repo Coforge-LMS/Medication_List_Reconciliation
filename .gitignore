@@ -225,3 +225,5 @@ misc/
 .DS_Store
 # Synthea tooling (jar + scratch output; committed data lives in data/fhir/synthea/)
 tools/
+# Database archives and verification reports are local artifacts.
+backups/
