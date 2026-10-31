@@ -11,6 +11,8 @@ from typing import Any
 
 import httpx
 
+from ingest.fhir import CASE_ID_SYSTEM, SYNTHEA_ID_SYSTEM
+
 DEFAULT_BASE_URL = "http://localhost:8080/fhir"
 MAX_PAGES = 100  # guards against a next-link loop
 FHIR_ID = re.compile(r"[A-Za-z0-9\-.]{1,64}")  # FHIR R4 id datatype
@@ -71,9 +73,18 @@ class FhirClient:
         identifier = urllib.parse.quote(f"urn:medrec:case|{case}", safe="")
         return self._search(f"Patient?identifier={identifier}")
 
-    def list_patients(self) -> list[dict[str, Any]]:
-        """GET Patient?_count=50, following next links (live only: no recorded fixture)."""
-        return self._search("Patient?_count=50")
+    def search_patients(self, query: str) -> list[dict[str, Any]]:
+        """Patients whose name starts with query or whose identifier equals it, name matches first.
+
+        Runs Patient?name= and Patient?identifier= (live only: no recorded fixture). The query is
+        percent-encoded, so it can't add search parameters of its own.
+        """
+        encoded = urllib.parse.quote(query, safe="")
+        matches = [
+            *self._search(f"Patient?name={encoded}&_count=50"),
+            *self._search(f"Patient?identifier={encoded}"),
+        ]
+        return list({patient["id"]: patient for patient in matches}.values())
 
     def _get(self, url: str) -> dict[str, Any]:
         """One GET; url is relative to the base or an absolute next link."""
@@ -100,12 +111,21 @@ class FhirClient:
 
 
 def patient_row(resource: dict[str, Any]) -> dict[str, str | None]:
-    """Display fields for the patient list: id, 'Given Family', birth date, gender."""
+    """Display fields for a patient row: id, 'Given Family', identifier, birth date, gender."""
     names = resource.get("name") or [{}]
     name = " ".join([*names[0].get("given", []), names[0].get("family", "")]).strip()
+    identifier = next(
+        (
+            i.get("value")
+            for i in resource.get("identifier") or []
+            if i.get("system") in (SYNTHEA_ID_SYSTEM, CASE_ID_SYSTEM)
+        ),
+        None,
+    )
     return {
         "id": resource.get("id"),
         "name": name or None,
+        "identifier": identifier,
         "birth_date": resource.get("birthDate"),
         "gender": resource.get("gender"),
     }

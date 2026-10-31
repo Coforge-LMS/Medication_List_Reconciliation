@@ -228,6 +228,32 @@ def list_runs(session: Session, identifier: str) -> list[RunSummary]:
     ]
 
 
+def recent_patients(session: Session, limit: int = 20) -> list[tuple[PatientInfo, datetime]]:
+    """Patients with at least one run and their last run time, most recently reconciled first."""
+    run, patient = models.ReconciliationRun, models.Patient
+    last_run = func.max(run.started_at)
+    stmt = (
+        select(patient, last_run)
+        .join(run, run.patient_id == patient.id)
+        .group_by(patient.id)
+        .order_by(last_run.desc(), patient.id.desc())
+        .limit(limit)
+    )
+    return [
+        (
+            PatientInfo(
+                identifier=p.identifier,
+                fhir_patient_id=p.fhir_patient_id,
+                name=p.name,
+                birth_date=p.birth_date,
+                gender=p.gender,
+            ),
+            started_at,
+        )
+        for p, started_at in session.execute(stmt)
+    ]
+
+
 def _latest_interview(session: Session, identifier: str) -> models.IntakeInterview | None:
     interview = models.IntakeInterview
     return session.scalar(

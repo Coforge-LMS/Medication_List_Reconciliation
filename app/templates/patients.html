@@ -2,21 +2,48 @@
 {% block title %}Patients · MedRec{% endblock %}
 {% block content %}
 <h1>Patients</h1>
-{% if patients %}
+<form method="get" action="/" role="search">
+  <label for="q">Search the FHIR server by name or exact identifier</label>
+  <input id="q" name="q" type="search" value="{{ query }}" placeholder="e.g. Mixton or CASE-MIXED">
+  <button type="submit">Search</button>
+</form>
+
+{% if results is not none %}
+<h2>Search results</h2>
+{% if results %}
 <table>
-  <thead><tr><th>Name</th><th>Birth date</th><th>Gender</th><th>FHIR id</th></tr></thead>
+  <thead><tr><th>Name</th><th>Identifier</th><th>Birth date</th><th>Gender</th></tr></thead>
   <tbody>
-    {% for p in patients %}
+    {% for p in results %}
     <tr>
       <td><a href="/patients/{{ p.id }}">{{ p.name or "(no name)" }}</a></td>
+      <td>{{ p.identifier or "—" }}</td>
       <td>{{ p.birth_date or "—" }}</td>
       <td>{{ p.gender or "—" }}</td>
-      <td>{{ p.id }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p class="muted">No patients on the FHIR server.</p>
+<p class="muted">No patients match "{{ query }}".</p>
+{% endif %}
+{% endif %}
+
+<h2>Recent patients</h2>
+{% if recent %}
+<table>
+  <thead><tr><th>Name</th><th>Identifier</th><th>Last run (UTC)</th></tr></thead>
+  <tbody>
+    {% for patient, last_run in recent %}
+    <tr>
+      <td><a href="/patients/{{ patient.fhir_patient_id }}">{{ patient.name or "(no name)" }}</a></td>
+      <td>{{ patient.identifier }}</td>
+      <td>{{ last_run | utc_time }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No patients reconciled yet.</p>
 {% endif %}
 {% endblock %}

@@ -33,8 +33,8 @@ def test_pager_follows_next_links_across_two_pages():
         return httpx.Response(200, json=_searchset(["1", "2"], next_url=page2))
 
     client = FhirClient(BASE, transport=httpx.MockTransport(handler))
-    assert [p["id"] for p in client.list_patients()] == ["1", "2", "3"]
-    assert seen == [f"{BASE}/Patient?_count=50", page2]
+    assert [p["id"] for p in client.active_medication_requests("9")] == ["1", "2", "3"]
+    assert seen == [f"{BASE}/MedicationRequest?patient=9&status=active", page2]
 
 
 def test_read_patient_uses_the_decided_shape(recorded_client):
@@ -71,6 +71,7 @@ def test_patient_row_formats_display_fields():
     assert patient_row(resource) == {
         "id": "2178",
         "name": "Marcus Mixton",
+        "identifier": "CASE-MIXED",
         "birth_date": "1951-11-30",
         "gender": "male",
     }
@@ -109,5 +110,36 @@ def test_endless_next_links_stop_at_max_pages():
         return httpx.Response(200, json=loop)
 
     with pytest.raises(FhirError, match="exceeded"):
-        FhirClient(BASE, transport=httpx.MockTransport(handler)).list_patients()
+        FhirClient(BASE, transport=httpx.MockTransport(handler)).search_patients("x")
     assert len(sent) == MAX_PAGES
+
+
+def test_search_queries_name_and_identifier_and_merges_by_id():
+    """Both searches run; a patient found by each appears once, name matches first."""
+    sent = []
+
+    def handler(request):
+        """Name search finds 1 and 2; identifier search finds 2 and 3."""
+        path = str(request.url).removeprefix(BASE + "/")
+        sent.append(path)
+        return httpx.Response(200, json=_searchset(["1", "2"] if "name=" in path else ["2", "3"]))
+
+    client = FhirClient(BASE, transport=httpx.MockTransport(handler))
+    assert [p["id"] for p in client.search_patients("mix")] == ["1", "2", "3"]
+    assert sent == ["Patient?name=mix&_count=50", "Patient?identifier=mix"]
+
+
+def test_search_query_cannot_add_parameters():
+    """The query is percent-encoded, so '&' and '=' stay inside its own value."""
+    sent = []
+
+    def handler(request):
+        """Record the URL and answer with an empty searchset."""
+        sent.append(str(request.url).removeprefix(BASE + "/"))
+        return httpx.Response(200, json=_searchset([]))
+
+    FhirClient(BASE, transport=httpx.MockTransport(handler)).search_patients("a&_id=2178")
+    assert sent == [
+        "Patient?name=a%26_id%3D2178&_count=50",
+        "Patient?identifier=a%26_id%3D2178",
+    ]

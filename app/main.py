@@ -99,15 +99,25 @@ def healthz() -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse)
-def patient_list(request: Request, fhir: FhirDep):
-    """Live patient list from FHIR; a readable 502 page when the server is unavailable."""
-    try:
-        patients = [patient_row(p) for p in fhir.list_patients()]
-    except (httpx.HTTPError, FhirError) as exc:
-        return _message(
-            request, 502, "FHIR server unavailable", f"Could not load patients from FHIR ({exc})."
-        )
-    return templates.TemplateResponse(request, "patients.html", {"patients": patients})
+def home(request: Request, session: SessionDep, fhir: FhirDep, q: str = ""):
+    """Search box, HAPI matches for q, and recently reconciled patients from our database.
+
+    FHIR is only contacted for a search, so the page still opens while HAPI is down.
+    """
+    query = q.strip()
+    results = None
+    if query:
+        try:
+            results = [patient_row(p) for p in fhir.search_patients(query)]
+        except (httpx.HTTPError, FhirError) as exc:
+            return _message(
+                request, 502, "FHIR server unavailable", f"Could not search FHIR ({exc})."
+            )
+    return templates.TemplateResponse(
+        request,
+        "patients.html",
+        {"query": query, "results": results, "recent": repo.recent_patients(session)},
+    )
 
 
 @app.get("/patients/{fhir_id}", response_class=HTMLResponse)
