@@ -6,9 +6,14 @@
   {{ patient.identifier }}{% if patient.birth_date %} · born {{ patient.birth_date }}{% endif %}{% if patient.gender %} · {{ patient.gender }}{% endif %} · FHIR id {{ fhir_id }}
 </p>
 <p id="interview">{{ interview }}</p>
+{% if can_run %}
 <form method="post" action="/patients/{{ fhir_id }}/reconcile">
   <button type="submit">Run reconciliation</button>
   <a href="/patients/{{ fhir_id }}/history">History</a>
 </form>
+{% else %}
+<p>No pharmacy records on file for this patient, so there is nothing to compare.</p>
+<p><a href="/patients/{{ fhir_id }}/history">History</a></p>
+{% endif %}
 {% include "_records.html" %}
 {% endblock %}

@@ -17,6 +17,10 @@ from ingest.pharmacy import validate
 from rules import run_rules
 
 
+class NoPharmacyData(Exception):
+    """We hold no pharmacy rows for this patient, so a comparison would only show false gaps."""
+
+
 @dataclass(frozen=True)
 class Prepared:
     """One patient's normalized input, ready for the rules, plus what the pages show with it."""
@@ -24,6 +28,7 @@ class Prepared:
     patient: PatientInfo
     data: ReconciliationInput
     interview: IntakeInterviewInfo | None
+    has_pharmacy_data: bool  # any rows on file, even if every one of them was rejected
 
 
 def build_input(
@@ -59,15 +64,18 @@ def collect(fhir_id: str, session: Session, client: FhirClient, aliases: AliasCo
     resources = client.active_medication_requests(fhir_id)
     latest = repo.latest_intake_for(session, patient.identifier)
     interview, intake_rows = latest if latest else (None, None)
-    data = build_input(
-        resources, patient.identifier, pharmacy.rows_for(patient.identifier), intake_rows, aliases
+    pharmacy_rows = pharmacy.rows_for(patient.identifier)
+    data = build_input(resources, patient.identifier, pharmacy_rows, intake_rows, aliases)
+    return Prepared(
+        patient=patient, data=data, interview=interview, has_pharmacy_data=bool(pharmacy_rows)
     )
-    return Prepared(patient=patient, data=data, interview=interview)
 
 
 def reconcile(fhir_id: str, session: Session, client: FhirClient, aliases: AliasConfig) -> int:
     """Run the full pipeline for one patient and save it in one transaction; returns the run id."""
     prepared = collect(fhir_id, session, client, aliases)
+    if not prepared.has_pharmacy_data:
+        raise NoPharmacyData(f"No pharmacy records on file for {prepared.patient.identifier}.")
     findings = run_rules(prepared.data)
     return repo.save_run(
         session, prepared.patient, client.base_url, __version__, prepared.data, findings

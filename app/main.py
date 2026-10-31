@@ -120,6 +120,11 @@ def patient_page(
     except PIPELINE_ERRORS as exc:
         return _message(request, *pipeline_error(exc))
     data = prepared.data
+    no_data = []
+    if prepared.interview is None:
+        no_data.append(SOURCE_HEADINGS["intake"])
+    if not prepared.has_pharmacy_data:
+        no_data.append(SOURCE_HEADINGS["pharmacy"])
     return templates.TemplateResponse(
         request,
         "patient.html",
@@ -133,6 +138,8 @@ def patient_page(
                 (SOURCE_HEADINGS["pharmacy"], data.pharmacy),
             ],
             "rejected": data.rejected,
+            "no_data": no_data,
+            "can_run": prepared.has_pharmacy_data,
         },
     )
 
@@ -224,6 +231,7 @@ PIPELINE_ERRORS = (
     PatientMappingError,
     FileNotFoundError,
     PharmacyDataError,
+    service.NoPharmacyData,
 )
 
 
@@ -239,6 +247,8 @@ def pipeline_error(exc: Exception) -> tuple[int, str, str]:
         return 502, "FHIR server unavailable", f"Could not reach the FHIR server ({exc})."
     if isinstance(exc, PatientMappingError):
         return 422, "Patient cannot be reconciled", str(exc)
+    if isinstance(exc, service.NoPharmacyData):
+        return 409, "No pharmacy records on file", str(exc)
     return 503, "Pharmacy dataset not available", str(exc)
 
 

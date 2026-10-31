@@ -1,4 +1,5 @@
-{# Three medication columns and the rejected records; expects `columns` and `rejected`. #}
+{# Three medication columns and the rejected records; expects `columns` and `rejected`.
+   Columns whose heading is in the optional `no_data` list say so instead of "No accepted records". #}
 <h2>Medications compared</h2>
 <div class="columns">
   {% for heading, records in columns %}
@@ -13,6 +14,8 @@
         {% endfor %}
       </tbody>
     </table>
+    {% elif heading in (no_data or []) %}
+    <p class="muted">No data</p>
     {% else %}
     <p class="muted">No accepted records</p>
     {% endif %}

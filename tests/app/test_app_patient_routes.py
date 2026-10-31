@@ -1,5 +1,6 @@
 """Patient detail page, reconcile POST and JSON, history and error pages (no database)."""
 
+import json
 from datetime import UTC, datetime
 
 import httpx
@@ -184,3 +185,72 @@ def test_corrupt_pharmacy_dataset_is_503(client, wired, tmp_path, monkeypatch):
     response = client.get("/patients/2178")
     assert response.status_code == 503
     assert "Pharmacy dataset not available" in response.text
+
+
+def _pharmacy_file(tmp_path, monkeypatch, rows):
+    """Point the app at a pharmacy dataset holding only these rows."""
+    path = tmp_path / "pharmacy.json"
+    path.write_text(json.dumps(rows))
+    monkeypatch.setenv("PHARMACY_DATA", str(path))
+
+
+def test_patient_without_pharmacy_data_shows_no_data_and_no_run_button(
+    client, wired, tmp_path, monkeypatch
+):
+    """FHIR meds still show, the pharmacy column says No data, and nothing can be run."""
+    _pharmacy_file(tmp_path, monkeypatch, [])
+    response = client.get("/patients/2178")
+    assert response.status_code == 200
+    html = response.text
+    assert "metoprolol tartrate" in html  # FHIR side is still shown
+    assert "No pharmacy records on file for this patient" in html
+    assert "No data" in html and "/reconcile" not in html
+    assert "/patients/2178/history" in html
+
+
+def test_reconcile_without_pharmacy_data_is_refused_and_saves_nothing(
+    client, wired, tmp_path, monkeypatch
+):
+    """Both the form POST and the API give 409, so no false "missing" findings are saved."""
+    _pharmacy_file(tmp_path, monkeypatch, [])
+    page = client.post("/patients/2178/reconcile", follow_redirects=False)
+    assert page.status_code == 409 and "No pharmacy records on file" in page.text
+    api = client.post("/api/patients/2178/reconcile")
+    assert api.status_code == 409
+    assert api.json()["detail"].startswith("No pharmacy records on file")
+    assert wired == []
+
+
+def test_pharmacy_rows_that_were_all_rejected_still_count_as_data(
+    client, wired, tmp_path, monkeypatch
+):
+    """Rows on file that all fail validation can still be run; the rejections are the point."""
+    bad = {
+        "record_id": "PH-X",
+        "patient_id": "CASE-MIXED",
+        "medication_name": "metformin",
+        "dose_amount": "ten",
+        "dose_unit": "mg",
+        "frequency": "",
+        "date_recorded": "2026-09-15",
+    }
+    _pharmacy_file(tmp_path, monkeypatch, [bad])
+    html = client.get("/patients/2178").text
+    assert 'action="/patients/2178/reconcile"' in html
+    assert "No accepted records" in html
+    assert client.post("/patients/2178/reconcile", follow_redirects=False).status_code == 303
+
+
+def test_fhir_and_pharmacy_without_an_interview_can_still_run(client, wired, monkeypatch):
+    """No interview only empties the Patient-reported column; two-source reconcile still runs."""
+    monkeypatch.setattr(repo, "latest_intake_for", lambda session, ident: None)
+    html = client.get("/patients/2178").text
+    assert "No intake history recorded" in html and "No data" in html
+    assert 'action="/patients/2178/reconcile"' in html
+    assert client.post("/patients/2178/reconcile", follow_redirects=False).status_code == 303
+    assert wired[0][4].intake is None  # save_run's ReconciliationInput
+
+
+def test_patient_with_full_data_shows_no_no_data_marker(client, wired):
+    """All three sources present: nothing says No data."""
+    assert "No data" not in client.get("/patients/2178").text
