@@ -33,8 +33,8 @@ def test_pager_follows_next_links_across_two_pages():
         return httpx.Response(200, json=_searchset(["1", "2"], next_url=page2))
 
     client = FhirClient(BASE, transport=httpx.MockTransport(handler))
-    assert [p["id"] for p in client.list_patients()] == ["1", "2", "3"]
-    assert seen == [f"{BASE}/Patient?_count=50", page2]
+    assert [p["id"] for p in client.active_medication_requests("9")] == ["1", "2", "3"]
+    assert seen == [f"{BASE}/MedicationRequest?patient=9&status=active", page2]
 
 
 def test_read_patient_uses_the_decided_shape(recorded_client):
@@ -71,6 +71,7 @@ def test_patient_row_formats_display_fields():
     assert patient_row(resource) == {
         "id": "2178",
         "name": "Marcus Mixton",
+        "identifier": "CASE-MIXED",
         "birth_date": "1951-11-30",
         "gender": "male",
     }
@@ -109,5 +110,87 @@ def test_endless_next_links_stop_at_max_pages():
         return httpx.Response(200, json=loop)
 
     with pytest.raises(FhirError, match="exceeded"):
-        FhirClient(BASE, transport=httpx.MockTransport(handler)).list_patients()
+        FhirClient(BASE, transport=httpx.MockTransport(handler)).search_patients("x")
     assert len(sent) == MAX_PAGES
+
+
+def test_search_queries_name_and_identifier_and_merges_by_id():
+    """Both searches run; a patient found by each appears once, name matches first."""
+    sent = []
+
+    def handler(request):
+        """Name search finds 1 and 2; identifier search finds 2 and 3."""
+        path = str(request.url).removeprefix(BASE + "/")
+        sent.append(path)
+        return httpx.Response(200, json=_searchset(["1", "2"] if "name=" in path else ["2", "3"]))
+
+    client = FhirClient(BASE, transport=httpx.MockTransport(handler))
+    assert [p["id"] for p in client.search_patients("mix")] == ["1", "2", "3"]
+    assert sent == ["Patient?name=mix&_count=50", "Patient?identifier=mix"]
+
+
+def test_search_query_cannot_add_parameters():
+    """The query is percent-encoded, so '&' and '=' stay inside its own value."""
+    sent = []
+
+    def handler(request):
+        """Record the URL and answer with an empty searchset."""
+        sent.append(str(request.url).removeprefix(BASE + "/"))
+        return httpx.Response(200, json=_searchset([]))
+
+    FhirClient(BASE, transport=httpx.MockTransport(handler)).search_patients("a&_id=2178")
+    assert sent == [
+        "Patient?name=a%26_id%3D2178&_count=50",
+        "Patient?identifier=a%26_id%3D2178",
+    ]
+
+
+def _recording_client(bundle=None):
+    """A client that records each request path and answers with bundle (empty by default)."""
+    sent = []
+
+    def handler(request):
+        """Record the URL relative to BASE and answer."""
+        sent.append(str(request.url).removeprefix(BASE + "/"))
+        return httpx.Response(200, json=bundle or _searchset([]))
+
+    return FhirClient(BASE, transport=httpx.MockTransport(handler)), sent
+
+
+def test_full_name_search_sends_each_word_as_its_own_name_value():
+    """HAPI ANDs repeated name values, so a full name finds the patient; each word is encoded."""
+    client, sent = _recording_client()
+    client.search_patients("Marcus  O&Brien")
+    assert sent == [
+        "Patient?name=Marcus&name=O%26Brien&_count=50",
+        "Patient?identifier=Marcus%20%20O%26Brien",
+    ]
+
+
+@pytest.mark.parametrize("query", ["a\x00b", "\x7f", "", "   "])
+def test_query_that_cannot_match_never_reaches_the_server(query):
+    """Control characters or an empty query return no results without a request."""
+    client, sent = _recording_client()
+    assert client.search_patients(query) == []
+    assert sent == []
+
+
+def test_search_keeps_only_patients_with_an_id():
+    """An OperationOutcome entry or an id-less resource doesn't reach the results."""
+    bundle = {
+        "resourceType": "Bundle",
+        "entry": [
+            {"resource": {"resourceType": "OperationOutcome"}},
+            {"resource": {"resourceType": "Patient"}},
+            {"resource": {"resourceType": "Patient", "id": "7"}},
+        ],
+    }
+    client, _ = _recording_client(bundle)
+    assert [p["id"] for p in client.search_patients("x")] == ["7"]
+
+
+def test_patient_row_tolerates_null_name_parts():
+    """Null given or family, as FHIR JSON can carry, doesn't crash the row."""
+    row = patient_row({"id": "9", "name": [{"given": None, "family": "Solo"}]})
+    assert row["name"] == "Solo"
+    assert patient_row({"id": "9", "name": [{"family": None}]})["name"] is None

@@ -127,3 +127,60 @@ def test_database_down_is_a_503_json_for_the_api(client, serve_run, monkeypatch)
     response = client.get("/api/runs/7")
     assert response.status_code == 503
     assert response.json() == {"detail": "Database unavailable"}
+
+
+def test_stylesheet_is_served_and_linked(client, serve_run):
+    """Pages link the bundled stylesheet, and it is served as CSS with no external host."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert f'href="/static/app.css?v={__version__}"' in html
+    assert 'class="topbar"' in html and "<footer>" in html
+    response = client.get("/static/app.css")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert "http://" not in response.text and "https://" not in response.text
+
+
+def test_run_page_marks_each_finding_type_for_styling(client, serve_run):
+    """Summary cards and finding groups carry a per-type class; unknown types get one too."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert 'class="card finding-group type-missing"' in html
+    assert 'class="card finding-group type-frequency_mismatch"' in html
+    assert '<span class="count">2</span> Missing medication' in html
+
+
+def test_run_page_links_back_to_the_patient(client, serve_run):
+    """The run page links to the patient and their history by FHIR id."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert 'href="/patients/2178"' in html and 'href="/patients/2178/history"' in html
+
+
+def test_run_without_an_interview_says_no_data_for_the_patient_side(client, serve_run):
+    """No interview isn't an empty list, so the column doesn't imply records were checked."""
+    serve_run(make_run(intake_interview=None, intake=[]))
+    column = _section(client.get("/runs/7").text, "Patient-reported")
+    assert "No data" in column and "No accepted records" not in column
+
+
+def test_run_with_a_no_medications_interview_keeps_its_wording(client, serve_run):
+    """The patient was asked and reports nothing, so this is not missing data."""
+    interview = INTERVIEW.model_copy(update={"no_medications": True})
+    serve_run(make_run(intake_interview=interview, intake=[]))
+    column = _section(client.get("/runs/7").text, "Patient-reported")
+    assert "No accepted records" in column and "No data" not in column
+
+
+@pytest.mark.parametrize("run_id", ["99999999999999999999", "9223372036854775808", "0", "-1"])
+@pytest.mark.parametrize("path", ["/runs/{}", "/runs/{}/report.pdf", "/api/runs/{}"])
+def test_impossible_run_ids_are_404_without_querying(client, serve_run, monkeypatch, path, run_id):
+    """Ids outside the bigint range never reach Postgres, which would raise an error."""
+    serve_run(None)
+
+    def unexpected(session, requested):
+        """Fail if the database would have been queried."""
+        pytest.fail(f"queried run {requested}")
+
+    monkeypatch.setattr(repo, "get_run", unexpected)
+    assert client.get(path.format(run_id)).status_code == 404

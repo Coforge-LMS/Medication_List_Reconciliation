@@ -1,0 +1,173 @@
+/* MedRec styles. Colour only tells finding types apart; no source is ever emphasised over another. */
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #1c2430;
+  --muted: #5a6675;
+  --line: #dfe3e8;
+  --head: #f0f2f5;
+  --accent: #0b6e75;
+  --on-accent: #ffffff;
+  --duplicate: #6d4fb3;
+  --missing: #a85d0a;
+  --mismatch: #1f6fb2;
+  --other: #66707c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161c;
+    --surface: #1b2129;
+    --ink: #e6eaf0;
+    --muted: #9aa6b4;
+    --line: #2f3843;
+    --head: #232a33;
+    --accent: #58c4ca;
+    --on-accent: #06262a;
+    --duplicate: #b39df0;
+    --missing: #e6a456;
+    --mismatch: #6db3ea;
+    --other: #9aa6b4;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1 { margin: 0 0 .25rem; font-size: 1.6rem; line-height: 1.25; }
+h2 { margin: 2rem 0 .75rem; font-size: 1.15rem; }
+h3 { margin: 0 0 .5rem; font-size: 1rem; }
+p { margin: 0 0 .75rem; }
+
+.topbar, footer { padding: .75rem max(1rem, calc((100% - 72rem) / 2)); }
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.brand { color: var(--ink); font-size: 1.1rem; font-weight: 700; text-decoration: none; }
+.tagline { color: var(--muted); font-size: .9rem; }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 74rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 2rem;
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.muted { color: var(--muted); }
+
+.card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.card > :last-child { margin-bottom: 0; }
+
+#interview, .notice {
+  padding: .5rem .75rem;
+  background: var(--head);
+  border-radius: 6px;
+}
+.notice { margin-top: .75rem; }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; }
+.actions form { margin: 0; }
+
+button, .button {
+  display: inline-block;
+  padding: .5rem 1rem;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--on-accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.search { display: grid; grid-template-columns: 1fr auto; gap: .5rem; }
+.search label { grid-column: 1 / -1; font-weight: 600; }
+.search input {
+  width: 100%;
+  min-width: 0;
+  padding: .5rem .75rem;
+  background: var(--bg);
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+}
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td {
+  padding: .45rem .6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th { background: var(--head); font-weight: 600; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+.finding-table { min-width: 44rem; }
+.finding-table td:nth-child(n+3) { min-width: 6rem; }
+.columns td:nth-child(2) { white-space: nowrap; }
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: .75rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.summary li {
+  padding: .75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--type, var(--other));
+  border-radius: 8px;
+}
+.summary .count { display: block; font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+
+.finding-group { border-left: 4px solid var(--type, var(--other)); }
+
+.type-duplicate { --type: var(--duplicate); }
+.type-missing { --type: var(--missing); }
+.type-dosage_mismatch { --type: var(--mismatch); }
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.columns .card { margin-bottom: 0; }

@@ -1,13 +1,13 @@
-# Medical_List_Reconciliation
+# Medication List Reconciliation
 
 Medication reconciliation using synthetic FHIR and pharmacy data.
 
-## Local Compose Architecture 
+## Local Compose Architecture
 
 Requires Docker with Compose v2.20+ and enough memory for HAPI (2 GiB container
 limit) plus two Postgres instances. Run commands from the repository root.
 
-The root `compose.yaml` includes `infra/docker-compose.yml`, which starts HAPI and two databases, imports FHIR bundles, and seed CSVs before starting the app.
+The root `compose.yaml` includes `infra/docker-compose.yml`, which starts HAPI and two databases, imports the FHIR bundles and seeds the intake CSVs before starting the app.
 
 ```sh
 cp .env.example .env
@@ -55,7 +55,7 @@ flowchart TB
 HAPI stores FHIR resources in `hapi-db`; the importer writes bundles through
 `http://hapi:8080/fhir`. The seeder writes intake records to `app-db`. The app
 receives `FHIR_BASE_URL=http://hapi:8080/fhir` and a `DATABASE_URL` pointing to
-`app-db:5432`;
+`app-db:5432`.
 
 `app` and `app-seed` use the same image built from `infra/Dockerfile`. App code,
 aliases, pharmacy data, and intake CSVs are baked into that image. Passwords

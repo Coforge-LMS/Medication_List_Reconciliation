@@ -1,30 +1,42 @@
 """FastAPI entry point: pages, JSON API and /healthz."""
 
+import logging
 import os
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from functools import cache
 from pathlib import Path
 from typing import Annotated
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app import service
 from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
-from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
+from app.labels import (
+    DISCLAIMER,
+    SOURCE_HEADINGS,
+    group_findings,
+    interview_line,
+    label_for,
+    utc_time,
+)
+from app.pdf import build_report
 from app.pharmacy import PharmacyDataError
 from app.version import __version__
-from contract import AliasConfig, Finding, RunDetail, format_dose
+from contract import AliasConfig, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
 from ingest.aliases import load_aliases
 from ingest.fhir import PatientMappingError, map_patient
+
+log = logging.getLogger(__name__)
+MAX_RUN_ID = 2**63 - 1  # the largest bigint
 
 
 @cache
@@ -62,12 +74,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-def utc_time(moment: datetime) -> str:
-    """'2026-10-30 14:05' in UTC, whatever zone the database session returned."""
-    return f"{moment.astimezone(UTC):%Y-%m-%d %H:%M}"
-
-
 app = FastAPI(title="MedRec", version=__version__, lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"))
 templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
 templates.env.filters["utc_time"] = utc_time
 templates.env.globals.update(
@@ -97,15 +105,23 @@ def healthz() -> dict[str, str]:
 
 
 @app.get("/", response_class=HTMLResponse)
-def patient_list(request: Request, fhir: FhirDep):
-    """Live patient list from FHIR; a readable 502 page when the server is unavailable."""
-    try:
-        patients = [patient_row(p) for p in fhir.list_patients()]
-    except (httpx.HTTPError, FhirError) as exc:
-        return _message(
-            request, 502, "FHIR server unavailable", f"Could not load patients from FHIR ({exc})."
-        )
-    return templates.TemplateResponse(request, "patients.html", {"patients": patients})
+def home(request: Request, session: SessionDep, fhir: FhirDep, q: str = ""):
+    """Search box, HAPI matches for q, and recently reconciled patients from our database.
+
+    FHIR is only contacted for a search, so the page still opens while HAPI is down.
+    """
+    query = q.strip()
+    results = None
+    if query:
+        try:
+            results = [patient_row(p) for p in fhir.search_patients(query)]
+        except (httpx.HTTPError, FhirError) as exc:
+            return _message(request, 502, "FHIR server unavailable", _fhir_problem(exc))
+    return templates.TemplateResponse(
+        request,
+        "patients.html",
+        {"query": query, "results": results, "recent": repo.recent_patients(session)},
+    )
 
 
 @app.get("/patients/{fhir_id}", response_class=HTMLResponse)
@@ -118,6 +134,11 @@ def patient_page(
     except PIPELINE_ERRORS as exc:
         return _message(request, *pipeline_error(exc))
     data = prepared.data
+    no_data = []
+    if prepared.interview is None:
+        no_data.append(SOURCE_HEADINGS["intake"])
+    if not prepared.has_pharmacy_data:
+        no_data.append(SOURCE_HEADINGS["pharmacy"])
     return templates.TemplateResponse(
         request,
         "patient.html",
@@ -131,6 +152,8 @@ def patient_page(
                 (SOURCE_HEADINGS["pharmacy"], data.pharmacy),
             ],
             "rejected": data.rejected,
+            "no_data": no_data,
+            "can_run": prepared.has_pharmacy_data,
         },
     )
 
@@ -165,7 +188,7 @@ def history_page(request: Request, fhir_id: str, session: SessionDep, fhir: Fhir
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_page(request: Request, run_id: int, session: SessionDep):
     """Findings grouped by type, the three medication lists, rejections and the interview."""
-    run = repo.get_run(session, run_id)
+    run = _load_run(session, run_id)
     if run is None:
         return _message(request, 404, "Run not found", f"No reconciliation run {run_id}.")
     return templates.TemplateResponse(
@@ -178,7 +201,21 @@ def run_page(request: Request, run_id: int, session: SessionDep):
             "headings": list(SOURCE_HEADINGS.values()),
             "columns": _columns(run),
             "rejected": run.rejected,
+            "no_data": [SOURCE_HEADINGS["intake"]] if run.intake_interview is None else [],
         },
+    )
+
+
+@app.get("/runs/{run_id}/report.pdf")
+def run_report(request: Request, run_id: int, session: SessionDep):
+    """The saved run as a PDF download; an unknown run gets the usual 404 page."""
+    run = _load_run(session, run_id)
+    if run is None:
+        return _message(request, 404, "Run not found", f"No reconciliation run {run_id}.")
+    return Response(
+        build_report(run),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="reconciliation-run-{run_id}.pdf"'},
     )
 
 
@@ -196,7 +233,7 @@ def reconcile_json(fhir_id: str, session: SessionDep, fhir: FhirDep, aliases: Al
 @app.get("/api/runs/{run_id}")
 def run_json(run_id: int, session: SessionDep) -> dict:
     """Run JSON: patient, interview, records per source, rejections and findings."""
-    run = repo.get_run(session, run_id)
+    run = _load_run(session, run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return run.model_dump(mode="json")
@@ -209,7 +246,23 @@ PIPELINE_ERRORS = (
     PatientMappingError,
     FileNotFoundError,
     PharmacyDataError,
+    service.NoPharmacyData,
 )
+
+
+def _load_run(session: Session, run_id: int) -> RunDetail | None:
+    """The saved run, or None for an id that can't exist, which Postgres would refuse outright."""
+    return repo.get_run(session, run_id) if 0 < run_id <= MAX_RUN_ID else None
+
+
+def _fhir_problem(exc: Exception) -> str:
+    """A message for the page, free of internal URLs; the full error goes to the log."""
+    log.warning("FHIR request failed: %s", exc)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"The FHIR server answered with status {exc.response.status_code}."
+    if isinstance(exc, httpx.HTTPError):
+        return "The FHIR server could not be reached."
+    return str(exc)
 
 
 def pipeline_error(exc: Exception) -> tuple[int, str, str]:
@@ -218,21 +271,13 @@ def pipeline_error(exc: Exception) -> tuple[int, str, str]:
         isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 404
     ):
         return 404, "Patient not found", "The FHIR server has no such patient."
-    if isinstance(exc, FhirError):
-        return 502, "FHIR server unavailable", str(exc)
-    if isinstance(exc, httpx.HTTPError):
-        return 502, "FHIR server unavailable", f"Could not reach the FHIR server ({exc})."
+    if isinstance(exc, (FhirError, httpx.HTTPError)):
+        return 502, "FHIR server unavailable", _fhir_problem(exc)
     if isinstance(exc, PatientMappingError):
         return 422, "Patient cannot be reconciled", str(exc)
+    if isinstance(exc, service.NoPharmacyData):
+        return 409, "No pharmacy records on file", str(exc)
     return 503, "Pharmacy dataset not available", str(exc)
-
-
-def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
-    """(label, findings) per discrepancy type, types in first-seen order; unknown -> Other (x)."""
-    groups: dict[str, list[Finding]] = {}
-    for f in findings:
-        groups.setdefault(f.discrepancy_type, []).append(f)
-    return [(label_for(t), fs) for t, fs in groups.items()]
 
 
 def _columns(run: RunDetail) -> list[tuple[str, list]]:

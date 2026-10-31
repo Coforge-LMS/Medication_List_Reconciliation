@@ -4,12 +4,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
+from app.labels import DISCLAIMER
 from app.main import app, get_fhir_client
 from contract import ReconciliationInput
 from db import models
 from db.repo import save_run
 from db.seed import seed
 from tests.app.conftest import INTAKE_DIR, make_run
+from tests.app.test_app_pdf import pages
 
 
 def test_saved_three_way_run_renders_from_the_database(db, client):
@@ -73,7 +75,17 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
         assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
 
+        assert client.get("/runs/99999999999999999999").status_code == 404
+
         history = client.get("/patients/2178/history").text
         assert f'href="/runs/{body["run_id"]}"' in history
+
+        report = client.get(f"/runs/{body['run_id']}/report.pdf")
+        assert report.status_code == 200
+        pdf_text = " ".join(pages(report.content))
+        assert "Marcus Mixton" in pdf_text
+        assert "Intake taken 2026-10-28 by RN Okafor (patient)" in pdf_text
+        assert "Ibuprofen 200 mg" in pdf_text  # a patient-reported record
+        assert DISCLAIMER in pdf_text
     finally:
         app.dependency_overrides.pop(get_fhir_client, None)

@@ -1,2 +1,4 @@
+name: medrec
+
 include:
   - infra/docker-compose.yml

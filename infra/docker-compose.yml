@@ -79,12 +79,9 @@ services:
       - "127.0.0.1:5433:5432"
 
   app-seed:
+    # Same image as app, which holds the build section; it is never on a registry.
     image: medrec-app:${APP_VERSION:?set APP_VERSION in .env}
-    build:
-      context: ..
-      dockerfile: infra/Dockerfile
-      args:
-        VCS_REF: ${VCS_REF:-unknown}
+    pull_policy: never
     restart: "no"
     depends_on:
       app-db:

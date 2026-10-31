@@ -15,7 +15,7 @@ from contract import (
     Rejection,
 )
 from db import models
-from db.repo import get_run, latest_intake_for, list_runs, save_run
+from db.repo import get_run, latest_intake_for, list_runs, recent_patients, save_run
 
 BASE_URL = "http://hapi:8080/fhir"
 INTERVIEW = IntakeInterviewInfo(
@@ -182,3 +182,37 @@ def test_save_run_refuses_a_session_with_uncommitted_writes(db, row_counts, flus
 def test_get_run_of_missing_id_is_none(db):
     with Session(db) as session:
         assert get_run(session, 999999) is None
+
+
+def _empty_run(session, who):
+    """Save a run with no records or findings for this patient."""
+    data = ReconciliationInput(fhir=[], pharmacy=[])
+    save_run(session, who, BASE_URL, "1.0.0", data, [])
+
+
+def test_recent_patients_lists_each_once_with_the_latest_run_first(db):
+    """Two runs for one patient give one row; the most recently run patient comes first."""
+    other = patient().model_copy(update={"identifier": "CASE-CLEAN", "name": "Clara Cleary"})
+    with Session(db) as session:
+        _empty_run(session, patient())
+        _empty_run(session, other)
+        _empty_run(session, patient())
+        recent = recent_patients(session)
+    assert [p.identifier for p, _ in recent] == ["CASE-MIXED", "CASE-CLEAN"]
+    assert recent[0][0].fhir_patient_id == "1" and recent[0][1] > recent[1][1]
+
+
+def test_recent_patients_excludes_patients_only_seeded(db, seed_intake):
+    """An interview creates a patient row, but with no run they aren't recent."""
+    seed_intake()
+    with Session(db) as session:
+        assert recent_patients(session) == []
+
+
+def test_recent_patients_honours_the_limit(db):
+    """Only the newest patients up to limit are returned."""
+    other = patient().model_copy(update={"identifier": "CASE-CLEAN"})
+    with Session(db) as session:
+        _empty_run(session, patient())
+        _empty_run(session, other)
+        assert [p.identifier for p, _ in recent_patients(session, limit=1)] == ["CASE-CLEAN"]

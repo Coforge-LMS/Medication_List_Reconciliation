@@ -1,39 +1,49 @@
 {% extends "base.html" %}
 {% block title %}Run {{ run.run_id }} · MedRec{% endblock %}
 {% block content %}
-<h1>Reconciliation run {{ run.run_id }}</h1>
-<p>
-  {{ run.patient.name or run.patient.identifier }}
-  <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at | utc_time }} UTC · app {{ run.app_version }}</span>
-</p>
-<p id="interview">{{ interview }}</p>
+<div class="card">
+  <h1>Reconciliation run {{ run.run_id }}</h1>
+  <p>
+    <a href="/patients/{{ run.patient.fhir_patient_id }}">{{ run.patient.name or run.patient.identifier }}</a>
+    <span class="muted">· {{ run.patient.identifier }} · {{ run.started_at | utc_time }} UTC · app {{ run.app_version }}</span>
+  </p>
+  <p id="interview">{{ interview }}</p>
+  <div class="actions">
+    <a class="button" href="/runs/{{ run.run_id }}/report.pdf">Download PDF report</a>
+    <a href="/patients/{{ run.patient.fhir_patient_id }}/history">History</a>
+  </div>
+</div>
 
 <h2>Findings</h2>
 {% if not groups %}
-<p>No discrepancies found</p>
+<p class="notice">No discrepancies found</p>
 {% else %}
-<ul>
-  {% for label, findings in groups %}<li>{{ label }}: {{ findings | length }}</li>{% endfor %}
+<ul class="summary">
+  {% for label, findings in groups %}
+  <li class="type-{{ findings[0].discrepancy_type }}"><span class="count">{{ findings | length }}</span> {{ label }}</li>
+  {% endfor %}
 </ul>
 {% for label, findings in groups %}
-<section>
+<section class="card finding-group type-{{ findings[0].discrepancy_type }}">
   <h3>{{ label }}</h3>
-  <table>
-    <thead>
-      <tr><th>Medication</th><th>Summary</th>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr>
-    </thead>
-    <tbody>
-      {% for f in findings %}
-      <tr>
-        <td>{{ f.medication }}</td>
-        <td>{{ f.summary }}</td>
-        <td>{{ f.intake_value or "—" }}</td>
-        <td>{{ f.fhir_value or "—" }}</td>
-        <td>{{ f.pharmacy_value or "—" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="finding-table">
+      <thead>
+        <tr><th>Medication</th><th>Summary</th>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for f in findings %}
+        <tr>
+          <td>{{ f.medication }}</td>
+          <td>{{ f.summary }}</td>
+          <td>{{ f.intake_value or "—" }}</td>
+          <td>{{ f.fhir_value or "—" }}</td>
+          <td>{{ f.pharmacy_value or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endfor %}
 {% endif %}

@@ -6,10 +6,13 @@ fixtures and the E2E test match by exact URL. The transport is injectable for te
 
 import os
 import re
+import unicodedata
 import urllib.parse
 from typing import Any
 
 import httpx
+
+from ingest.fhir import CASE_ID_SYSTEM, SYNTHEA_ID_SYSTEM, _patient_name
 
 DEFAULT_BASE_URL = "http://localhost:8080/fhir"
 MAX_PAGES = 100  # guards against a next-link loop
@@ -71,9 +74,25 @@ class FhirClient:
         identifier = urllib.parse.quote(f"urn:medrec:case|{case}", safe="")
         return self._search(f"Patient?identifier={identifier}")
 
-    def list_patients(self) -> list[dict[str, Any]]:
-        """GET Patient?_count=50, following next links (live only: no recorded fixture)."""
-        return self._search("Patient?_count=50")
+    def search_patients(self, query: str) -> list[dict[str, Any]]:
+        """Patients matching every word of query by name, or all of it by identifier.
+
+        Each word matches the start of a name part, so "Marcus Mixton" and "mix" both work. Runs
+        Patient?name= and Patient?identifier= (live only: no recorded fixture), name matches first.
+        Words are percent-encoded, so they can't add search parameters of their own. A query with
+        control characters can't match anything, so it never reaches the server.
+        """
+        words = query.split()
+        if not words or any(unicodedata.category(c) == "Cc" for c in "".join(words)):
+            return []
+        names = "&".join(f"name={urllib.parse.quote(word, safe='')}" for word in words)
+        identifier = urllib.parse.quote(query, safe="")
+        matches = [
+            *self._search(f"Patient?{names}&_count=50"),
+            *self._search(f"Patient?identifier={identifier}"),
+        ]
+        patients = [p for p in matches if p.get("resourceType") == "Patient" and p.get("id")]
+        return list({patient["id"]: patient for patient in patients}.values())
 
     def _get(self, url: str) -> dict[str, Any]:
         """One GET; url is relative to the base or an absolute next link."""
@@ -82,7 +101,7 @@ class FhirClient:
         try:
             return response.json()
         except ValueError as exc:
-            raise FhirError(f"FHIR server sent a non-JSON response for {url}") from exc
+            raise FhirError("The FHIR server sent a non-JSON response.") from exc
 
     def _search(self, url: str) -> list[dict[str, Any]]:
         """Resources from a searchset, page by page via link[relation=next]."""
@@ -96,16 +115,23 @@ class FhirClient:
             )
             if url is None:
                 return resources
-        raise FhirError(f"FHIR search exceeded {MAX_PAGES} pages")
+        raise FhirError(f"The FHIR search exceeded {MAX_PAGES} pages.")
 
 
 def patient_row(resource: dict[str, Any]) -> dict[str, str | None]:
-    """Display fields for the patient list: id, 'Given Family', birth date, gender."""
-    names = resource.get("name") or [{}]
-    name = " ".join([*names[0].get("given", []), names[0].get("family", "")]).strip()
+    """Display fields for a patient row: id, 'Given Family', identifier, birth date, gender."""
+    identifier = next(
+        (
+            i.get("value")
+            for i in resource.get("identifier") or []
+            if i.get("system") in (SYNTHEA_ID_SYSTEM, CASE_ID_SYSTEM)
+        ),
+        None,
+    )
     return {
         "id": resource.get("id"),
-        "name": name or None,
+        "name": _patient_name(resource),
+        "identifier": identifier,
         "birth_date": resource.get("birthDate"),
         "gender": resource.get("gender"),
     }
