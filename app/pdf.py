@@ -11,6 +11,8 @@ FONTS = Path(__file__).resolve().parent / "fonts"
 FAMILY = "DejaVu"
 EMPTY = "—"
 NEXT_LINE = {"new_x": "LMARGIN", "new_y": "NEXT"}
+MAX_CELL_CHARS = 400  # keeps any table row shorter than a page, which fpdf2 requires
+TRUNCATED = "… [truncated; full text on the run page]"
 KEEP_WITH_TABLE = 30  # mm a heading needs below it, so it isn't stranded at the foot of a page
 
 
@@ -166,4 +168,9 @@ def _table(
         for values in (header, *rows):
             row = table.row()
             for value in values:
-                row.cell(value)
+                row.cell(_fit(value))
+
+
+def _fit(value: str) -> str:
+    """The cell text, visibly cut if it's so long that its row couldn't fit on one page."""
+    return value if len(value) <= MAX_CELL_CHARS else value[:MAX_CELL_CHARS] + TRUNCATED

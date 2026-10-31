@@ -75,6 +75,8 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
         assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
 
+        assert client.get("/runs/99999999999999999999").status_code == 404
+
         history = client.get("/patients/2178/history").text
         assert f'href="/runs/{body["run_id"]}"' in history
 

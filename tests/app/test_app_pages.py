@@ -170,3 +170,17 @@ def test_run_with_a_no_medications_interview_keeps_its_wording(client, serve_run
     serve_run(make_run(intake_interview=interview, intake=[]))
     column = _section(client.get("/runs/7").text, "Patient-reported")
     assert "No accepted records" in column and "No data" not in column
+
+
+@pytest.mark.parametrize("run_id", ["99999999999999999999", "9223372036854775808", "0", "-1"])
+@pytest.mark.parametrize("path", ["/runs/{}", "/runs/{}/report.pdf", "/api/runs/{}"])
+def test_impossible_run_ids_are_404_without_querying(client, serve_run, monkeypatch, path, run_id):
+    """Ids outside the bigint range never reach Postgres, which would raise an error."""
+    serve_run(None)
+
+    def unexpected(session, requested):
+        """Fail if the database would have been queried."""
+        pytest.fail(f"queried run {requested}")
+
+    monkeypatch.setattr(repo, "get_run", unexpected)
+    assert client.get(path.format(run_id)).status_code == 404

@@ -36,6 +36,7 @@ from ingest.aliases import load_aliases
 from ingest.fhir import PatientMappingError, map_patient
 
 log = logging.getLogger(__name__)
+MAX_RUN_ID = 2**63 - 1  # the largest bigint
 
 
 @cache
@@ -187,7 +188,7 @@ def history_page(request: Request, fhir_id: str, session: SessionDep, fhir: Fhir
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
 def run_page(request: Request, run_id: int, session: SessionDep):
     """Findings grouped by type, the three medication lists, rejections and the interview."""
-    run = repo.get_run(session, run_id)
+    run = _load_run(session, run_id)
     if run is None:
         return _message(request, 404, "Run not found", f"No reconciliation run {run_id}.")
     return templates.TemplateResponse(
@@ -208,7 +209,7 @@ def run_page(request: Request, run_id: int, session: SessionDep):
 @app.get("/runs/{run_id}/report.pdf")
 def run_report(request: Request, run_id: int, session: SessionDep):
     """The saved run as a PDF download; an unknown run gets the usual 404 page."""
-    run = repo.get_run(session, run_id)
+    run = _load_run(session, run_id)
     if run is None:
         return _message(request, 404, "Run not found", f"No reconciliation run {run_id}.")
     return Response(
@@ -232,7 +233,7 @@ def reconcile_json(fhir_id: str, session: SessionDep, fhir: FhirDep, aliases: Al
 @app.get("/api/runs/{run_id}")
 def run_json(run_id: int, session: SessionDep) -> dict:
     """Run JSON: patient, interview, records per source, rejections and findings."""
-    run = repo.get_run(session, run_id)
+    run = _load_run(session, run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return run.model_dump(mode="json")
@@ -247,6 +248,11 @@ PIPELINE_ERRORS = (
     PharmacyDataError,
     service.NoPharmacyData,
 )
+
+
+def _load_run(session: Session, run_id: int) -> RunDetail | None:
+    """The saved run, or None for an id that can't exist, which Postgres would refuse outright."""
+    return repo.get_run(session, run_id) if 0 < run_id <= MAX_RUN_ID else None
 
 
 def _fhir_problem(exc: Exception) -> str:

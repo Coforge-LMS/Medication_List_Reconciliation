@@ -7,10 +7,10 @@ from pypdf import PdfReader
 from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER
-from app.pdf import build_report
-from contract import Finding
+from app.pdf import MAX_CELL_CHARS, TRUNCATED, build_report
+from contract import Finding, Reason, Rejection
 from db import repo
-from tests.app.conftest import INTERVIEW, make_run
+from tests.app.conftest import INTERVIEW, make_run, record
 
 
 def pages(pdf: bytes) -> list[str]:
@@ -179,3 +179,39 @@ def test_report_with_a_no_medications_interview_keeps_the_count_and_none():
     content = text(make_run(intake_interview=interview, intake=[]))
     assert "Patient-reported medications (none)" in content
     assert "Records compared: 0 patient-reported, 2 FHIR, 1 pharmacy." in content
+
+
+@pytest.mark.parametrize("length", [MAX_CELL_CHARS, MAX_CELL_CHARS + 1, 5000])
+def test_very_long_values_in_every_table_column_still_build_a_report(length):
+    """Wide unbroken text in every cell can't make a row taller than a page, which would raise."""
+    long = "W" * length
+    finding = Finding(
+        discrepancy_type="missing",
+        medication=long,
+        summary=long,
+        intake_value=long,
+        fhir_value=long,
+        pharmacy_value=long,
+    )
+    rejection = Rejection(
+        source="pharmacy",
+        name=long,
+        reasons=[Reason(field="dose_amount", code="unreadable_dosage", message=long)],
+    )
+    run = make_run(
+        findings=[finding] * 3,
+        intake=[record("intake", long, frequency=long)],
+        fhir=[record("fhir", long, frequency=long)],
+        pharmacy=[record("pharmacy", long, frequency=long)],
+        rejected=[rejection],
+    )
+    assert build_report(run).startswith(b"%PDF-")
+
+
+def test_long_cell_is_visibly_truncated_and_short_ones_are_not():
+    """A cut value says so, so nothing disappears silently; values under the cap are untouched."""
+    at_cap = "words " * (MAX_CELL_CHARS // 6)
+    over = Finding(discrepancy_type="missing", medication="x", summary="words " * 200)
+    assert " ".join(TRUNCATED.split()) in text(make_run(findings=[over]))
+    under = Finding(discrepancy_type="missing", medication="x", summary=at_cap)
+    assert "truncated" not in text(make_run(findings=[under]))
