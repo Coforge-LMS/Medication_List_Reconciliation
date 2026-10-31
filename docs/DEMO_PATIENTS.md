@@ -1,10 +1,11 @@
 # Demo patient sheet
 
-All patients are synthetic. App: http://127.0.0.1:8000. Search on the home page by name (the start of any name works) or by exact identifier (case-sensitive).
+All patients are synthetic. App: http://127.0.0.1:8000. Search on the home page by name (a full name, or the start of any name) or by exact identifier (case-sensitive).
 
 **Start clean, from the repo root (allow a minute or so):**
 
 ```bash
+cp .env.example .env    # first time only
 docker compose down -v
 docker compose up -d --build
 ```
@@ -26,7 +27,7 @@ docker compose up -d --build
 - **Acetaminophen has two findings:** pharmacy lists 500 mg and 1000 mg (duplicate), and the three sources' doses differ (dosage mismatch).
 - **Sertraline duplicate:** the patient reported it twice.
 - **Ibuprofen:** only the patient reports it. **Omeprazole:** only pharmacy has it. **Metoprolol:** only FHIR has it.
-- **Warfarin:** on the FHIR list, and the summary names both rejected records (pharmacy dose "ten", patient "not sure"), so a rejection isn't presented as a true omission.
+- **Warfarin:** on the FHIR list. The summary says one patient-reported and one pharmacy record with this name were rejected, so a rejection isn't presented as a true omission. The Rejected records table shows why: dose "ten" and "patient unsure of dose".
 - **Say:** the app reports differences for clinician review. It doesn't treat any source as the truth and doesn't recommend treatment.
 
 ## Adding the live patient (step 6)

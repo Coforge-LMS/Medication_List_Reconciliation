@@ -50,6 +50,7 @@ def test_unknown_type_renders_as_other_with_its_stored_summary():
     content = text(make_run())
     assert "Other (frequency_mismatch)" in content
     assert "FHIR frequency QD; pharmacy frequency BID." in content
+    assert "— QD BID" in content  # no intake value, then the stored FHIR and pharmacy values
 
 
 def test_micro_signs_and_em_dash_render():
