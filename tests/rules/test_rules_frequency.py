@@ -443,6 +443,19 @@ def test_product_note_only_covers_compared_sources(rec, data):
     assert "different_salt" not in f.details and f.details["not_compared"] == ["intake"]
 
 
+def test_form_note_only_covers_compared_sources(rec, data):
+    """A form only the uncompared source states can't explain a difference between the others."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[_product(rec, "intake", "as needed", form="Extended Release Oral Tablet")],
+            fhir=[_product(rec, "fhir", "QD", form="Oral Tablet")],
+            pharmacy=[_product(rec, "pharmacy", "BID", form="Oral Tablet")],
+        )
+    )
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+    assert "different_form" not in f.details
+
+
 def test_case_variants_of_a_non_compared_frequency_appear_once(rec, data):
     """The same wording in other capitals is one statement, kept as first written."""
     (f,) = rule.evaluate(
