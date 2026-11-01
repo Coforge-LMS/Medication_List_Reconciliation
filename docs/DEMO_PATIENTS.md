@@ -14,7 +14,7 @@ docker compose up -d --build
 
 | # | Search | Patient | What it shows | Expect |
 |---|---|---|---|---|
-| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all four rule types, RxNorm matching, rejected records, the PDF | **8 findings:** 2 duplicate, 4 missing, 1 dosage mismatch, 1 frequency mismatch; 6 rejected records |
+| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all four rule types, RxNorm matching, rejected records, the PDF | **8 findings:** 2 duplicate, 4 missing, 1 dosage mismatch, 1 frequency mismatch; 1 medication with no differences (metformin); 6 rejected records |
 | 2 | `Cleary` | Clara Cleary (CASE-CLEAN) | Brand names matching generics across all three sources | **No discrepancies found** |
 | 3 | `Montero` | Cristobal567 Montero62 | No interview recorded: FHIR and pharmacy only | **3 findings**, two-source wording; Patient-reported column says "No data" |
 | 4 | `Dibbert` | Jona712 Dibbert990 | Patient says they take nothing | **3 findings**; "Patient reports no medications" |
@@ -23,7 +23,7 @@ docker compose up -d --build
 
 ## Points to show on Marcus Mixton
 
-- **Metformin has no finding:** 500 mg (FHIR, pharmacy) and 0.5 g (patient) are the same dose.
+- **Metformin has no finding, and is listed under "No differences":** 500 mg (FHIR, pharmacy) and 0.5 g (patient) are the same dose. The section shows what each source states and doesn't call any of them correct, which is why it doesn't say "validated".
 - **Acetaminophen has two findings:** pharmacy lists 500 mg and 1000 mg (duplicate), and the three sources' doses differ (dosage mismatch).
 - **RxNorm:** pharmacy's list says `Zoloft`, marked "Matched as: sertraline". It isn't in the alias list, so only RxNorm connects it to FHIR's sertraline.
 - **Sertraline:** the patient reported it twice (duplicate). Its frequency also differs: the patient and FHIR say once daily, pharmacy's Zoloft says twice daily. Without the RxNorm match there would be 2 false `missing` findings instead of this comparison. "Once a day", "at bedtime" and FHIR's `QD` all count as once daily, so they don't differ from each other.
@@ -71,5 +71,6 @@ Findings: D = duplicate, M = missing, DM = dosage mismatch, F = frequency mismat
 - **`Effertz` finds two patients:** search `Todd` or `Wallace` to get one.
 - **Identifier search is exact:** `CASE-MIXED` works; `case-mixed` and partial identifiers find nothing.
 - **Avoid Kristine579 Cummings51 as an "intake-only" example:** a seeded-data overlap means Loratadine appears in both intake and pharmacy for this patient, so it isn't intake-only.
+- **"No differences" means no finding, not proof of agreement:** a frequency marked "(not compared)" states no schedule, so it may still differ. Rosuvastatin on Leonila462 Nolan344 shows this. A medication with a rejected record isn't listed there.
 - **Findings appear only after clicking Run.** The patient page previews the medication lists, and each patient joins Recent patients after their first run.
 - **Reset between rehearsals and the real demo,** or runs and the live patient stay in place.
