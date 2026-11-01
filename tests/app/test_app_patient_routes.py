@@ -130,7 +130,7 @@ def test_history_lists_runs_newest_first_with_labels(client, wired, monkeypatch)
                 app_version="1.1.0",
                 started_at=datetime(2026, 10, 31, 9, 0, tzinfo=UTC),
                 finding_count=3,
-                counts_by_type={"missing": 2, "frequency_mismatch": 1},
+                counts_by_type={"missing": 2, "route_mismatch": 1},
             ),
             RunSummary(
                 run_id=7,
@@ -145,7 +145,7 @@ def test_history_lists_runs_newest_first_with_labels(client, wired, monkeypatch)
     html = client.get("/patients/2178/history").text
     assert asked == ["CASE-MIXED"]
     assert html.index('href="/runs/8"') < html.index('href="/runs/7"')
-    assert "Missing medication: 2; Other (frequency_mismatch): 1" in html
+    assert "Missing medication: 2; Other (route_mismatch): 1" in html
     assert "2026-10-31 09:00" in html and DISCLAIMER in html
 
 

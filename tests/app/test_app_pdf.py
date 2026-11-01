@@ -48,9 +48,9 @@ def test_findings_never_claim_no_discrepancies():
 def test_unknown_type_renders_as_other_with_its_stored_summary():
     """A type from a newer release is labelled Other (x) and keeps its summary and values."""
     content = text(make_run())
-    assert "Other (frequency_mismatch)" in content
-    assert "FHIR frequency QD; pharmacy frequency BID." in content
-    assert "— QD BID" in content  # no intake value, then the stored FHIR and pharmacy values
+    assert "Other (route_mismatch)" in content
+    assert "FHIR route oral; pharmacy route topical." in content
+    assert "— oral topical" in content  # no intake value, then the stored FHIR and pharmacy values
 
 
 def test_micro_signs_and_em_dash_render():
@@ -216,3 +216,17 @@ def test_long_cell_is_visibly_truncated_and_short_ones_are_not():
     assert " ".join(TRUNCATED.split()) in text(make_run(findings=[over]))
     under = Finding(discrepancy_type="missing", medication="x", summary=at_cap)
     assert "truncated" not in text(make_run(findings=[under]))
+
+
+def test_frequency_finding_has_its_own_label_in_the_report():
+    """The report labels it and prints the plain wording, not an abbreviation."""
+    finding = Finding(
+        discrepancy_type="frequency_mismatch",
+        medication="sertraline",
+        summary="FHIR frequency once daily; pharmacy frequency twice daily.",
+        fhir_value="once daily",
+        pharmacy_value="twice daily",
+    )
+    content = text(make_run(findings=[finding]))
+    assert "Frequency mismatch: 1" in content and "Other (" not in content
+    assert "FHIR frequency once daily; pharmacy frequency twice daily." in content

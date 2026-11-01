@@ -7,6 +7,7 @@ written by a newer one (tolerant reader).
 from datetime import UTC, datetime
 
 from contract import Finding, IntakeInterviewInfo
+from rules.frequency import normalize_frequency, plain_text
 
 DISCLAIMER = (
     "Synthetic data. Reports discrepancies between sources for clinician review; "
@@ -17,11 +18,18 @@ LABELS: dict[str, str] = {
     "duplicate": "Duplicate medication",
     "missing": "Missing medication",
     "dosage_mismatch": "Dosage mismatch",
+    "frequency_mismatch": "Frequency mismatch",
 }
 
 
 def label_for(discrepancy_type: str) -> str:
     return LABELS.get(discrepancy_type, f"Other ({discrepancy_type})")
+
+
+def plain_frequency(stored: str | None) -> str | None:
+    """Plain wording for stored frequency text ("QD" gives "once daily"); unknown text as given."""
+    code = normalize_frequency(stored)
+    return plain_text(code) if code else stored
 
 
 # Medication column headings in display order.

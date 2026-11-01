@@ -38,6 +38,7 @@ def test_case_mixed_three_way_findings(reconcile):
             ("duplicate", "acetaminophen"),  # pharmacy lists 500 mg and 1000 mg
             ("duplicate", "sertraline"),  # intake lists it twice
             ("dosage_mismatch", "acetaminophen"),  # 500 / 500+1000 / 1000
+            ("frequency_mismatch", "sertraline"),  # FHIR and intake QD, pharmacy twice daily
             ("missing", "ibuprofen", ("intake",), ("fhir", "pharmacy"), 0),
             ("missing", "metoprolol", ("fhir",), ("intake", "pharmacy"), 0),
             ("missing", "omeprazole", ("pharmacy",), ("intake", "fhir"), 0),
@@ -55,7 +56,12 @@ def test_case_mixed_metformin_is_equal_across_sources(reconcile):
 
 def test_case_mixed_without_an_interview_is_the_two_source_result(reconcile):
     _, findings = reconcile("CASE-MIXED", with_intake=False)
-    assert {f.discrepancy_type for f in findings} <= {"duplicate", "missing", "dosage_mismatch"}
+    assert {f.discrepancy_type for f in findings} <= {
+        "duplicate",
+        "missing",
+        "dosage_mismatch",
+        "frequency_mismatch",
+    }
     assert all("intake_value" not in f.model_fields_set for f in findings)
     missing = {
         f.medication: f.details["missing_from"] for f in findings if f.discrepancy_type == "missing"
