@@ -14,7 +14,7 @@ docker compose up -d --build
 
 | # | Search | Patient | What it shows | Expect |
 |---|---|---|---|---|
-| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all four rule types, rejected records, the PDF | **8 findings:** 2 duplicate, 4 missing, 1 dosage mismatch, 1 frequency mismatch; 6 rejected records |
+| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all four rule types, RxNorm matching, rejected records, the PDF | **8 findings:** 2 duplicate, 4 missing, 1 dosage mismatch, 1 frequency mismatch; 6 rejected records |
 | 2 | `Cleary` | Clara Cleary (CASE-CLEAN) | Brand names matching generics across all three sources | **No discrepancies found** |
 | 3 | `Montero` | Cristobal567 Montero62 | No interview recorded: FHIR and pharmacy only | **3 findings**, two-source wording; Patient-reported column says "No data" |
 | 4 | `Dibbert` | Jona712 Dibbert990 | Patient says they take nothing | **3 findings**; "Patient reports no medications" |
@@ -25,7 +25,8 @@ docker compose up -d --build
 
 - **Metformin has no finding:** 500 mg (FHIR, pharmacy) and 0.5 g (patient) are the same dose.
 - **Acetaminophen has two findings:** pharmacy lists 500 mg and 1000 mg (duplicate), and the three sources' doses differ (dosage mismatch).
-- **Sertraline:** the patient reported it twice (duplicate). Its frequency also differs: the patient and FHIR say once daily, pharmacy says twice daily. "Once a day", "at bedtime" and FHIR's `QD` all count as once daily, so they don't differ from each other.
+- **RxNorm:** pharmacy's list says `Zoloft`, marked "Matched as: sertraline". It isn't in the alias list, so only RxNorm connects it to FHIR's sertraline.
+- **Sertraline:** the patient reported it twice (duplicate). Its frequency also differs: the patient and FHIR say once daily, pharmacy's Zoloft says twice daily. Without the RxNorm match there would be 2 false `missing` findings instead of this comparison. "Once a day", "at bedtime" and FHIR's `QD` all count as once daily, so they don't differ from each other.
 - **Ibuprofen:** only the patient reports it. **Omeprazole:** only pharmacy has it. **Metoprolol:** only FHIR has it.
 - **Warfarin:** on the FHIR list. The summary says one patient-reported and one pharmacy record with this name were rejected, so a rejection isn't presented as a true omission. The Rejected records table shows why: dose "ten" and "patient unsure of dose".
 - **Say:** the app reports differences for clinician review. It doesn't treat any source as the truth and doesn't recommend treatment.

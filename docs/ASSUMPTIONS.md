@@ -21,7 +21,7 @@ OWNER: Rachit Shah, to review and finalize
 | A6 | Only `status=active` MedicationRequests count as current medications | Assumed | [R01]–[R03]; confirm with a clinician (Q2) |
 | A7 | Accepted units are mg, g, mcg and mL. Anything else (tablets, units, puffs, per-mL strengths, combination products) is rejected as `unreadable_dosage`. | Decided | Brief; ISMP prefers "mcg" over "µg" [R11] |
 | A8 | Pharmacy `dose_amount` is per administration, matching the FHIR side (strength × doseQuantity) | Decided | Comparability of the dosage rule |
-| A9 | The alias list stays deliberately small. The generator picks brands only from it (except CASE-BRAND), so V2's RxNorm normalization visibly reduces false "missing" findings. | Decided | Brief: V2 must show fewer false "missing" |
+| A9 | The alias list stays deliberately small. The generator picks brands only from it (except CASE-BRAND's Crestor and CASE-MIXED's Zoloft), so V2's RxNorm normalization visibly reduces false "missing" findings. | Decided | Brief: V2 must show fewer false "missing" |
 | A10 | The importer skips only when the last case patient exists, so a partial import is never treated as done | Decided | Red-team review |
 | A31 | Patient intake history is simulated from a seeded generator (patient-report patterns on top of Synthea meds) and seeded into the app DB, not typed in a form | Decided | Lead decision 2026-10-29; brief puts forms out of scope; [R11] (patient interview) |
 | A32 | An intake item with no usable dose ("not sure") is rejected as `unreadable_dosage` ("patient unsure of dose"), not accepted without a dose | Decided | Lead decision 2026-10-29; keeps the contract's dose required |
