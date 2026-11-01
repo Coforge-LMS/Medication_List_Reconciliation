@@ -117,3 +117,23 @@ def test_duplicate_of_one_product_keeps_the_plain_summary(rec, data):
         )
     )
     assert f.summary == "Pharmacy has 2 records for metformin."
+
+
+def test_vaguer_form_is_not_a_different_form_on_a_duplicate(rec, data):
+    """ "Metformin ER" and an ER tablet agree, as they do in the dosage rule."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[
+                rec("fhir", "metformin", "500", form="Extended Release Oral Tablet"),
+                rec("fhir", "metformin", "500", form="Extended Release"),
+            ]
+        )
+    )
+    assert f.summary == "FHIR has 2 records for metformin."
+
+
+def test_duplicate_lists_the_record_ids(rec, data):
+    """Each record stays traceable."""
+    records = [rec("pharmacy", "x"), rec("pharmacy", "x")]
+    (f,) = rule.evaluate(data(pharmacy=records))
+    assert f.details["source_record_ids"] == [r.source_record_id for r in records]

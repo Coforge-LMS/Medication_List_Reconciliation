@@ -120,15 +120,15 @@ def _not_compared(records: list[MedicationRecord]) -> list[str]:
 
     Stored wording is kept when it says more than "as needed" does, as "BID PRN" does.
     """
-    stated: dict[str, None] = {}
+    stated: dict[str, str] = {}  # keyed by lowercase, so case variants appear once
     for record in records:
-        text = (record.frequency or "").strip()
+        text = " ".join((record.frequency or "").split())
         code = normalize_frequency(text)
         if code == PRN and _BY_PHRASE.get(text.lower().replace(".", "")) == PRN:
-            stated[PLAIN_TEXT[PRN]] = None
+            stated.setdefault(PLAIN_TEXT[PRN], PLAIN_TEXT[PRN])
         elif text and code in (PRN, None):
-            stated[text] = None
-    return list(stated)
+            stated.setdefault(text.lower(), text)
+    return list(stated.values())
 
 
 def _value(records: list[MedicationRecord], found: list[str]) -> str | None:
@@ -164,8 +164,10 @@ class FrequencyMismatchRule(ReconciliationRule):
             values = {
                 source: ", ".join(map(plain_text, found)) for source, found in compared.items()
             }
-            forms = differing_concept(present, "dose_form")
-            salts = differing_concept(present, "salt")
+            # Only compared sources: a note about another source wouldn't explain this difference.
+            sources = {source: present[source] for source in compared}
+            forms = differing_concept(sources, "dose_form")
+            salts = differing_concept(sources, "salt")
             findings.append(
                 Finding(
                     discrepancy_type=self.discrepancy_type,

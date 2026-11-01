@@ -428,3 +428,31 @@ def test_product_difference_without_a_schedule_difference_is_not_a_frequency_fin
         )
         == []
     )
+
+
+def test_product_note_only_covers_compared_sources(rec, data):
+    """A salt only the uncompared source names can't explain a difference between the others."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[_product(rec, "intake", "as needed", salt="metoprolol succinate")],
+            fhir=[_product(rec, "fhir", "QD", salt="metoprolol tartrate")],
+            pharmacy=[_product(rec, "pharmacy", "BID", salt="metoprolol tartrate")],
+        )
+    )
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+    assert "different_salt" not in f.details and f.details["not_compared"] == ["intake"]
+
+
+def test_case_variants_of_a_non_compared_frequency_appear_once(rec, data):
+    """The same wording in other capitals is one statement, kept as first written."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[
+                _with_frequency(rec, "intake", "x", "bid prn"),
+                _with_frequency(rec, "intake", "x", "BID  PRN"),
+            ],
+            fhir=[_with_frequency(rec, "fhir", "x", "QD")],
+            pharmacy=[_with_frequency(rec, "pharmacy", "x", "BID")],
+        )
+    )
+    assert f.intake_value == "bid prn (not compared)"

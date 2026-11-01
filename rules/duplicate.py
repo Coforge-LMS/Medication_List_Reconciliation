@@ -8,6 +8,7 @@ from rules.base import (
     ReconciliationRule,
     by_name,
     concept_values,
+    most_specific,
     participating,
     sentence,
 )
@@ -32,7 +33,7 @@ class DuplicateMedicationRule(ReconciliationRule):
                     f"{r.name} {format_dose(r.dose_amount, r.dose_unit)}" for r in group
                 )
                 salts = concept_values(group, "salt")
-                forms = concept_values(group, "dose_form")
+                forms = most_specific(concept_values(group, "dose_form"))
                 findings.append(
                     Finding(
                         discrepancy_type=self.discrepancy_type,

@@ -76,6 +76,11 @@ def concept_values(records: list[MedicationRecord], field: str) -> list[str]:
     return sorted(values)
 
 
+def most_specific(values: list[str]) -> list[str]:
+    """Values without those a fuller one begins: "Extended Release" adds nothing to its tablet."""
+    return [v for v in values if not any(other.startswith(f"{v} ") for other in values)]
+
+
 def differing_concept(present: dict[Source, list[MedicationRecord]], field: str) -> dict[str, str]:
     """{source: value} for a concept field, if the sources stating one disagree; else empty.
 
