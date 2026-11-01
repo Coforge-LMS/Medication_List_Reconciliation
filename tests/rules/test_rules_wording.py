@@ -106,5 +106,16 @@ def test_no_form_or_salt_summary_recommends_treatment(rec, data):
     assert len(findings) == 2
     assert any("Different form" in f.summary for f in findings)
     assert any("Different salt" in f.summary for f in findings)
+    findings += run_rules(
+        data(
+            fhir=[
+                rec("fhir", "metoprolol", "25", salt="metoprolol tartrate", form="Oral Tablet"),
+                rec(
+                    "fhir", "metoprolol", "50", salt="metoprolol succinate", form="Extended Release"
+                ),
+            ]
+        )
+    )
+    assert any("Different salts" in f.summary and "Different forms" in f.summary for f in findings)
     for f in findings:
         assert not BANNED.search(f.summary), f.summary

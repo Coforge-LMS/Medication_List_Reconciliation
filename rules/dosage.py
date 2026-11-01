@@ -8,6 +8,7 @@ from rules.base import (
     ReconciliationRule,
     all_names,
     by_name,
+    concept_values,
     participating,
     sentence,
 )
@@ -63,13 +64,22 @@ class DosageMismatchRule(ReconciliationRule):
 
 
 def _differing(present: dict[str, list[MedicationRecord]], field: str) -> dict[str, str]:
-    """{source: value} for a concept field, if the sources stating one disagree; else empty."""
-    stated = {}
-    for source, group in present.items():
-        values = {(r.raw.get("rxnorm") or {}).get(field) for r in group} - {None}
-        if values:
-            stated[source] = ", ".join(sorted(values))
-    return stated if len(set(stated.values())) > 1 else {}
+    """{source: value} for a concept field, if the sources stating one disagree; else empty.
+
+    A vaguer value agrees with a fuller one it begins: "Extended Release" from a name like
+    "Metformin ER" doesn't conflict with "Extended Release Oral Tablet".
+    """
+    stated = {source: concept_values(group, field) for source, group in present.items()}
+    stated = {source: values for source, values in stated.items() if values}
+    every = {value for values in stated.values() for value in values}
+
+    def fullest(value: str) -> str:
+        """The fuller value this one begins, if any source states one."""
+        return next((other for other in sorted(every) if other.startswith(f"{value} ")), value)
+
+    if len({frozenset(map(fullest, values)) for values in stated.values()}) < 2:
+        return {}
+    return {source: ", ".join(values) for source, values in stated.items()}
 
 
 def _described(label: str, differing: dict[str, str]) -> str:

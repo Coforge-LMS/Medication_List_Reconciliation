@@ -63,3 +63,14 @@ def all_names(groups: dict[Source, dict[str, list[MedicationRecord]]]) -> list[s
 def sentence(text: str) -> str:
     """Capitalize the first letter only ('pharmacy' -> 'Pharmacy'), leaving the rest as is."""
     return text[:1].upper() + text[1:]
+
+
+def concept_values(records: list[MedicationRecord], field: str) -> list[str]:
+    """Distinct values RxNorm's concept states for these records, sorted; unknowns are left out."""
+    values = set()
+    for record in records:
+        concept = record.raw.get("rxnorm")
+        value = concept.get(field) if isinstance(concept, dict) else None
+        if value:
+            values.add(value)
+    return sorted(values)

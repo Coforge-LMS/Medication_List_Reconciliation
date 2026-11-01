@@ -245,3 +245,45 @@ def test_form_difference_never_becomes_two_missing_findings(rec, data):
         )
     )
     assert [f.discrepancy_type for f in findings] == ["dosage_mismatch"]
+
+
+def test_vaguer_form_agrees_with_a_fuller_one_it_begins(rec, data):
+    """ "Metformin ER" and an Extended Release Oral Tablet aren't a difference."""
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[rec("fhir", "metformin", "500", form=ER)],
+                pharmacy=[rec("pharmacy", "metformin", "500", form="Extended Release")],
+            )
+        )
+        == []
+    )
+
+
+def test_vaguer_form_still_conflicts_with_a_different_one(rec, data):
+    """ "Extended Release" doesn't begin "Oral Tablet", so that difference is reported as stated."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[rec("fhir", "metformin", "500", form=IR)],
+            pharmacy=[rec("pharmacy", "metformin", "500", form="Extended Release")],
+        )
+    )
+    assert f.details["different_form"] == {"fhir": IR, "pharmacy": "Extended Release"}
+
+
+def test_plain_form_does_not_agree_with_a_fuller_one_it_only_ends(rec, data):
+    """ "Oral Tablet" is the end of "Extended Release Oral Tablet", not the start: they differ."""
+    assert rule.evaluate(
+        data(
+            fhir=[rec("fhir", "metformin", "500", form=ER)],
+            pharmacy=[rec("pharmacy", "metformin", "500", form=IR)],
+        )
+    )
+
+
+def test_malformed_concept_in_raw_is_treated_as_unknown(rec, data):
+    """A raw record that happens to hold a non-object "rxnorm" key can't crash the rule."""
+    bad = rec("pharmacy", "metformin", "500").model_copy(update={"raw": {"rxnorm": "oops"}})
+    assert (
+        rule.evaluate(data(fhir=[rec("fhir", "metformin", "500", form=ER)], pharmacy=[bad])) == []
+    )
