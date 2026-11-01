@@ -31,7 +31,11 @@ rule = FrequencyMismatchRule()
         ("BED", "QD"),
         ("at bedtime", "QD"),
         ("every morning", "QD"),
+        ("every evening", "QD"),
+        ("every night", "QD"),
         ("nightly", "QD"),
+        ("daily", "QD"),
+        ("every day", "QD"),
         ("every 24 hours", "QD"),
         ("24/1d", "24/D"),
         ("1/24h", "QD"),
@@ -40,6 +44,7 @@ rule = FrequencyMismatchRule()
         ("every 12 hours", "BID"),
         ("TID", "TID"),
         ("three times daily", "TID"),
+        ("three times a day", "TID"),
         ("3/1d", "TID"),
         ("Q8H", "TID"),
         ("QID", "QID"),
@@ -56,12 +61,14 @@ rule = FrequencyMismatchRule()
         ("WK", "QW"),
         ("weekly", "QW"),
         ("once a week", "QW"),
+        ("once weekly", "QW"),
         ("1/1wk", "QW"),
         ("1/7d", "QW"),
         # Other whole doses a day.
         ("5/1d", "5/D"),
         ("Q4H", "6/D"),
         ("Q2H", "12/D"),
+        ("every 1 hour", "24/D"),
         # Spelling and spacing don't matter.
         ("bid", "BID"),
         ("b.i.d.", "BID"),
@@ -95,6 +102,16 @@ def test_normalizer_table(text, code):
         "1/0d",
         "q0h",
         "twice",
+        # A dot in a number must not vanish and leave a different number.
+        "q1.2h",
+        "q2.4h",
+        "q0.8h",
+        "every 1.2 hours",
+        # Only the whole text counts, so extra words stay unknown.
+        "q12h and more",
+        "take q12h",
+        "bidprn",
+        "prn pain",
     ],
 )
 def test_anything_else_is_unknown(text):
@@ -204,7 +221,8 @@ def test_source_without_a_schedule_is_listed_as_not_compared(rec, data):
             pharmacy=[_with_frequency(rec, "pharmacy", "x", "twice daily")],
         )
     )
-    assert f.intake_value is None and "Patient-reported" not in f.summary
+    assert f.intake_value == "as needed (not compared)"
+    assert "Patient-reported" not in f.summary
     assert f.details["not_compared"] == ["intake"]
 
 
@@ -255,6 +273,63 @@ def test_scheduled_record_still_counts_beside_an_as_needed_one(rec, data):
         )
     )
     assert f.details["pharmacy_codes"] == ["BID"]
+    assert f.pharmacy_value == "twice daily, as needed (not compared)"
+
+
+def test_extra_schedule_in_one_source_is_a_difference(rec, data):
+    """Sets differ even when the first code agrees: {BID, QD} isn't {BID}."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[
+                _with_frequency(rec, "fhir", "x", "BID"),
+                _with_frequency(rec, "fhir", "x", "QD"),
+            ],
+            pharmacy=[_with_frequency(rec, "pharmacy", "x", "twice daily")],
+        )
+    )
+    assert f.details["fhir_codes"] == ["BID", "QD"]
+
+
+@pytest.mark.parametrize(
+    ("stored", "value"),
+    [
+        ("PRN", "as needed (not compared)"),
+        ("as needed", "as needed (not compared)"),
+        ("Take as needed.", "as needed (not compared)"),
+        ("BID PRN", "BID PRN (not compared)"),
+        ("whenever", "whenever (not compared)"),
+        (None, None),
+        ("", None),
+        ("   ", None),
+    ],
+)
+def test_non_compared_source_shows_what_it_says(rec, data, stored, value):
+    """Stated wording stays visible and marked; a source that states nothing shows nothing."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[_with_frequency(rec, "intake", "x", stored)],
+            fhir=[_with_frequency(rec, "fhir", "x", "QD")],
+            pharmacy=[_with_frequency(rec, "pharmacy", "x", "twice daily")],
+        )
+    )
+    assert f.intake_value == value
+    assert f.details["not_compared"] == ["intake"]
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+
+
+def test_repeated_non_compared_wording_appears_once(rec, data):
+    """Two as-needed records are one statement."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[
+                _with_frequency(rec, "intake", "x", "as needed"),
+                _with_frequency(rec, "intake", "x", "PRN"),
+            ],
+            fhir=[_with_frequency(rec, "fhir", "x", "QD")],
+            pharmacy=[_with_frequency(rec, "pharmacy", "x", "BID")],
+        )
+    )
+    assert f.intake_value == "as needed (not compared)"
 
 
 def test_name_in_one_source_only_is_not_compared(rec, data):

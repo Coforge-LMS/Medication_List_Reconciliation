@@ -85,7 +85,7 @@ def normalize_frequency(text: str | None) -> str | None:
         return _BY_PHRASE[key]
     if key.endswith(" prn"):
         return PRN  # as needed decides, whatever schedule comes with it
-    if hourly := _HOURLY.fullmatch(key):
+    if hourly := _HOURLY.fullmatch(lowered):  # not key: removing dots would change the number
         return _from_per_day(Fraction(24), Fraction(hourly.group(1)))
     return None
 
@@ -113,11 +113,35 @@ def _scheduled(records: list[MedicationRecord]) -> list[str]:
     return sorted(codes)
 
 
+def _not_compared(records: list[MedicationRecord]) -> list[str]:
+    """What these records state that has no schedule to compare, in first-seen order.
+
+    Stored wording is kept when it says more than "as needed" does, as "BID PRN" does.
+    """
+    stated: dict[str, None] = {}
+    for record in records:
+        text = (record.frequency or "").strip()
+        code = normalize_frequency(text)
+        if code == PRN and _BY_PHRASE.get(text.lower().replace(".", "")) == PRN:
+            stated[PLAIN_TEXT[PRN]] = None
+        elif text and code in (PRN, None):
+            stated[text] = None
+    return list(stated)
+
+
+def _value(records: list[MedicationRecord], found: list[str]) -> str | None:
+    """What one source says, in plain wording, with anything not compared marked as such."""
+    parts = [plain_text(code) for code in found]
+    parts += [f"{text} (not compared)" for text in _not_compared(records)]
+    return ", ".join(parts) or None
+
+
 class FrequencyMismatchRule(ReconciliationRule):
     """A name whose scheduled frequencies differ between 2+ sources; one finding per name.
 
     A source with no scheduled frequency for the name isn't compared, so as-needed or unknown
-    never counts as a difference. No source is treated as the right one.
+    never counts as a difference, but what it says still appears in its value, marked as not
+    compared, so it can't be mistaken for saying nothing. No source is treated as the right one.
     """
 
     discrepancy_type: ClassVar[str] = "frequency_mismatch"
@@ -133,8 +157,7 @@ class FrequencyMismatchRule(ReconciliationRule):
             if len({tuple(found) for found in compared.values()}) < 2:
                 continue
             values = {
-                source: ", ".join(plain_text(code) for code in found)
-                for source, found in compared.items()
+                source: ", ".join(map(plain_text, found)) for source, found in compared.items()
             }
             findings.append(
                 Finding(
@@ -147,7 +170,10 @@ class FrequencyMismatchRule(ReconciliationRule):
                         )
                         + "."
                     ),
-                    **{f"{source}_value": value for source, value in values.items()},
+                    **{
+                        f"{source}_value": _value(group, codes[source])
+                        for source, group in present.items()
+                    },
                     details={
                         **{f"{source}_codes": found for source, found in compared.items()},
                         "not_compared": [source for source in present if source not in compared],

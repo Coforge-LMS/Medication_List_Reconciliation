@@ -56,7 +56,7 @@ def test_case_mixed_metformin_is_equal_across_sources(reconcile):
 
 def test_case_mixed_without_an_interview_is_the_two_source_result(reconcile):
     _, findings = reconcile("CASE-MIXED", with_intake=False)
-    assert {f.discrepancy_type for f in findings} <= {
+    assert {f.discrepancy_type for f in findings} == {
         "duplicate",
         "missing",
         "dosage_mismatch",
