@@ -87,6 +87,7 @@ def test_no_frequency_summary_recommends_treatment(rec, data):
     assert len(findings) == 6  # all but the drug that's weekly on both sides
     for f in findings:
         assert f.discrepancy_type == "frequency_mismatch"
+        assert not BANNED.search(f.summary), f.summary
 
 
 def test_no_form_or_salt_summary_recommends_treatment(rec, data):
