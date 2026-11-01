@@ -88,23 +88,24 @@ What each source says, and the findings the real ingest and rules produce (`test
 | Patient | FHIR (active) | Pharmacy | Intake | Expected findings |
 |---|---|---|---|---|
 | CASE-CLEAN | lisinopril 10, atorvastatin 20, amlodipine 5 mg (once daily) | Zestril 10, Atorvastatin 20, Amlodipine 5 mg | Zestril 10, Atorvastatin 20, Norvasc 5 mg | none (alias matches) |
-| CASE-MIXED | metformin 500 mg, metoprolol 25 mg, acetaminophen 500 mg, sertraline 50 mg, warfarin 5 mg | Metformin Hydrochloride 500 mg; Acetaminophen 500 mg and 1000 mg; Sertraline 50 mg twice daily; Omeprazole 20 mg; Warfarin Sodium dose "ten"; four more invalid rows | Metformin 0.5 g; Acetaminophen 1000 mg; Sertraline 50 mg twice; Warfarin "not sure"; Ibuprofen 200 mg as needed | **7 findings** (below) |
+| CASE-MIXED | metformin 500 mg, metoprolol 25 mg, acetaminophen 500 mg, sertraline 50 mg, warfarin 5 mg | Metformin Hydrochloride 500 mg; Acetaminophen 500 mg and 1000 mg; Sertraline 50 mg twice daily; Omeprazole 20 mg; Warfarin Sodium dose "ten"; four more invalid rows | Metformin 0.5 g; Acetaminophen 1000 mg; Sertraline 50 mg twice; Warfarin "not sure"; Ibuprofen 200 mg as needed | **8 findings** (below) |
 | CASE-BRAND | rosuvastatin calcium 10 mg `[Crestor]` | Crestor 10 mg | Crestor 10 mg | **2 `missing`** in V1; 0 after V2 RxNorm |
 
-CASE-MIXED's 7 findings:
+CASE-MIXED's 8 findings:
 
 | Type | Medication | Why |
 |---|---|---|
 | `duplicate` | acetaminophen | pharmacy lists 500 mg and 1000 mg |
 | `duplicate` | sertraline | intake lists it twice |
 | `dosage_mismatch` | acetaminophen | FHIR 500 mg, pharmacy 500 + 1000 mg, intake 1000 mg |
+| `frequency_mismatch` | sertraline | FHIR and intake once daily, pharmacy twice daily |
 | `missing` | ibuprofen | reported by the patient only |
 | `missing` | metoprolol | on the FHIR list; not in pharmacy records, not reported |
 | `missing` | omeprazole | in pharmacy records only |
 | `missing` | warfarin | on the FHIR list; the pharmacy row and the intake entry were rejected, so the summary names 2 rejected records |
 
 - Metformin gives **no** finding: 500 mg = 0.5 g.
-- Sertraline's once daily (FHIR) vs twice daily (pharmacy) is a V2 `frequency_mismatch`; V1 stores and shows frequency, never compares it.
+- Sertraline's `frequency_mismatch` is V2; 1.0.0 stores and shows frequency, never compares it, so it gives 7 findings for CASE-MIXED and shows this type as "Other (frequency_mismatch)" after a rollback.
 - With no interview, CASE-MIXED gives the two-source result (`missing_from` is a single source).
 - The six rejected records (five invalid pharmacy rows and the intake warfarin) sit on drugs that appear nowhere else, so they show as rejected without changing any finding: a blank name, a unit `tab`, a date `03/02/2026`, a future date, and the unreadable warfarin dose.
 - CASE-BRAND's `Crestor` is deliberately not in `aliases.json`, so with aliases alone FHIR's `rosuvastatin calcium` and `crestor` don't match. RxNorm matches them in the running app (see "RxNorm cache").

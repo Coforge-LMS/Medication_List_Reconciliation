@@ -14,7 +14,7 @@ docker compose up -d --build
 
 | # | Search | Patient | What it shows | Expect |
 |---|---|---|---|---|
-| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all three rule types, rejected records, the PDF | **7 findings:** 2 duplicate, 4 missing, 1 dosage mismatch; 6 rejected records |
+| 1 | `Mixton` | Marcus Mixton (CASE-MIXED) | Everything at once: all four rule types, rejected records, the PDF | **8 findings:** 2 duplicate, 4 missing, 1 dosage mismatch, 1 frequency mismatch; 6 rejected records |
 | 2 | `Cleary` | Clara Cleary (CASE-CLEAN) | Brand names matching generics across all three sources | **No discrepancies found** |
 | 3 | `Montero` | Cristobal567 Montero62 | No interview recorded: FHIR and pharmacy only | **3 findings**, two-source wording; Patient-reported column says "No data" |
 | 4 | `Dibbert` | Jona712 Dibbert990 | Patient says they take nothing | **3 findings**; "Patient reports no medications" |
@@ -25,7 +25,7 @@ docker compose up -d --build
 
 - **Metformin has no finding:** 500 mg (FHIR, pharmacy) and 0.5 g (patient) are the same dose.
 - **Acetaminophen has two findings:** pharmacy lists 500 mg and 1000 mg (duplicate), and the three sources' doses differ (dosage mismatch).
-- **Sertraline duplicate:** the patient reported it twice.
+- **Sertraline:** the patient reported it twice (duplicate). Its frequency also differs: the patient and FHIR say once daily, pharmacy says twice daily. "Once a day", "at bedtime" and FHIR's `QD` all count as once daily, so they don't differ from each other.
 - **Ibuprofen:** only the patient reports it. **Omeprazole:** only pharmacy has it. **Metoprolol:** only FHIR has it.
 - **Warfarin:** on the FHIR list. The summary says one patient-reported and one pharmacy record with this name were rejected, so a rejection isn't presented as a true omission. The Rejected records table shows why: dose "ten" and "patient unsure of dose".
 - **Say:** the app reports differences for clinician review. It doesn't treat any source as the truth and doesn't recommend treatment.
@@ -43,20 +43,20 @@ Posting again changes nothing. The patient stays until `docker compose down -v`.
 
 ## All imported patients
 
-Findings: D = duplicate, M = missing, DM = dosage mismatch. FHIR ids are from a fresh import.
+Findings: D = duplicate, M = missing, DM = dosage mismatch, F = frequency mismatch. FHIR ids are from a fresh import.
 
 | Search | Full name | Identifier | FHIR id | Intake | Findings | Rejected |
 |---|---|---|---|---|---|---|
-| `Mixton` | Marcus Mixton | CASE-MIXED | 2178 | 5 records | 7: 2 D, 4 M, 1 DM | 6 |
+| `Mixton` | Marcus Mixton | CASE-MIXED | 2178 | 5 records | 8: 2 D, 4 M, 1 DM, 1 F | 6 |
 | `Cleary` | Clara Cleary | CASE-CLEAN | 2174 | 3 records | 0 | 0 |
 | `Brandt` | Beatrice Brandt | CASE-BRAND | 2184 | 1 record | 0 | 0 |
-| `Lowe` | Bud153 Stan246 Lowe577 | 98ff8f7e… | 1119 | 8 records | 10: 3 D, 4 M, 3 DM | 2 |
+| `Lowe` | Bud153 Stan246 Lowe577 | 98ff8f7e… | 1119 | 8 records | 11: 3 D, 4 M, 3 DM, 1 F | 2 |
 | `Montero` | Cristobal567 Alfredo17 Montero62 | c86c400e… | 1271 | **no interview** | 3: 1 D, 1 M, 1 DM | 3 |
 | `Walter` | Ezekiel373 Leslie90 Walter473 | 4f083ce3… | 1349 | 3 records | 3: 2 M, 1 DM | 1 |
 | `Dibbert` | Jona712 Bonnie873 Dibbert990 | aa616abe… | 1402 | **reports none** | 3: 2 M, 1 DM | 2 |
-| `Cummings` | Kristine579 Eboni653 Cummings51 | 87f32e4c… | 1472 | 3 records | 4: 3 M, 1 DM | 1 |
-| `Nolan` | Leonila462 Candyce305 Nolan344 | 8c42357f… | 1578 | 6 records | 4: 3 M, 1 DM | 4 |
-| `Auer` | Shalanda398 Kelsie51 Auer97 | 46ee9d82… | 1783 | 5 records | 8: 1 D, 5 M, 2 DM | 1 |
+| `Cummings` | Kristine579 Eboni653 Cummings51 | 87f32e4c… | 1472 | 3 records | 5: 3 M, 1 DM, 1 F | 1 |
+| `Nolan` | Leonila462 Candyce305 Nolan344 | 8c42357f… | 1578 | 6 records | 5: 3 M, 1 DM, 1 F | 4 |
+| `Auer` | Shalanda398 Kelsie51 Auer97 | 46ee9d82… | 1783 | 5 records | 9: 1 D, 5 M, 2 DM, 1 F | 1 |
 | `Erdman` | Tennille443 Denna536 Erdman779 | e74367bd… | 1909 | 2 records | 2: 2 M | 0 |
 | `Todd` | Todd315 Adolph80 Effertz744 | 5a3596ef… | 1996 | 4 records | 5: 3 M, 2 DM | 6 |
 | `Wallace` | Wallace647 Raymond398 Effertz744 | 5e688e99… | 2090 | 2 records (caregiver) | 1: 1 M | 0 |
@@ -64,6 +64,7 @@ Findings: D = duplicate, M = missing, DM = dosage mismatch. FHIR ids are from a 
 ## Watch out for
 
 - **Findings use the RxNorm ingredient name:** `metoprolol`, `naproxen`, `fish oils`. The medication tables keep each source's own wording.
+- **Frequency wording:** findings say "once daily"; the medication tables keep each source's own wording, such as `QD`. As-needed and blank frequencies are never compared.
 - **No "different form" finding in this data:** pharmacy and intake rows are bare drug names, so they state no dose form to compare. The form and salt checks are covered by automated tests.
 - **Numbers in names:** Synthea generates names like `Montero62`. They're real values in the data, not a display bug.
 - **`Effertz` finds two patients:** search `Todd` or `Wallace` to get one.
