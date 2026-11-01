@@ -225,6 +225,29 @@ def test_er_abbreviation_is_compared_through_the_pipeline():
     assert _findings(er, ("Metformin ER", "500")) == []
 
 
+def test_er_name_with_a_plain_form_is_extended_release_through_the_pipeline():
+    """ "Metformin ER … Oral Tablet" differs from a plain tablet and agrees with an ER one."""
+    (f,) = _findings(
+        ("861007", "metformin hydrochloride 500 MG Oral Tablet"),
+        ("Metformin ER 500 mg Oral Tablet", "500"),
+    )
+    assert f.details["different_form"] == {
+        "fhir": "Oral Tablet",
+        "pharmacy": "Extended Release Oral Tablet",
+    }
+    er = ("860975", "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet")
+    assert _findings(er, ("Metformin ER 500 mg Oral Tablet", "500")) == []
+
+
+def test_capsule_vs_tablet_is_reported_through_the_pipeline():
+    """A form the committed cache doesn't hold is still read from the name and compared."""
+    (f,) = _findings(
+        ("861007", "metformin hydrochloride 500 MG Oral Tablet"),
+        ("Metformin 500 mg Oral Capsule", "500"),
+    )
+    assert f.details["different_form"]["pharmacy"] == "Oral Capsule"
+
+
 def test_rejected_fhir_record_is_named_as_the_pharmacy_rows_counterpart():
     """A coded rejection and a plain salt name meet, so it isn't presented as an omission."""
     (f,) = _findings(

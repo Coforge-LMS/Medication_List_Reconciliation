@@ -213,3 +213,8 @@ def test_each_known_finding_type_has_its_own_accent(client):
     css = client.get("/static/app.css").text
     for discrepancy_type in ("duplicate", "missing", "dosage_mismatch", "frequency_mismatch"):
         assert f".type-{discrepancy_type} {{ --type:" in css
+    variables = ("duplicate", "missing", "mismatch", "frequency", "other")
+    light, dark = css.split("@media (prefers-color-scheme: dark)")
+    for scheme in (light, dark):
+        colours = [re.search(rf"--{name}: (#\w+);", scheme).group(1) for name in variables]
+        assert len(set(colours)) == len(variables)

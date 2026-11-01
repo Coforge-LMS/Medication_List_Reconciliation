@@ -139,6 +139,12 @@ def test_unresolved_item_keeps_its_alias_identity():
     assert rxnorm.refine([unknown, negative], CACHE) == [unknown, negative]
 
 
+def test_alias_based_name_is_used_when_the_name_itself_finds_nothing():
+    """A name only an alias explains still resolves through its normalized name."""
+    (refined,) = rxnorm.refine([record("Our House Brand", normalized="crestor")], CACHE)
+    assert refined.rxcui == "320864"
+
+
 def test_rejection_gets_the_ingredient_identity_only():
     """A rejected brand still matches its generic; Rejection has no rxcui to set."""
     (refined,) = rxnorm.refine([rejection("Crestor", "crestor")], CACHE)
@@ -179,6 +185,27 @@ def test_malformed_concept_is_refused_at_load_not_at_request_time(tmp_path, conc
     path = tmp_path / "cache.json"
     path.write_text(json.dumps({"_meta": {}, "rxcuis": {"1": concept}, "names": names}))
     with pytest.raises(rxnorm.RxNormCacheError, match=reason):
+        rxnorm.load_cache(path)
+
+
+@pytest.mark.parametrize("field", ["dose_form", "salt"])
+@pytest.mark.parametrize("value", [1, ["Oral Tablet"], {"a": 1}])
+def test_bad_form_or_salt_type_is_refused_at_load(tmp_path, field, value):
+    """These are read later by the rules, so a wrong type must fail at startup instead."""
+    concept = {"rxcui": "1", "ingredients": ["a"], field: value}
+    path = tmp_path / "cache.json"
+    path.write_text(json.dumps({"_meta": {}, "rxcuis": {"1": concept}, "names": {}}))
+    with pytest.raises(rxnorm.RxNormCacheError, match=f"bad {field}"):
+        rxnorm.load_cache(path)
+
+
+@pytest.mark.parametrize("missing", ["_meta", "rxcuis", "names"])
+def test_each_top_level_cache_key_is_required(tmp_path, missing):
+    """Dropping any one of the three is refused."""
+    content = {key: {} for key in ("_meta", "rxcuis", "names") if key != missing}
+    path = tmp_path / "cache.json"
+    path.write_text(json.dumps(content))
+    with pytest.raises(rxnorm.RxNormCacheError, match="needs _meta, rxcuis and names"):
         rxnorm.load_cache(path)
 
 
@@ -260,12 +287,31 @@ def test_salt_survives_a_strength_in_the_name_even_when_aliases_drop_it():
         ("metoprolol xr 25 mg", "Extended Release"),
         ("Metoprolol", None),
         ("Metoprolol 25 mg tablet", None),
+        ("metoprolol extended release", "Extended Release"),
+        ("metoprolol xl", "Extended Release"),
+        ("metoprolol sr", "Extended Release"),
+        # A release word and a plain oral form together are one form.
+        ("Metoprolol ER 50 mg Oral Tablet", "Extended Release Oral Tablet"),
+        ("metoprolol xr 50 mg Oral Capsule", "Extended Release Oral Capsule"),
+        # Forms a name states don't depend on what the cache happens to hold.
+        ("metoprolol 25 MG Oral Capsule", "Oral Capsule"),
+        ("metoprolol 25 MG Delayed Release Oral Tablet", "Delayed Release Oral Tablet"),
+        ("metoprolol Chewable Oral Tablet", "Chewable Tablet"),
+        ("metoprolol Disintegrating Oral Tablet", "Disintegrating Oral Tablet"),
     ],
 )
 def test_form_is_read_from_the_name_when_the_concept_has_none(name, form):
     """A stated form is kept, and a name that states none stays unknown."""
     (refined,) = rxnorm.refine([record(name, normalized="metoprolol")], FORMS)
     assert refined.raw["rxnorm"]["dose_form"] == form
+
+
+def test_stated_form_keeps_the_rest_of_the_concept():
+    """Reading a form adds to the concept; its salt, ingredients and rxcui stay."""
+    (refined,) = rxnorm.refine(
+        [record("Metoprolol Tartrate 25 mg Oral Tablet", normalized="metoprolol")], FORMS
+    )
+    assert refined.raw["rxnorm"] == {**SALTED, "dose_form": "Oral Tablet"}
 
 
 def test_form_in_the_name_does_not_replace_the_concepts_own():
@@ -493,6 +539,67 @@ def test_live_client_is_bounded_to_three_seconds():
         assert client.timeout == httpx.Timeout(3.0)
 
 
+def test_remembered_name_does_not_stand_in_for_an_unasked_code(monkeypatch):
+    """A code is asked about first, so a record's form doesn't depend on lookup order."""
+
+    def handler(request):
+        """The name is a form-less salt; the code is the ER product."""
+        if request.url.path.endswith("/rxcui.json"):
+            return httpx.Response(200, json={"idGroup": {"rxnormId": ["221124"]}})
+        if "/866436/" in request.url.path:
+            body = _history("SCD", "metoprolol ER", ["metoprolol"], dose_form="Extended Release")
+            return httpx.Response(200, json=body)
+        return httpx.Response(200, json=_history("PIN", "metoprolol succinate", ["metoprolol"]))
+
+    monkeypatch.setattr(
+        rxnorm, "_live_client", lambda: httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    first, second = rxnorm.refine(
+        [
+            record("Metoprolol Succinate"),
+            record("Metoprolol Succinate", code="866436", source="fhir"),
+        ],
+        CACHE,
+    )
+    assert first.raw["rxnorm"]["dose_form"] is None
+    assert second.raw["rxnorm"]["dose_form"] == "Extended Release"
+
+
+def test_no_match_is_remembered_so_it_is_asked_once(monkeypatch):
+    """An answer of "nothing" isn't a failure, so the same name doesn't go back to RxNav."""
+    asked = []
+
+    def handler(request):
+        """Nothing matches."""
+        asked.append(request.url)
+        return httpx.Response(200, json={"idGroup": {}})
+
+    monkeypatch.setattr(
+        rxnorm, "_live_client", lambda: httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    items = [record("Nothing Like It"), record("Nothing Like It")]
+    assert rxnorm.refine(items, CACHE) == items
+    assert len(asked) == 1
+
+
+def test_lookup_asks_for_an_exact_match_and_describes_it():
+    """Search 0 is exact; a looser search could return the wrong release type."""
+    seen = []
+
+    def handler(request):
+        """Answer the search, then the concept, recording what was asked."""
+        seen.append(request.url)
+        if request.url.path.endswith("/rxcui.json"):
+            return httpx.Response(200, json={"idGroup": {"rxnormId": ["5640"]}})
+        return httpx.Response(200, json=_history("IN", "ibuprofen"))
+
+    assert rxnorm.lookup(httpx.Client(transport=httpx.MockTransport(handler)), "Ibuprofen")
+    assert str(seen[0]) == f"{rxnorm.RXNAV_URL}/rxcui.json?name=Ibuprofen&search=0"
+    assert str(seen[1]) == f"{rxnorm.RXNAV_URL}/rxcui/5640/historystatus.json"
+
+
 def test_ambiguous_name_is_not_guessed():
     """Several matches return nothing, rather than picking one."""
     client = httpx.Client(
@@ -518,6 +625,28 @@ def test_obsolete_concept_keeps_its_ingredient_and_status():
     """Dropping an obsolete code would turn a real match into a false missing finding."""
     concept = _describe(_history("SBD", "verapamil [Calan]", ["verapamil"], status="Obsolete"))
     assert concept["ingredients"] == ["verapamil"] and concept["status"] == "Obsolete"
+
+
+def test_described_concept_carries_its_fields():
+    """Everything the rules read comes through, including the dose form."""
+    concept = _describe(
+        _history(
+            "SCD",
+            "metformin ER",
+            ["metformin"],
+            dose_form="Extended Release Oral Tablet",
+            boss="metformin hydrochloride",
+        )
+    )
+    assert concept == {
+        "rxcui": "1",
+        "tty": "SCD",
+        "name": "metformin ER",
+        "status": "Active",
+        "ingredients": ["metformin"],
+        "dose_form": "Extended Release Oral Tablet",
+        "salt": "metformin hydrochloride",
+    }
 
 
 def test_concept_with_no_ingredient_is_none():

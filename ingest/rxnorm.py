@@ -28,10 +28,27 @@ DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.jso
 
 # Words that describe the product, not the drug, dropped to find the drug name in free text.
 PRODUCT_WORDS = frozenset(
-    "oral tablet tab capsule cap extended release er xr xl sr film coated chewable solution".split()
+    "oral tablet tab capsule cap extended delayed release er xr xl sr film coated chewable "
+    "disintegrating sublingual solution suspension".split()
 )
 RELEASE_WORDS = frozenset({"er", "xr", "xl", "sr"})
 EXTENDED_RELEASE = "Extended Release"
+# RxNorm's names for forms a free-text name may state; the cache adds any others it holds.
+STATED_FORMS = (
+    "Oral Tablet",
+    "Oral Capsule",
+    "Oral Solution",
+    "Oral Suspension",
+    "Extended Release Oral Tablet",
+    "Extended Release Oral Capsule",
+    "Delayed Release Oral Tablet",
+    "Delayed Release Oral Capsule",
+    "Chewable Tablet",
+    "Disintegrating Oral Tablet",
+    "Sublingual Tablet",
+)
+PLAIN_ORAL_FORMS = frozenset({"Oral Tablet", "Oral Capsule"})
+FORM_WORDINGS = {"chewable oral tablet": "Chewable Tablet"}  # common wording RxNorm doesn't use
 
 _STRENGTH = strength_pattern(KNOWN_UNITS, re.IGNORECASE)
 _TOKEN = re.compile(r"[^\W_]+")
@@ -70,6 +87,9 @@ def load_cache(path: str | Path) -> dict[str, Any]:
             raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has no ingredients")
         if concept.get("rxcui") != rxcui:
             raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has a different rxcui inside")
+        for field in ("dose_form", "salt"):
+            if not isinstance(concept.get(field), str | None):
+                raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has a bad {field}")
     for name, rxcui in cache["names"].items():
         if rxcui is not None and (not isinstance(rxcui, str) or rxcui not in cache["rxcuis"]):
             raise RxNormCacheError(f"RxNorm cache {path}: {name!r} points at unknown {rxcui}")
@@ -232,14 +252,27 @@ def _with_stated_form(concept: Concept, name: str, cache: dict[str, Any]) -> Con
     """
     if concept.get("dose_form"):
         return concept
+    stated = _stated_form(name, cache)
+    return {**concept, "dose_form": stated} if stated else concept
+
+
+def _stated_form(name: str, cache: dict[str, Any]) -> str | None:
+    """The dose form free text states, combining a release word with a plain oral form.
+
+    "Metformin ER 500 mg Oral Tablet" is an extended release tablet, not a plain one. With no
+    route to combine, "Metformin ER" says only "Extended Release", and the rule treats that as
+    agreeing with any fuller form it begins.
+    """
     text = f" {' '.join(_words(name))} "
-    forms = {c["dose_form"] for c in cache["rxcuis"].values() if c.get("dose_form")}
-    stated = [form for form in forms if f" {form.lower()} " in text]
-    if stated:
-        return {**concept, "dose_form": max(stated, key=len)}
-    if RELEASE_WORDS & set(text.split()) or " extended release " in text:
-        return {**concept, "dose_form": EXTENDED_RELEASE}
-    return concept
+    cached = {c["dose_form"] for c in cache["rxcuis"].values() if c.get("dose_form")}
+    wordings = {form.lower(): form for form in {*STATED_FORMS, *cached}} | FORM_WORDINGS
+    found = [wording for wording in wordings if f" {wording} " in text]
+    stated = wordings[max(found, key=len)] if found else None
+    if not (RELEASE_WORDS & set(text.split()) or " extended release " in text):
+        return stated
+    if stated in PLAIN_ORAL_FORMS:
+        return f"{EXTENDED_RELEASE} {stated}"
+    return stated if stated and stated.startswith(EXTENDED_RELEASE) else EXTENDED_RELEASE
 
 
 def _live_client() -> httpx.Client:
@@ -256,16 +289,18 @@ def _live(code: str | None, names: list[str]) -> Concept | None:
     global _live_retry_at
     queries = [(f"rxcui:{code}", describe, code)] if code else []
     queries += [(f"name:{name}", lookup, name) for name in names]
-    for memo, _, _ in queries:
-        if _live_found.get(memo):
+    # In order, so a remembered name can't stand in for a code that hasn't been asked about yet.
+    while queries and queries[0][0] in _live_found:
+        memo = queries.pop(0)[0]
+        if _live_found[memo]:
             return _live_found[memo]
-    pending = [query for query in queries if query[0] not in _live_found]
-    if not pending or time.monotonic() < _live_retry_at:
+    if not queries or time.monotonic() < _live_retry_at:
         return None
     try:
         with _live_client() as client:
-            for memo, ask, value in pending:
-                _live_found[memo] = ask(client, value)
+            for memo, ask, value in queries:
+                if memo not in _live_found:
+                    _live_found[memo] = ask(client, value)
                 if _live_found[memo]:
                     return _live_found[memo]
     except (httpx.HTTPError, httpx.InvalidURL, ValueError, KeyError, TypeError, AttributeError):
