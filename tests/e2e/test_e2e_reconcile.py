@@ -16,7 +16,7 @@ INTERVIEW_LINE = "Intake taken 2026-10-28 by RN Okafor (patient)"
 
 
 def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
-    """The seeded three-source case produces the seven documented findings and a saved PDF."""
+    """The seeded three-source case produces its documented findings and a saved PDF."""
     client, requested = e2e_client
     with Session(db) as session:
         seed(session, INTAKE_DIR)
@@ -51,7 +51,7 @@ def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
         assert session.scalar(select(func.count()).select_from(models.ReconciliationRun)) == 1
         for model, expected in (
             (models.MedicationRecord, 15),
-            (models.Finding, 7),
+            (models.Finding, 8),
             (models.RejectedRecord, 6),
         ):
             assert (
@@ -68,11 +68,12 @@ def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
         assert all(r.source_record_id and r.raw for r in run.fhir + run.pharmacy + run.intake)
 
     findings = {(f.discrepancy_type, f.medication): f for f in run.findings}
-    assert len(run.findings) == len(findings) == 7
+    assert len(run.findings) == len(findings) == 8
     assert set(findings) == {
         ("duplicate", "acetaminophen"),
         ("duplicate", "sertraline"),
         ("dosage_mismatch", "acetaminophen"),
+        ("frequency_mismatch", "sertraline"),
         ("missing", "ibuprofen"),
         ("missing", "metoprolol"),
         ("missing", "omeprazole"),
@@ -101,7 +102,12 @@ def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
     assert page.status_code == 200
     assert INTERVIEW_LINE in page.text
     assert "0.5 g" in page.text and "200 mg" in page.text
-    for label in ("Duplicate medication", "Missing medication", "Dosage mismatch"):
+    for label in (
+        "Duplicate medication",
+        "Missing medication",
+        "Dosage mismatch",
+        "Frequency mismatch",
+    ):
         assert f"<h3>{label}</h3>" in page.text
     assert f'href="{run_url}/report.pdf"' in page.text
     assert DISCLAIMER in page.text
@@ -155,10 +161,11 @@ def test_no_interview_patient_keeps_the_two_source_result(db, e2e_client):
         assert run.intake_interview is None and run.intake == []
         assert len(run.rejected) == 5
         assert all(r.source == "pharmacy" for r in run.rejected)
-    assert len(run.findings) == 5
+    assert len(run.findings) == 6
     assert {(f.discrepancy_type, f.medication) for f in run.findings} == {
         ("duplicate", "acetaminophen"),
         ("dosage_mismatch", "acetaminophen"),
+        ("frequency_mismatch", "sertraline"),
         ("missing", "metoprolol"),
         ("missing", "omeprazole"),
         ("missing", "warfarin"),

@@ -3,6 +3,7 @@
 from rules.base import ReconciliationRule
 from rules.dosage import DosageMismatchRule
 from rules.duplicate import DuplicateMedicationRule
+from rules.frequency import FrequencyMismatchRule
 from rules.missing import MissingMedicationRule
 from rules.runner import DEFAULT_RULES, run_rules
 
@@ -10,6 +11,7 @@ __all__ = [
     "DEFAULT_RULES",
     "DosageMismatchRule",
     "DuplicateMedicationRule",
+    "FrequencyMismatchRule",
     "MissingMedicationRule",
     "ReconciliationRule",
     "run_rules",

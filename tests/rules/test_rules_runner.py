@@ -3,12 +3,13 @@
 from rules import DEFAULT_RULES, run_rules
 
 
-def test_default_rules_are_the_three_v1_rules():
-    """DEFAULT_RULES holds the three V1 rules in order."""
+def test_default_rules_are_the_three_v1_rules_then_frequency():
+    """DEFAULT_RULES holds the three V1 rules in order, with V2's frequency rule appended."""
     assert [r.discrepancy_type for r in DEFAULT_RULES] == [
         "duplicate",
         "missing",
         "dosage_mismatch",
+        "frequency_mismatch",
     ]
 
 

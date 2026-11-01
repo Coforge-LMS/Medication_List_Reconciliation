@@ -17,6 +17,7 @@ LABELS: dict[str, str] = {
     "duplicate": "Duplicate medication",
     "missing": "Missing medication",
     "dosage_mismatch": "Dosage mismatch",
+    "frequency_mismatch": "Frequency mismatch",
 }
 
 

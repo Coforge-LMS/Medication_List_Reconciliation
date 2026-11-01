@@ -51,13 +51,14 @@ def _found(case, recorded_client, saved):
     return [(f.discrepancy_type, f.medication) for f in call["findings"]], call
 
 
-def test_case_mixed_gives_the_seven_documented_findings(recorded_client, intake, saved):
-    """data/README's CASE-MIXED table: 7 findings across the three sources."""
+def test_case_mixed_gives_the_documented_findings(recorded_client, intake, saved):
+    """data/README's CASE-MIXED table, plus V2's frequency mismatch: 8 findings."""
     found, call = _found("CASE-MIXED", recorded_client, saved)
     assert sorted(found) == [
         ("dosage_mismatch", "acetaminophen"),
         ("duplicate", "acetaminophen"),
         ("duplicate", "sertraline"),
+        ("frequency_mismatch", "sertraline"),
         ("missing", "ibuprofen"),
         ("missing", "metoprolol"),
         ("missing", "omeprazole"),
@@ -68,6 +69,11 @@ def test_case_mixed_gives_the_seven_documented_findings(recorded_client, intake,
     assert "1 patient-reported record" in warfarin.summary
     assert "1 pharmacy record" in warfarin.summary
     assert all(f.medication != "metformin" for f in call["findings"])  # 500 mg == 0.5 g
+    frequency = next(f for f in call["findings"] if f.discrepancy_type == "frequency_mismatch")
+    assert frequency.summary == (
+        "Patient-reported frequency once daily; FHIR frequency once daily; "
+        "pharmacy frequency twice daily."
+    )
 
 
 def test_save_run_gets_patient_base_url_and_version(recorded_client, intake, saved):
@@ -98,7 +104,7 @@ def test_patient_reporting_no_medications_gives_empty_intake(recorded_client, in
 
 
 def test_case_clean_has_no_findings(recorded_client, intake, saved):
-    """Alias matches across all three sources leave nothing to report."""
+    """Alias matches and equal schedules across all three sources leave nothing to report."""
     assert _found("CASE-CLEAN", recorded_client, saved)[0] == []
 
 

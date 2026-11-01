@@ -12,7 +12,7 @@ def test_known_types_have_labels():
 
 
 def test_unknown_type_from_a_newer_release_renders_as_other():
-    assert label_for("frequency_mismatch") == "Other (frequency_mismatch)"
+    assert label_for("route_mismatch") == "Other (route_mismatch)"
 
 
 def test_disclaimer_never_recommends():
@@ -63,3 +63,8 @@ def test_interview_date_is_the_local_day_like_the_intake_rows(kolkata):
     """20:00 UTC is 01:30 the next day in Kolkata: the line shows the date the rows carry."""
     late = _interview().model_copy(update={"taken_at": datetime(2026, 10, 1, 20, 0, tzinfo=UTC)})
     assert interview_line(late).startswith("Intake taken 2026-10-02 ")
+
+
+def test_frequency_mismatch_has_its_own_label():
+    """V2's type is known in this release; 1.0.0 still shows it as Other (frequency_mismatch)."""
+    assert label_for("frequency_mismatch") == "Frequency mismatch"

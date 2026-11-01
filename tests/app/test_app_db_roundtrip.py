@@ -48,7 +48,7 @@ def test_saved_three_way_run_renders_from_the_database(db, client):
 
     html = client.get(f"/runs/{run_id}").text
     assert "Intake taken 2026-10-01 by RN Okafor (patient)" in html
-    assert "Other (frequency_mismatch)" in html and "200 mg" in html
+    assert "Other (route_mismatch)" in html and "200 mg" in html
 
     body = client.get(f"/api/runs/{run_id}").json()
     assert [f["discrepancy_type"] for f in body["findings"]] == [
@@ -67,12 +67,13 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         response = client.post("/api/patients/2178/reconcile")
         assert response.status_code == 201
         body = response.json()
-        assert len(body["findings"]) == 7  # data/README's CASE-MIXED table
+        assert len(body["findings"]) == 8  # data/README's 7, plus V2's sertraline frequency
         assert body["intake_interview"]["taken_by"] == "RN Okafor"
         assert {r["source"] for r in body["rejected"]} == {"pharmacy", "intake"}
 
         run_page = client.get(f"/runs/{body['run_id']}").text
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
+        assert "<h3>Frequency mismatch</h3>" in run_page
         assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
 
         assert client.get("/runs/99999999999999999999").status_code == 404

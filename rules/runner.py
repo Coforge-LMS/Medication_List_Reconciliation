@@ -4,13 +4,15 @@ from contract import Finding, ReconciliationInput
 from rules.base import ReconciliationRule
 from rules.dosage import DosageMismatchRule
 from rules.duplicate import DuplicateMedicationRule
+from rules.frequency import FrequencyMismatchRule
 from rules.missing import MissingMedicationRule
 
-# V1 rules in output order; V2 appends FrequencyMismatchRule here (B15).
+# Rules in output order.
 DEFAULT_RULES: list[ReconciliationRule] = [
     DuplicateMedicationRule(),
     MissingMedicationRule(),
     DosageMismatchRule(),
+    FrequencyMismatchRule(),
 ]
 
 

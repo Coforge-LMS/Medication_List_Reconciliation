@@ -8,6 +8,7 @@ from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER
 from app.version import __version__
+from contract import Finding
 from db import repo
 from tests.app.conftest import INTERVIEW, make_run
 
@@ -32,8 +33,8 @@ def test_findings_are_grouped_under_their_labels(client, serve_run):
 def test_unknown_type_renders_as_other(client, serve_run):
     """A type from a newer release is shown as Other (x) with its stored summary."""
     serve_run(make_run())
-    section = _section(client.get("/runs/7").text, "Other (frequency_mismatch)")
-    assert "FHIR frequency QD; pharmacy frequency BID." in section
+    section = _section(client.get("/runs/7").text, "Other (route_mismatch)")
+    assert "FHIR route oral; pharmacy route topical." in section
 
 
 def test_each_finding_shows_all_three_values(client, serve_run):
@@ -146,7 +147,7 @@ def test_run_page_marks_each_finding_type_for_styling(client, serve_run):
     serve_run(make_run())
     html = client.get("/runs/7").text
     assert 'class="card finding-group type-missing"' in html
-    assert 'class="card finding-group type-frequency_mismatch"' in html
+    assert 'class="card finding-group type-route_mismatch"' in html
     assert '<span class="count">2</span> Missing medication' in html
 
 
@@ -184,3 +185,18 @@ def test_impossible_run_ids_are_404_without_querying(client, serve_run, monkeypa
 
     monkeypatch.setattr(repo, "get_run", unexpected)
     assert client.get(path.format(run_id)).status_code == 404
+
+
+def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
+    """A frequency mismatch is a known type now, with its stored plain wording."""
+    finding = Finding(
+        discrepancy_type="frequency_mismatch",
+        medication="sertraline",
+        summary="FHIR frequency once daily; pharmacy frequency twice daily.",
+        fhir_value="once daily",
+        pharmacy_value="twice daily",
+    )
+    serve_run(make_run(findings=[finding]))
+    section = _section(client.get("/runs/7").text, "Frequency mismatch")
+    assert "FHIR frequency once daily; pharmacy frequency twice daily." in section
+    assert "<td>once daily</td>" in section and "<td>twice daily</td>" in section

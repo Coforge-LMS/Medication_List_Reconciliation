@@ -66,3 +66,25 @@ def test_no_three_way_summary_recommends_treatment(rec, rejected, data):
         assert pattern in summaries
     for f in findings:
         assert not BANNED.search(f.summary), f.summary
+
+
+def test_no_frequency_summary_recommends_treatment(rec, data):
+    """The frequency wording states what each source says and nothing more."""
+    wordings = ["QD", "BID", "TID", "QID", "QOD", "QW", "Q4H"]
+    findings = run_rules(
+        data(
+            fhir=[
+                rec("fhir", f"drug{i}").model_copy(update={"frequency": wording})
+                for i, wording in enumerate(wordings)
+            ],
+            pharmacy=[
+                rec("pharmacy", f"drug{i}").model_copy(update={"frequency": "weekly"})
+                for i in range(len(wordings) - 1)
+            ]
+            + [rec("pharmacy", "drug6").model_copy(update={"frequency": "twice daily"})],
+        )
+    )
+    assert len(findings) == 6  # all but the drug that's weekly on both sides
+    for f in findings:
+        assert f.discrepancy_type == "frequency_mismatch"
+        assert not BANNED.search(f.summary), f.summary
