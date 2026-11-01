@@ -6,7 +6,7 @@ import pytest
 from pypdf import PdfReader
 from sqlalchemy.exc import OperationalError
 
-from app.labels import DISCLAIMER
+from app.labels import DISCLAIMER, NLM_ATTRIBUTION
 from app.pdf import MAX_CELL_CHARS, TRUNCATED, build_report
 from contract import Finding, Reason, Rejection
 from db import repo
@@ -230,3 +230,14 @@ def test_frequency_finding_has_its_own_label_in_the_report():
     content = text(make_run(findings=[finding]))
     assert "Frequency mismatch: 1" in content and "Other (" not in content
     assert "FHIR frequency once daily; pharmacy frequency twice daily." in content
+
+
+def test_every_page_of_the_report_has_the_nlm_attribution():
+    """The attribution travels with the report on every page, in NLM's exact words."""
+    many = [
+        Finding(discrepancy_type="missing", medication=f"drug{i}", summary="Listed in FHIR.")
+        for i in range(80)
+    ]
+    report = pages(build_report(make_run(findings=many)))
+    assert len(report) > 1
+    assert all(NLM_ATTRIBUTION in page and DISCLAIMER in page for page in report)

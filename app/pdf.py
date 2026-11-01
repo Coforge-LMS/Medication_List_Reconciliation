@@ -4,7 +4,14 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-from app.labels import DISCLAIMER, SOURCE_HEADINGS, group_findings, interview_line, utc_time
+from app.labels import (
+    DISCLAIMER,
+    NLM_ATTRIBUTION,
+    SOURCE_HEADINGS,
+    group_findings,
+    interview_line,
+    utc_time,
+)
 from contract import MedicationRecord, RunDetail, format_dose
 
 FONTS = Path(__file__).resolve().parent / "fonts"
@@ -17,13 +24,16 @@ KEEP_WITH_TABLE = 30  # mm a heading needs below it, so it isn't stranded at the
 
 
 class _Report(FPDF):
-    """A4 pages whose footer carries the disclaimer and the page number."""
+    """A4 pages whose footer carries the disclaimer, the NLM attribution and the page number."""
 
     def footer(self) -> None:
         """Print the exact disclaimer on every page, not only the first."""
-        self.set_y(-15)
+        self.set_y(-19)
         self.set_font(FAMILY, size=8)
         self.cell(0, 4, DISCLAIMER, align="C", **NEXT_LINE)
+        self.set_font(FAMILY, size=6)
+        self.multi_cell(0, 3, NLM_ATTRIBUTION, align="C", **NEXT_LINE)
+        self.set_font(FAMILY, size=8)
         self.cell(0, 4, f"Page {self.page_no()}", align="C")
 
 

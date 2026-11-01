@@ -80,6 +80,8 @@ footer {
   font-size: .85rem;
 }
 
+.attribution { margin-top: .25rem; font-size: .75rem; }
+
 .muted { color: var(--muted); }
 
 .card {

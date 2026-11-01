@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from contract import AliasConfigError
+from ingest.rxnorm import RxNormCacheError
 
 
 def test_bad_alias_config_stops_startup(tmp_path, monkeypatch):
@@ -28,3 +29,13 @@ def test_missing_alias_config_stops_startup(tmp_path, monkeypatch):
 def test_shipped_alias_config_starts(client):
     """The committed data/aliases.json loads and the app serves /healthz."""
     assert client.get("/healthz").status_code == 200
+
+
+def test_bad_rxnorm_cache_stops_startup(tmp_path, monkeypatch):
+    """A broken cache is found at startup, not during a demo reconciliation."""
+    bad = tmp_path / "rxnorm_cache.json"
+    bad.write_text("{not json")
+    monkeypatch.setenv("RXNORM_CACHE", str(bad))
+    with pytest.raises(RxNormCacheError, match="not valid JSON"):
+        with TestClient(app):
+            pass

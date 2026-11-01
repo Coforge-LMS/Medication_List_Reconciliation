@@ -9,9 +9,16 @@ from sqlalchemy.orm import Session
 from app import pharmacy
 from app.fhir_client import FhirClient
 from app.version import __version__
-from contract import AliasConfig, IntakeInterviewInfo, PatientInfo, ReconciliationInput
+from contract import (
+    AliasConfig,
+    IntakeInterviewInfo,
+    MedicationRecord,
+    PatientInfo,
+    ReconciliationInput,
+    Rejection,
+)
 from db import repo
-from ingest import normalize
+from ingest import normalize, rxnorm
 from ingest.fhir import map_medication_requests, map_patient
 from ingest.pharmacy import validate
 from rules import run_rules
@@ -38,8 +45,9 @@ def build_input(
     intake_rows: Iterable[Mapping[str, Any]] | None,
     aliases: AliasConfig,
 ) -> ReconciliationInput:
-    """Map, validate and normalize the three sources; no I/O.
+    """Map, validate and normalize the three sources; reads only the committed RxNorm cache.
 
+    Normalizing applies the aliases, then RxNorm's ingredient where it resolves.
     intake_rows=None means no interview was recorded, so intake stays None (two-source result);
     [] means the patient reports no medications. Rejections from every source are normalized
     too, so the rules can name a rejected counterpart.
@@ -49,13 +57,20 @@ def build_input(
     intake, intake_rejected = None, []
     if intake_rows is not None:
         intake, intake_rejected = validate(intake_rows, source="intake")
-        intake = normalize.apply(intake, aliases)
+        intake = _normalized(intake, aliases)
     return ReconciliationInput(
-        fhir=normalize.apply(fhir, aliases),
-        pharmacy=normalize.apply(pharmacy_records, aliases),
+        fhir=_normalized(fhir, aliases),
+        pharmacy=_normalized(pharmacy_records, aliases),
         intake=intake,
-        rejected=normalize.apply([*fhir_rejected, *pharmacy_rejected, *intake_rejected], aliases),
+        rejected=_normalized([*fhir_rejected, *pharmacy_rejected, *intake_rejected], aliases),
     )
+
+
+def _normalized[Item: (MedicationRecord, Rejection)](
+    items: Iterable[Item], aliases: AliasConfig
+) -> list[Item]:
+    """Alias-based names first, so anything RxNorm can't resolve keeps a usable identity."""
+    return rxnorm.refine(normalize.apply(items, aliases))
 
 
 def collect(fhir_id: str, session: Session, client: FhirClient, aliases: AliasConfig) -> Prepared:

@@ -20,6 +20,7 @@ from app import service
 from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
 from app.labels import (
     DISCLAIMER,
+    NLM_ATTRIBUTION,
     SOURCE_HEADINGS,
     group_findings,
     interview_line,
@@ -32,6 +33,7 @@ from app.version import __version__
 from contract import AliasConfig, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
+from ingest import rxnorm
 from ingest.aliases import load_aliases
 from ingest.fhir import PatientMappingError, map_patient
 
@@ -67,8 +69,9 @@ AliasesDep = Annotated[AliasConfig, Depends(get_aliases)]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Refuse to start on a bad alias config; create missing tables when a DB is set."""
+    """Refuse to start on a bad alias config or RxNorm cache; create tables when a DB is set."""
     get_aliases()
+    rxnorm.default_cache()
     if os.environ.get("DATABASE_URL"):
         repo.init_db(get_engine())
     yield
@@ -81,6 +84,7 @@ templates.env.filters["utc_time"] = utc_time
 templates.env.globals.update(
     version=__version__,
     disclaimer=DISCLAIMER,
+    nlm_attribution=NLM_ATTRIBUTION,
     format_dose=format_dose,
     source_headings=SOURCE_HEADINGS,
 )

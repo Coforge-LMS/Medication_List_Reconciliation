@@ -13,6 +13,13 @@ DISCLAIMER = (
     "does not recommend treatment."
 )
 
+# Required wherever RxNorm data from RxNav is used, in NLM's own words.
+NLM_ATTRIBUTION = (
+    "This product uses publicly available data from the U.S. National Library of Medicine (NLM), "
+    "National Institutes of Health, Department of Health and Human Services; NLM is not "
+    "responsible for the product and does not endorse or recommend this or any other product."
+)
+
 LABELS: dict[str, str] = {
     "duplicate": "Duplicate medication",
     "missing": "Missing medication",

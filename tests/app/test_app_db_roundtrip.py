@@ -70,6 +70,11 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         assert len(body["findings"]) == 8  # data/README's 7, plus V2's sertraline frequency
         assert body["intake_interview"]["taken_by"] == "RN Okafor"
         assert {r["source"] for r in body["rejected"]} == {"pharmacy", "intake"}
+        # Read back from Postgres: saved rows carry the RxCUI, in the existing column.
+        saved = [*body["fhir"], *body["pharmacy"], *body["intake"]]
+        assert all(r["rxcui"] for r in saved)
+        assert {r["normalized_name"] for r in body["fhir"]} >= {"metoprolol", "warfarin"}
+        assert all(r["raw"]["rxnorm"]["rxcui"] == r["rxcui"] for r in saved)
 
         run_page = client.get(f"/runs/{body['run_id']}").text
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page

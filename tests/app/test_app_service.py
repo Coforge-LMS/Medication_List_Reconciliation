@@ -11,6 +11,8 @@ from app import service
 from app.version import __version__
 from db import repo
 from ingest.aliases import load_aliases
+from ingest.fhir import RXNORM
+from rules import run_rules
 from tests.app.conftest import BASE, INTERVIEW, case_intake
 
 ALIASES = load_aliases(Path(__file__).resolve().parents[2] / "data" / "aliases.json")
@@ -108,10 +110,94 @@ def test_case_clean_has_no_findings(recorded_client, intake, saved):
     assert _found("CASE-CLEAN", recorded_client, saved)[0] == []
 
 
-def test_case_brand_gives_two_missing_in_v1(recorded_client, intake, saved):
-    """Crestor isn't an alias, so FHIR's rosuvastatin calcium and crestor don't match in V1."""
-    found, _ = _found("CASE-BRAND", recorded_client, saved)
-    assert sorted(found) == [("missing", "crestor"), ("missing", "rosuvastatin calcium")]
+def test_case_brand_matches_through_rxnorm(recorded_client, intake, saved):
+    """Crestor isn't an alias, but RxNorm matches it to FHIR's rosuvastatin: 2 missing become 0."""
+    found, call = _found("CASE-BRAND", recorded_client, saved)
+    assert found == []
+    (fhir,), (pharmacy,) = call["data"].fhir, call["data"].pharmacy
+    assert fhir.normalized_name == pharmacy.normalized_name == "rosuvastatin"
+    assert pharmacy.name == "Crestor" and fhir.rxcui and pharmacy.rxcui
+
+
+def _medication_request(code, display):
+    """An active coded MedicationRequest, as HAPI returns it."""
+    return {
+        "resourceType": "MedicationRequest",
+        "id": code,
+        "status": "active",
+        "subject": {"reference": "Patient/1"},
+        "authoredOn": "2026-09-01",
+        "medicationCodeableConcept": {
+            "coding": [{"system": RXNORM, "code": code, "display": display}],
+            "text": display,
+        },
+    }
+
+
+def _pharmacy_row(name, dose):
+    """A valid pharmacy row for the test patient."""
+    return {
+        "record_id": f"PH-{name}-{dose}",
+        "patient_id": "CASE-TEST",
+        "medication_name": name,
+        "dose_amount": dose,
+        "dose_unit": "mg",
+        "frequency": "once daily",
+        "date_recorded": "2026-09-01",
+    }
+
+
+def _findings(fhir, pharmacy):
+    """The real mapping, validation, aliases, committed RxNorm cache and rules, for one pair."""
+    data = service.build_input(
+        [_medication_request(*fhir)], "CASE-TEST", [_pharmacy_row(*pharmacy)], None, ALIASES
+    )
+    return run_rules(data)
+
+
+def test_er_vs_ir_is_reported_not_merged_through_the_pipeline():
+    """Metformin ER on FHIR vs a pharmacy row naming the plain tablet, same dose: one finding."""
+    (f,) = _findings(
+        ("860975", "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet"),
+        ("metformin hydrochloride 500 MG Oral Tablet", "500"),
+    )
+    assert (f.discrepancy_type, f.medication) == ("dosage_mismatch", "metformin")
+    assert f.details["different_form"] == {
+        "fhir": "Extended Release Oral Tablet",
+        "pharmacy": "Oral Tablet",
+    }
+    assert f.summary.startswith("Different form:")
+
+
+def test_strength_difference_is_still_a_mismatch_through_the_pipeline():
+    """A brand matched to its generic at another strength is a dose mismatch, not a match."""
+    (f,) = _findings(("314076", "lisinopril 10 MG Oral Tablet"), ("Zestril", "20"))
+    assert (f.discrepancy_type, f.medication) == ("dosage_mismatch", "lisinopril")
+    assert f.summary == "FHIR dose 10 mg; pharmacy dose 20 mg."
+
+
+def test_equivalent_brand_and_generic_give_no_finding_through_the_pipeline():
+    """The same ingredient and dose, with the brand stating no form, is simply a match."""
+    assert _findings(("314076", "lisinopril 10 MG Oral Tablet"), ("Zestril", "10")) == []
+
+
+def test_salts_of_one_ingredient_are_reported_through_the_pipeline():
+    """Tartrate on FHIR vs succinate at pharmacy: never silently the same drug."""
+    (f,) = _findings(
+        ("866924", "metoprolol tartrate 25 MG Oral Tablet"), ("Metoprolol Succinate", "25")
+    )
+    assert f.details["different_salt"] == {
+        "fhir": "metoprolol tartrate",
+        "pharmacy": "metoprolol succinate",
+    }
+
+
+def test_records_keep_their_original_names_and_carry_rxcui(recorded_client, intake, saved):
+    """Every record in a real run has an RxCUI, beside the name its source gave."""
+    _, call = _found("CASE-MIXED", recorded_client, saved)
+    data = call["data"]
+    assert all(r.rxcui for r in [*data.fhir, *data.pharmacy, *data.intake])
+    assert {r.name for r in data.fhir} >= {"metoprolol tartrate 25 MG Oral Tablet"}
 
 
 def test_intake_rejection_is_kept_and_normalized(recorded_client, intake, saved):

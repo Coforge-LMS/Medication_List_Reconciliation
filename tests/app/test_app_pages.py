@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from app.labels import DISCLAIMER
+from app.labels import DISCLAIMER, NLM_ATTRIBUTION
 from app.version import __version__
 from contract import Finding
 from db import repo
@@ -200,3 +200,9 @@ def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
     section = _section(client.get("/runs/7").text, "Frequency mismatch")
     assert "FHIR frequency once daily; pharmacy frequency twice daily." in section
     assert "<td>once daily</td>" in section and "<td>twice daily</td>" in section
+
+
+def test_footer_has_the_nlm_attribution(client, serve_run):
+    """RxNorm data requires NLM's attribution, in its exact words, on every page."""
+    serve_run(None)
+    assert NLM_ATTRIBUTION in client.get("/runs/999").text
