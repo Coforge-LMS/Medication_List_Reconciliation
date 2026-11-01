@@ -15,6 +15,7 @@
 !rules/**
 !data/
 !data/aliases.json
+!data/rxnorm_cache.json
 !data/intake/
 !data/intake/**
 !data/pharmacy/

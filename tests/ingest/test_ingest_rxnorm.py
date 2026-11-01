@@ -320,6 +320,51 @@ def _build(names, manual=None):
     )
 
 
+def test_committed_cache_covers_every_code_and_name_in_the_data():
+    """No committed FHIR code, pharmacy, intake or alias name is left to fall back on aliases."""
+    cache = rxnorm.load_cache(rxnorm.DEFAULT_CACHE)
+    codes, names = builder.collect_inputs()
+    assert len(codes) == 39
+    assert not [code for code in codes if code not in cache["rxcuis"]]
+    assert not [name for name in names if not cache["names"].get(rxnorm._key(name))]
+    assert cache["_meta"]["rxnorm_version"]
+
+
+def test_committed_cache_resolves_offline(monkeypatch):
+    """With no network at all and no live flag, brand, salt and generic meet from the file alone."""
+
+    def no_network(*args, **kwargs):
+        """Fail if anything tries to open an HTTP client."""
+        pytest.fail("tried to use the network")
+
+    monkeypatch.setattr(httpx, "Client", no_network)
+    fhir, salt, brand = rxnorm.refine(
+        [
+            record(
+                "rosuvastatin calcium 10 MG Oral Tablet [Crestor]", code="859747", source="fhir"
+            ),
+            record("Rosuvastatin Calcium"),
+            record("Crestor"),
+        ]
+    )
+    assert fhir.normalized_name == salt.normalized_name == brand.normalized_name == "rosuvastatin"
+    assert all(item.rxcui for item in (fhir, salt, brand))
+
+
+def test_committed_cache_keeps_the_obsolete_verapamil_code():
+    """FHIR's obsolete Calan code still meets the pharmacy's plain salt name."""
+    fhir, pharmacy = rxnorm.refine(
+        [
+            record(
+                "verapamil hydrochloride 80 MG Oral Tablet [Calan]", code="897685", source="fhir"
+            ),
+            record("Verapamil Hydrochloride"),
+        ]
+    )
+    assert fhir.normalized_name == pharmacy.normalized_name == "verapamil"
+    assert fhir.raw["rxnorm"]["status"] == "Obsolete"
+
+
 def test_build_maps_names_and_displays_to_concepts():
     """Both a looked-up name and a FHIR display resolve; the release is recorded."""
     cache = _build({"Crestor"})
