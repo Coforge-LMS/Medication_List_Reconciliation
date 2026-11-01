@@ -149,7 +149,7 @@ python -m data.generators.build_rxnorm_cache
 
 The build calls live RxNav and refuses to write a cache with gaps: an unresolved or ambiguous name must be decided by hand in its `MANUAL` map. Review the diff before committing. Code `897685` (Calan) is obsolete in RxNorm but is kept, with its status, because it still names its ingredient.
 
-Set `RXNORM_LIVE=1` to have the running app ask RxNav about anything the cache doesn't hold (3-second timeout; on any failure the record keeps its alias-based name).
+Add `RXNORM_LIVE=1` to `.env` and recreate the app to have it ask RxNav about anything the cache doesn't hold. Each request has a 3-second timeout; on any failure the record keeps its alias-based name and live lookups pause for 60 seconds. It's off by default, and the demo doesn't need it.
 
 Uses RxNorm data from the U.S. National Library of Medicine; the app's footer carries NLM's required attribution.
 

@@ -7,7 +7,7 @@ from pypdf import PdfReader
 from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER, NLM_ATTRIBUTION
-from app.pdf import MAX_CELL_CHARS, TRUNCATED, build_report
+from app.pdf import BOTTOM_MARGIN, FOOTER_HEIGHT, MAX_CELL_CHARS, TRUNCATED, build_report
 from contract import Finding, Reason, Rejection
 from db import repo
 from tests.app.conftest import INTERVIEW, make_run, record
@@ -241,3 +241,8 @@ def test_every_page_of_the_report_has_the_nlm_attribution():
     report = pages(build_report(make_run(findings=many)))
     assert len(report) > 1
     assert all(NLM_ATTRIBUTION in page and DISCLAIMER in page for page in report)
+
+
+def test_footer_stays_inside_the_bottom_margin():
+    """The longer footer starts below where the page body stops, so they can't overlap."""
+    assert FOOTER_HEIGHT <= BOTTOM_MARGIN

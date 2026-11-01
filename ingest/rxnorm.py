@@ -9,6 +9,7 @@ Anything unresolved keeps its alias-based identity.
 import json
 import os
 import re
+import time
 from collections.abc import Iterable
 from functools import cache as memoize
 from pathlib import Path
@@ -22,6 +23,7 @@ from ingest.fhir import RXNORM
 
 RXNAV_URL = "https://rxnav.nlm.nih.gov/REST"
 LIVE_TIMEOUT = 3.0
+LIVE_COOLDOWN = 60.0  # seconds to stop asking after a failure, so each record doesn't wait again
 DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.json"
 
 # Words that describe the product, not the drug, dropped to find the drug name in free text.
@@ -37,6 +39,7 @@ _TOKEN = re.compile(r"[^\W_]+")
 Concept = dict[str, Any]
 
 _live_found: dict[str, Concept | None] = {}  # successful live answers, including "no match"
+_live_retry_at = 0.0  # time.monotonic() value before which live RxNav isn't asked again
 
 
 class RxNormCacheError(Exception):
@@ -50,6 +53,8 @@ def load_cache(path: str | Path) -> dict[str, Any]:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise RxNormCacheError(f"cannot read RxNorm cache {path}: {exc.strerror}") from exc
+    except UnicodeDecodeError as exc:
+        raise RxNormCacheError(f"RxNorm cache {path} is not UTF-8 text") from exc
     try:
         cache = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -61,12 +66,19 @@ def load_cache(path: str | Path) -> dict[str, Any]:
     ):
         raise RxNormCacheError(f"RxNorm cache {path} needs _meta, rxcuis and names objects")
     for rxcui, concept in cache["rxcuis"].items():
-        if not isinstance(concept, dict) or not concept.get("ingredients"):
+        if not isinstance(concept, dict) or not _is_ingredient_list(concept.get("ingredients")):
             raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has no ingredients")
+        if concept.get("rxcui") != rxcui:
+            raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has a different rxcui inside")
     for name, rxcui in cache["names"].items():
-        if rxcui is not None and rxcui not in cache["rxcuis"]:
+        if rxcui is not None and (not isinstance(rxcui, str) or rxcui not in cache["rxcuis"]):
             raise RxNormCacheError(f"RxNorm cache {path}: {name!r} points at unknown {rxcui}")
     return cache
+
+
+def _is_ingredient_list(value: Any) -> bool:
+    """A non-empty list of names; a bare string would otherwise split into letters."""
+    return isinstance(value, list) and bool(value) and all(isinstance(v, str) and v for v in value)
 
 
 @memoize
@@ -236,14 +248,19 @@ def _live_client() -> httpx.Client:
 
 
 def _live(code: str | None, names: list[str]) -> Concept | None:
-    """Ask RxNav about a code, then names, once each; failures aren't remembered as "no match"."""
+    """Ask RxNav about a code, then names, once each.
+
+    A failure isn't remembered as "no match", but it pauses live lookups for LIVE_COOLDOWN, so a
+    dead RxNav costs one timeout rather than one for every record on every page.
+    """
+    global _live_retry_at
     queries = [(f"rxcui:{code}", describe, code)] if code else []
     queries += [(f"name:{name}", lookup, name) for name in names]
     for memo, _, _ in queries:
         if _live_found.get(memo):
             return _live_found[memo]
     pending = [query for query in queries if query[0] not in _live_found]
-    if not pending:
+    if not pending or time.monotonic() < _live_retry_at:
         return None
     try:
         with _live_client() as client:
@@ -252,5 +269,5 @@ def _live(code: str | None, names: list[str]) -> Concept | None:
                 if _live_found[memo]:
                     return _live_found[memo]
     except (httpx.HTTPError, httpx.InvalidURL, ValueError, KeyError, TypeError, AttributeError):
-        return None
+        _live_retry_at = time.monotonic() + LIVE_COOLDOWN
     return None

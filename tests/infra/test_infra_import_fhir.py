@@ -63,3 +63,16 @@ def test_http_error_propagates_and_exits_non_zero(server, monkeypatch):
     monkeypatch.setattr(imp, "request", boom)
     with pytest.raises(imp.FhirImportError):
         imp.main()
+
+
+def test_image_build_includes_the_rxnorm_cache():
+    """The app refuses to start without the cache, so it must get through both build filters."""
+    root = imp.DATA_DIR.parents[1]
+    assert "!data/rxnorm_cache.json" in (root / ".dockerignore").read_text().splitlines()
+    assert "COPY data/rxnorm_cache.json" in (root / "infra" / "Dockerfile").read_text()
+
+
+def test_compose_passes_rxnorm_live_through_to_the_app():
+    """The app's environment is explicit, so the flag must be listed or it never arrives."""
+    compose = (imp.DATA_DIR.parents[1] / "infra" / "docker-compose.yml").read_text()
+    assert "RXNORM_LIVE: ${RXNORM_LIVE:-0}" in compose

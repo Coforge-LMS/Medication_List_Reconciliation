@@ -79,6 +79,7 @@ def no_live(monkeypatch):
     """Offline unless a test says otherwise: any real client creation fails the test."""
     monkeypatch.delenv("RXNORM_LIVE", raising=False)
     rxnorm._live_found.clear()
+    monkeypatch.setattr(rxnorm, "_live_retry_at", 0.0)
 
     def unexpected():
         """Fail if the live path opens a client."""
@@ -160,6 +161,41 @@ def test_bad_cache_is_refused_with_a_reason(tmp_path, content, reason):
     path.write_text(content)
     with pytest.raises(rxnorm.RxNormCacheError, match=reason):
         rxnorm.load_cache(path)
+
+
+@pytest.mark.parametrize(
+    ("concept", "names", "reason"),
+    [
+        ({"rxcui": "1", "ingredients": "abc"}, {}, "no ingredients"),
+        ({"rxcui": "1", "ingredients": [""]}, {}, "no ingredients"),
+        ({"ingredients": ["a"]}, {}, "different rxcui"),
+        ({"rxcui": "2", "ingredients": ["a"]}, {}, "different rxcui"),
+        ({"rxcui": "1", "ingredients": ["a"]}, {"a": ["1"]}, "points at unknown"),
+    ],
+    ids=["string", "blank", "no-rxcui", "wrong-rxcui", "list-name"],
+)
+def test_malformed_concept_is_refused_at_load_not_at_request_time(tmp_path, concept, names, reason):
+    """Whatever would fail later during a reconciliation fails at startup instead."""
+    path = tmp_path / "cache.json"
+    path.write_text(json.dumps({"_meta": {}, "rxcuis": {"1": concept}, "names": names}))
+    with pytest.raises(rxnorm.RxNormCacheError, match=reason):
+        rxnorm.load_cache(path)
+
+
+def test_non_utf8_cache_is_refused_with_a_reason(tmp_path):
+    """Bad bytes are the same readable error, not a UnicodeDecodeError."""
+    path = tmp_path / "cache.json"
+    path.write_bytes(b"\xff\xfe")
+    with pytest.raises(rxnorm.RxNormCacheError, match="not UTF-8"):
+        rxnorm.load_cache(path)
+
+
+def test_identity_is_lowercase():
+    """RxNorm's own casing (vitamin B12) must not split a drug from a lowercase name."""
+    concept = {"rxcui": "1", "ingredients": ["vitamin B12"]}
+    cache = {"_meta": {}, "rxcuis": {"1": concept}, "names": {"b12": "1"}}
+    (refined,) = rxnorm.refine([record("B12")], cache)
+    assert refined.normalized_name == "vitamin b12"
 
 
 def test_missing_cache_names_the_path(tmp_path):
@@ -340,6 +376,117 @@ def test_live_http_error_falls_back(monkeypatch):
     assert rxnorm.refine([item], CACHE) == [item]
 
 
+@pytest.mark.parametrize("value", ["0", "true", "yes", ""])
+def test_only_the_value_1_enables_live(monkeypatch, value):
+    """Anything else stays offline; the autouse fixture fails the test if a client opens."""
+    monkeypatch.setenv("RXNORM_LIVE", value)
+    item = record("Ibuprofen")
+    assert rxnorm.refine([item], CACHE) == [item]
+
+
+def test_live_uses_the_drug_name_when_the_name_as_given_finds_nothing(monkeypatch):
+    """ "Tylenol 500 mg" isn't an RxNorm name, but "tylenol" is."""
+    asked = []
+
+    def handler(request):
+        """Only the bare brand exists."""
+        if request.url.path.endswith("/rxcui.json"):
+            asked.append(request.url.params["name"])
+            ids = ["202433"] if request.url.params["name"] == "tylenol" else []
+            return httpx.Response(200, json={"idGroup": {"rxnormId": ids}})
+        return httpx.Response(200, json=_history("BN", "Tylenol", ["acetaminophen"]))
+
+    monkeypatch.setattr(rxnorm, "_live_client", _rxnav(handler))
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    (refined,) = rxnorm.refine([record("Tylenol 500 mg")], CACHE)
+    assert refined.normalized_name == "acetaminophen"
+    assert asked == ["tylenol 500 mg", "tylenol"]
+
+
+def test_live_tries_the_name_when_a_code_gives_no_concept(monkeypatch):
+    """A remapped code lists no ingredient, so the record's name gets its chance."""
+
+    def handler(request):
+        """The code is empty; the name resolves."""
+        if request.url.path.endswith("/rxcui.json"):
+            return httpx.Response(200, json={"idGroup": {"rxnormId": ["5640"]}})
+        if "/105048/" in request.url.path:
+            return httpx.Response(200, json=_history("SCD", "old"))
+        return httpx.Response(200, json=_history("IN", "ibuprofen"))
+
+    monkeypatch.setattr(rxnorm, "_live_client", _rxnav(handler))
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    (refined,) = rxnorm.refine([record("Ibuprofen", code="105048", source="fhir")], CACHE)
+    assert refined.normalized_name == "ibuprofen" and refined.rxcui == "105048"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        [],
+        "text",
+        {"rxcuiStatusHistory": []},
+        {"idGroup": []},
+    ],
+    ids=["list", "string", "history-list", "idgroup-list"],
+)
+def test_unexpected_rxnav_body_falls_back_instead_of_crashing(monkeypatch, body):
+    """A 200 in an odd shape is unresolved; it must never fail the reconciliation."""
+    monkeypatch.setattr(rxnorm, "_live_client", _rxnav(lambda r: httpx.Response(200, json=body)))
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    item = record("Ibuprofen", code="5640", source="fhir")
+    assert rxnorm.refine([item], CACHE) == [item]
+
+
+def test_dead_rxnav_costs_one_attempt_for_many_records(monkeypatch):
+    """After a failure, later records skip the network, so a page doesn't wait 3 seconds each."""
+    attempts = []
+
+    def handler(request):
+        """Fail every request."""
+        attempts.append(request.url)
+        raise httpx.ConnectTimeout("too slow")
+
+    monkeypatch.setattr(
+        rxnorm,
+        "_live_client",
+        lambda: httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    items = [record(name) for name in ("Ibuprofen", "Naproxen", "Aspirin", "Digoxin")]
+    assert rxnorm.refine(items, CACHE) == items
+    assert len(attempts) == 1
+
+
+def test_live_is_tried_again_after_the_cooldown(monkeypatch):
+    """RxNav coming back is noticed once the pause ends."""
+    now = [1000.0]
+    monkeypatch.setattr(rxnorm.time, "monotonic", lambda: now[0])
+    healthy = [False]
+
+    def handler(request):
+        """Fail until healthy, then resolve."""
+        if not healthy[0]:
+            raise httpx.ConnectError("no route")
+        if request.url.path.endswith("/rxcui.json"):
+            return httpx.Response(200, json={"idGroup": {"rxnormId": ["5640"]}})
+        return httpx.Response(200, json=_history("IN", "ibuprofen"))
+
+    monkeypatch.setattr(
+        rxnorm,
+        "_live_client",
+        lambda: httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+    item = record("Ibuprofen")
+    assert rxnorm.refine([item], CACHE) == [item]
+    healthy[0] = True
+    assert rxnorm.refine([item], CACHE) == [item]  # still pausing
+    now[0] += rxnorm.LIVE_COOLDOWN + 1
+    (refined,) = rxnorm.refine([item], CACHE)
+    assert refined.normalized_name == "ibuprofen"
+
+
 def test_live_client_is_bounded_to_three_seconds():
     """The real live client has a short timeout, so RxNav can't hold up a reconciliation."""
     with REAL_LIVE_CLIENT() as client:
@@ -386,9 +533,20 @@ def test_concept_with_no_ingredient_is_none():
         (_history("SCD", "rosuvastatin calcium", ["rosuvastatin"], boss="rosuvastatin"), None),
         (_history("SBD", "x", ["losartan", "hctz"], boss="losartan potassium"), None),
         (_history("BN", "Crestor", ["rosuvastatin"]), None),
+        (_history("SCD", "x", ["alendronate"], boss="alendronic acid"), None),
+        (_history("PIN", "alendronic acid", ["alendronate"]), None),
         (_history("IN", "metoprolol"), None),
     ],
-    ids=["pin", "scd-with-salt", "basis-is-ingredient", "combination", "brand", "ingredient"],
+    ids=[
+        "pin",
+        "scd-with-salt",
+        "basis-is-ingredient",
+        "combination",
+        "brand",
+        "free-acid-scd",
+        "free-acid-pin",
+        "ingredient",
+    ],
 )
 def test_salt_is_only_known_when_a_concept_states_one(body, salt):
     """A strength basis equal to the ingredient says nothing, as for rosuvastatin calcium."""

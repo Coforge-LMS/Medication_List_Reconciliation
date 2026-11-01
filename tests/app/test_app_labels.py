@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.labels import DISCLAIMER, SOURCE_HEADINGS, interview_line, label_for
+from app.labels import DISCLAIMER, NLM_ATTRIBUTION, SOURCE_HEADINGS, interview_line, label_for
 from contract import IntakeInterviewInfo
 
 
@@ -68,3 +68,13 @@ def test_interview_date_is_the_local_day_like_the_intake_rows(kolkata):
 def test_frequency_mismatch_has_its_own_label():
     """V2's type is known in this release; 1.0.0 still shows it as Other (frequency_mismatch)."""
     assert label_for("frequency_mismatch") == "Frequency mismatch"
+
+
+def test_nlm_attribution_is_nlms_exact_wording():
+    """RxNav's terms require this sentence, so it's pinned here rather than compared to itself."""
+    assert NLM_ATTRIBUTION == (
+        "This product uses publicly available data from the U.S. National Library of Medicine "
+        "(NLM), National Institutes of Health, Department of Health and Human Services; NLM is "
+        "not responsible for the product and does not endorse or recommend this or any other "
+        "product."
+    )

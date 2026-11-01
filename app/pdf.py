@@ -20,6 +20,8 @@ EMPTY = "—"
 NEXT_LINE = {"new_x": "LMARGIN", "new_y": "NEXT"}
 MAX_CELL_CHARS = 400  # keeps any table row shorter than a page, which fpdf2 requires
 TRUNCATED = "… [truncated; full text on the run page]"
+BOTTOM_MARGIN = 20  # mm the page body stays above the bottom edge
+FOOTER_HEIGHT = 19  # mm the footer starts above the bottom edge, inside that margin
 KEEP_WITH_TABLE = 30  # mm a heading needs below it, so it isn't stranded at the foot of a page
 
 
@@ -28,7 +30,7 @@ class _Report(FPDF):
 
     def footer(self) -> None:
         """Print the exact disclaimer on every page, not only the first."""
-        self.set_y(-19)
+        self.set_y(-FOOTER_HEIGHT)
         self.set_font(FAMILY, size=8)
         self.cell(0, 4, DISCLAIMER, align="C", **NEXT_LINE)
         self.set_font(FAMILY, size=6)
@@ -42,7 +44,7 @@ def build_report(run: RunDetail) -> bytes:
     pdf = _Report(format="A4")
     pdf.add_font(FAMILY, fname=FONTS / "DejaVuSans.ttf")
     pdf.add_font(FAMILY, style="B", fname=FONTS / "DejaVuSans-Bold.ttf")
-    pdf.set_auto_page_break(True, margin=20)
+    pdf.set_auto_page_break(True, margin=BOTTOM_MARGIN)
     pdf.set_title(f"Reconciliation run {run.run_id}")
     pdf.add_page()
 
