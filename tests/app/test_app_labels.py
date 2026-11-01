@@ -166,3 +166,20 @@ def test_no_differences_without_an_interview_compares_fhir_and_pharmacy():
 def test_no_differences_is_empty_when_the_patient_reports_none():
     """An interview with no medications takes part, so nothing is in every source."""
     assert no_differences(_three_way(intake=[])) == []
+
+
+@pytest.mark.parametrize(
+    ("frequency", "shown"),
+    [
+        ("BID", "500 mg, BID"),
+        ("as needed", "500 mg, as needed (not compared)"),
+        ("PRN", "500 mg, PRN (not compared)"),
+        ("when my knee hurts", "500 mg, when my knee hurts (not compared)"),
+        (None, "500 mg"),
+    ],
+)
+def test_no_differences_marks_a_frequency_that_was_not_compared(frequency, shown):
+    """As-needed and unreadable wording can hide a difference, so it can't read as agreement."""
+    fhir = [record("fhir", "metformin", "500", frequency=frequency)]
+    ((_, stated),) = no_differences(_three_way(fhir=fhir))
+    assert stated["fhir"] == shown
