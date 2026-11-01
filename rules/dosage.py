@@ -14,12 +14,17 @@ from rules.base import (
 
 
 class DosageMismatchRule(ReconciliationRule):
-    """A name in 2+ sources whose sets of base-unit doses differ (500 mg == 0.5 g)."""
+    """A name in 2+ sources whose base-unit doses, dose form or salt differ (500 mg == 0.5 g).
+
+    Records with the same ingredient can still be different products, so a form or salt difference
+    is reported even when the doses agree. A source that doesn't state one is left out of that
+    comparison: unknown is neither equal nor different.
+    """
 
     discrepancy_type: ClassVar[str] = "dosage_mismatch"
 
     def evaluate(self, data: ReconciliationInput) -> list[Finding]:
-        """Flag names in 2+ sources whose dose sets differ; mg vs mL is a different measure."""
+        """Flag names in 2+ sources that differ; mg vs mL is a different measure."""
         groups = {source: by_name(records) for source, records in participating(data).items()}
         findings = []
         for name in all_names(groups):
@@ -27,7 +32,8 @@ class DosageMismatchRule(ReconciliationRule):
             if len(present) < 2:
                 continue
             base = {source: _base_doses(group) for source, group in present.items()}
-            if len({frozenset(doses) for doses in base.values()}) == 1:
+            forms, salts = _differing(present, "dose_form"), _differing(present, "salt")
+            if len({frozenset(doses) for doses in base.values()}) == 1 and not (forms or salts):
                 continue
             values = {source: _listed(group) for source, group in present.items()}
             different_measure = len({frozenset(u for _, u in d) for d in base.values()}) > 1
@@ -36,6 +42,9 @@ class DosageMismatchRule(ReconciliationRule):
             )
             if different_measure:
                 summary = f"Doses are recorded in a different measure: {summary}"
+            for label, differing in (("salt", salts), ("form", forms)):
+                if differing:
+                    summary = f"{_described(label, differing)} {summary}"
             findings.append(
                 Finding(
                     discrepancy_type=self.discrepancy_type,
@@ -45,10 +54,28 @@ class DosageMismatchRule(ReconciliationRule):
                     details={
                         **{f"{s}_doses_base": _sorted_base(doses) for s, doses in base.items()},
                         "different_measure": different_measure,
+                        **({"different_form": forms} if forms else {}),
+                        **({"different_salt": salts} if salts else {}),
                     },
                 )
             )
         return findings
+
+
+def _differing(present: dict[str, list[MedicationRecord]], field: str) -> dict[str, str]:
+    """{source: value} for a concept field, if the sources stating one disagree; else empty."""
+    stated = {}
+    for source, group in present.items():
+        values = {(r.raw.get("rxnorm") or {}).get(field) for r in group} - {None}
+        if values:
+            stated[source] = ", ".join(sorted(values))
+    return stated if len(set(stated.values())) > 1 else {}
+
+
+def _described(label: str, differing: dict[str, str]) -> str:
+    """'Different form: FHIR Oral Tablet; pharmacy Extended Release Oral Tablet.'"""
+    listed = "; ".join(f"{SOURCE_LABELS[source]} {value}" for source, value in differing.items())
+    return f"Different {label}: {listed}."
 
 
 def _base_doses(records: list[MedicationRecord]) -> set[tuple]:

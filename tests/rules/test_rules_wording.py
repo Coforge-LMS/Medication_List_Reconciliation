@@ -87,4 +87,24 @@ def test_no_frequency_summary_recommends_treatment(rec, data):
     assert len(findings) == 6  # all but the drug that's weekly on both sides
     for f in findings:
         assert f.discrepancy_type == "frequency_mismatch"
+
+
+def test_no_form_or_salt_summary_recommends_treatment(rec, data):
+    """The form and salt wording states the difference and nothing more."""
+    findings = run_rules(
+        data(
+            fhir=[
+                rec("fhir", "metformin", "500", form="Extended Release Oral Tablet"),
+                rec("fhir", "metoprolol", "25", salt="metoprolol tartrate"),
+            ],
+            pharmacy=[
+                rec("pharmacy", "metformin", "500", form="Oral Tablet"),
+                rec("pharmacy", "metoprolol", "25", salt="metoprolol succinate"),
+            ],
+        )
+    )
+    assert len(findings) == 2
+    assert any("Different form" in f.summary for f in findings)
+    assert any("Different salt" in f.summary for f in findings)
+    for f in findings:
         assert not BANNED.search(f.summary), f.summary
