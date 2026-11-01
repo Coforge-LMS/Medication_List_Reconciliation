@@ -168,6 +168,107 @@ def test_missing_cache_names_the_path(tmp_path):
         rxnorm.load_cache(tmp_path / "nope.json")
 
 
+@pytest.mark.parametrize(
+    ("name", "drug"),
+    [
+        ("Metoprolol Tartrate 25 mg", "metoprolol tartrate"),
+        ("Metoprolol Tartrate 25 mg tab", "metoprolol tartrate"),
+        ("metformin hydrochloride 1000 MG Oral Tablet", "metformin hydrochloride"),
+        ("Metformin ER", "metformin"),
+        ("24 HR metoprolol succinate 100 MG Extended Release Oral Tablet", "metoprolol succinate"),
+        ("atorvastatin 20 MG Oral Tablet [Lipitor]", "atorvastatin"),
+    ],
+)
+def test_drug_name_drops_strength_brand_tag_and_product_words(name, drug):
+    """What's left of free text is the drug, salt included."""
+    assert rxnorm._drug_name(name) == drug
+
+
+SALTED = {
+    "rxcui": "203191",
+    "tty": "PIN",
+    "name": "metoprolol tartrate",
+    "status": "Active",
+    "ingredients": ["metoprolol"],
+    "dose_form": None,
+    "salt": "metoprolol tartrate",
+}
+PLAIN = {**SALTED, "rxcui": "6918", "tty": "IN", "name": "metoprolol", "salt": None}
+FORMS = {
+    "_meta": {},
+    "rxcuis": {
+        "203191": SALTED,
+        "6918": PLAIN,
+        "860975": {**PLAIN, "rxcui": "860975", "dose_form": "Extended Release Oral Tablet"},
+        "861007": {**PLAIN, "rxcui": "861007", "dose_form": "Oral Tablet"},
+    },
+    "names": {"metoprolol tartrate": "203191", "metoprolol": "6918"},
+}
+
+
+def test_salt_survives_a_strength_in_the_name_even_when_aliases_drop_it():
+    """The alias says plain metoprolol, but the name's own salt decides first."""
+    (refined,) = rxnorm.refine(
+        [record("Metoprolol Tartrate 25 mg", normalized="metoprolol")], FORMS
+    )
+    assert refined.raw["rxnorm"]["salt"] == "metoprolol tartrate"
+    assert refined.normalized_name == "metoprolol"
+
+
+@pytest.mark.parametrize(
+    ("name", "form"),
+    [
+        ("metoprolol 25 MG Oral Tablet", "Oral Tablet"),
+        ("metoprolol 25 MG Extended Release Oral Tablet", "Extended Release Oral Tablet"),
+        ("Metoprolol ER", "Extended Release"),
+        ("metoprolol xr 25 mg", "Extended Release"),
+        ("Metoprolol", None),
+        ("Metoprolol 25 mg tablet", None),
+    ],
+)
+def test_form_is_read_from_the_name_when_the_concept_has_none(name, form):
+    """A stated form is kept, and a name that states none stays unknown."""
+    (refined,) = rxnorm.refine([record(name, normalized="metoprolol")], FORMS)
+    assert refined.raw["rxnorm"]["dose_form"] == form
+
+
+def test_form_in_the_name_does_not_replace_the_concepts_own():
+    """A coded product's RxNorm form wins over whatever the display says."""
+    (refined,) = rxnorm.refine(
+        [record("metoprolol Oral Tablet", code="860975", source="fhir")], FORMS
+    )
+    assert refined.raw["rxnorm"]["dose_form"] == "Extended Release Oral Tablet"
+
+
+def test_stated_form_does_not_leak_into_the_shared_cache():
+    """One record's stated form must not change the concept the next record gets."""
+    rxnorm.refine([record("Metoprolol ER")], FORMS)
+    assert FORMS["rxcuis"]["6918"]["dose_form"] is None
+
+
+def test_source_code_is_saved_even_when_the_concept_comes_from_the_name():
+    """An uncached code stays the record's rxcui, so a saved row never contradicts its source."""
+    (refined,) = rxnorm.refine([record("Crestor", code="9999999", source="fhir")], CACHE)
+    assert refined.rxcui == "9999999" and refined.normalized_name == "rosuvastatin"
+    assert refined.raw["rxnorm"]["rxcui"] == "320864"
+
+
+@pytest.mark.parametrize(
+    "coding",
+    [
+        {"system": "http://snomed.info/sct", "code": "320864"},
+        {"system": RXNORM, "code": "not-a-code"},
+        {"system": RXNORM, "code": "1\n2"},
+        {"system": RXNORM},
+    ],
+    ids=["other-system", "not-digits", "newline", "no-code"],
+)
+def test_only_a_numeric_rxnorm_code_counts(coding):
+    """Another terminology's code, or a malformed one, is never taken as an RxCUI."""
+    raw = {"medicationCodeableConcept": {"coding": [coding]}}
+    assert rxnorm._coded_rxcui(raw) is None
+
+
 def _rxnav(handler):
     """Have the live path talk to a MockTransport."""
     client = httpx.Client(transport=httpx.MockTransport(handler))
@@ -330,6 +431,14 @@ def test_committed_cache_covers_every_code_and_name_in_the_data():
     assert cache["_meta"]["rxnorm_version"]
 
 
+def test_collect_inputs_includes_alias_keys_values_and_the_demo_bundle():
+    """Every alias, on both sides, and the live demo patient's codes are in the build's input."""
+    aliases = json.loads((rxnorm.DEFAULT_CACHE.parent / "aliases.json").read_text())["aliases"]
+    codes, names = builder.collect_inputs()
+    assert set(aliases) | set(aliases.values()) <= names
+    assert {"314076", "617310"} <= set(codes)
+
+
 def test_committed_cache_resolves_offline(monkeypatch):
     """With no network at all and no live flag, brand, salt and generic meet from the file alone."""
 
@@ -371,6 +480,23 @@ def test_build_maps_names_and_displays_to_concepts():
     assert cache["names"] == {"crestor": "320864", "lisinopril oral tablet": "29046"}
     assert set(cache["rxcuis"]) == {"320864", "29046"}
     assert cache["_meta"]["rxnorm_version"] == "05-Oct-2026"
+
+
+def test_build_adds_the_salts_and_ingredients_its_concepts_name():
+    """A concept's own ingredient becomes findable as a plain name, on a best-effort basis."""
+
+    def transport(request):
+        """Crestor names rosuvastatin, which RxNav can also resolve; nothing else exists."""
+        if request.url.path.endswith("/rxcui.json"):
+            ids = {"crestor": ["320864"], "rosuvastatin": ["301542"]}
+            return httpx.Response(
+                200, json={"idGroup": {"rxnormId": ids.get(request.url.params["name"], [])}}
+            )
+        return _builder_transport(request)
+
+    client = httpx.Client(transport=httpx.MockTransport(transport))
+    cache = builder.build(client, {}, {"Crestor"}, "2026-11-01", {}, lambda seconds: None)
+    assert cache["names"]["rosuvastatin"] == "301542"
 
 
 def test_build_refuses_an_unresolved_name():

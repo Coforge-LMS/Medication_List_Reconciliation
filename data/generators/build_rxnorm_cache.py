@@ -3,8 +3,9 @@
 Run from the repo root: python -m data.generators.build_rxnorm_cache
 
 Covers every RxNorm code on an active FHIR medication and every name in the pharmacy, intake and
-alias data. It fails loudly on anything unresolved or ambiguous unless MANUAL decides it, because
-a silent gap would come back as a false "missing" finding.
+alias data, plus the salts and ingredients those concepts name, so a plain "chlorpheniramine
+maleate" meets a coded product. It fails loudly on any committed input that is unresolved or
+ambiguous unless MANUAL decides it, because a silent gap would come back as a false "missing".
 """
 
 import argparse
@@ -36,6 +37,7 @@ def collect_inputs(root: Path = ROOT) -> tuple[dict[str, str], set[str]]:
     codes: dict[str, str] = {}
     bundles = [*sorted((root / "data/fhir/synthea").glob("*.json"))]
     bundles += sorted((root / "data/fhir/cases").glob("*.json"))
+    bundles += sorted((root / "data/fhir/demo").glob("*.json"))
     for path in bundles:
         for entry in json.loads(path.read_text(encoding="utf-8")).get("entry", []):
             resource = entry.get("resource", {})
@@ -43,13 +45,15 @@ def collect_inputs(root: Path = ROOT) -> tuple[dict[str, str], set[str]]:
                 continue
             code = _coded_rxcui(resource)
             if resource.get("status") == "active" and code:
-                codes[code] = resource["medicationCodeableConcept"].get("text", "")
+                concept = resource["medicationCodeableConcept"]
+                displays = [c.get("display") for c in concept.get("coding", [])]
+                codes[code] = concept.get("text") or next(filter(None, displays), "")
     pharmacy = json.loads((root / "data/pharmacy/pharmacy_records.json").read_text("utf-8"))
     names = {row["medication_name"] for row in pharmacy}
     with (root / "data/intake/intake_medications.csv").open(newline="", encoding="utf-8") as f:
         names |= {row["medication_name"] for row in csv.DictReader(f)}
     aliases = json.loads((root / "data/aliases.json").read_text(encoding="utf-8"))
-    names |= set(aliases["aliases"])
+    names |= set(aliases["aliases"]) | set(aliases["aliases"].values())
     return codes, {name for name in names if name and name.strip()}
 
 
@@ -96,6 +100,13 @@ def build(
             continue
         rxcuis.setdefault(concept["rxcui"], concept)
         cached_names[key] = concept["rxcui"]
+    named = {n for c in list(rxcuis.values()) for n in [c.get("salt"), *c["ingredients"]] if n}
+    for key in sorted({_key(name) for name in named} - set(cached_names)):
+        pause(PAUSE)
+        concept = lookup(client, key)  # best effort: without it, this name just keeps its alias
+        if concept is not None:
+            rxcuis.setdefault(concept["rxcui"], concept)
+            cached_names[key] = concept["rxcui"]
     if problems:
         raise CacheBuildError("; ".join(sorted(problems)))
     return {

@@ -15,8 +15,10 @@
     "acetaminophen 300 mg / hydrocodone bitartrate 5 mg oral tablet": "856987",
     "acetaminophen 325 mg oral tablet [tylenol]": "209387",
     "acetaminophen 500 mg oral tablet": "198440",
+    "albuterol": "435",
     "albuterol 0.83 mg/ml inhalation solution": "630208",
     "albuterol 5 mg/ml inhalation solution": "245314",
+    "alendronate": "46041",
     "alendronic acid": "236083",
     "alendronic acid 10 mg oral tablet": "904419",
     "amlodipine": "17767",
@@ -26,6 +28,8 @@
     "atorvastatin": "83367",
     "atorvastatin 20 mg oral tablet": "617310",
     "cetirizine": "20610",
+    "chlorpheniramine": "2400",
+    "chlorpheniramine maleate": "142429",
     "chlorpheniramine maleate 2 mg/ml oral solution": "477045",
     "clopidogrel": "32968",
     "clopidogrel 75 mg oral tablet": "309362",
@@ -34,22 +38,30 @@
     "digoxin 0.125 mg oral tablet": "197604",
     "famotidine": "4278",
     "fish oil": "4419",
+    "fish oils": "4419",
+    "fluticasone": "41126",
+    "fluticasone propionate": "50121",
     "hydrochlorothiazide": "5487",
     "hydrochlorothiazide 25 mg / losartan potassium 100 mg oral tablet": "979471",
     "hydrochlorothiazide 25 mg oral tablet": "310798",
+    "hydrocodone": "5489",
+    "hydrocortisone": "5492",
     "hydrocortisone 10 mg/ml topical cream": "106258",
     "ibuprofen": "5640",
     "ibuprofen 400 mg oral tablet [ibu]": "206905",
     "insulin isophane, human 70 unt/ml / insulin, regular, human 30 unt/ml injectable suspension [humulin]": "106892",
+    "insulin, regular, human": "253182",
     "lipitor": "153165",
     "lisinopril": "29046",
     "lisinopril 10 mg oral tablet": "314076",
     "loratadine": "28889",
+    "losartan": "52175",
     "magnesium": "6574",
     "melatonin": "6711",
     "metformin": "6809",
     "metformin hydrochloride": "235743",
     "metformin hydrochloride 500 mg oral tablet": "861004",
+    "metoprolol": "6918",
     "metoprolol succinate": "221124",
     "metoprolol tartrate": "203191",
     "metoprolol tartrate 25 mg oral tablet": "866924",
@@ -57,6 +69,7 @@
     "naproxen 500 mg oral tablet": "198014",
     "naproxen sodium": "142442",
     "naproxen sodium 220 mg oral tablet": "849574",
+    "nitroglycerin": "4917",
     "nitroglycerin 0.4 mg/actuat mucosal spray": "705129",
     "norvasc": "58927",
     "omeprazole": "7646",
@@ -64,19 +77,24 @@
     "prasugrel": "613391",
     "prasugrel 10 mg oral tablet": "855812",
     "pravastatin": "42463",
+    "rosuvastatin": "301542",
     "rosuvastatin calcium": "323828",
     "rosuvastatin calcium 10 mg oral tablet [crestor]": "859747",
     "rosuvastatin calcium 20 mg oral tablet": "859751",
+    "salmeterol": "36117",
     "sertraline": "36437",
     "sertraline 50 mg oral tablet": "312940",
     "simvastatin": "36567",
     "simvastatin 10 mg oral tablet": "314231",
     "simvastatin 20 mg oral tablet": "312961",
     "tamsulosin": "77492",
+    "tramadol": "10689",
     "tramadol hydrochloride": "82110",
     "tramadol hydrochloride 50 mg oral tablet": "835603",
+    "verapamil": "11170",
     "verapamil hydrochloride": "203138",
     "verapamil hydrochloride 80 mg oral tablet [calan]": "897685",
+    "vitamin b12": "11248",
     "vitamin b12 5 mg/ml injectable solution": "2001499",
     "warfarin": "11289",
     "warfarin sodium": "114194",
@@ -95,6 +113,17 @@
       "status": "Active",
       "tty": "SCD"
     },
+    "10689": {
+      "dose_form": null,
+      "ingredients": [
+        "tramadol"
+      ],
+      "name": "tramadol",
+      "rxcui": "10689",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "106892": {
       "dose_form": "Injectable Suspension",
       "ingredients": [
@@ -106,6 +135,28 @@
       "salt": null,
       "status": "Active",
       "tty": "SBD"
+    },
+    "11170": {
+      "dose_form": null,
+      "ingredients": [
+        "verapamil"
+      ],
+      "name": "verapamil",
+      "rxcui": "11170",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "11248": {
+      "dose_form": null,
+      "ingredients": [
+        "vitamin B12"
+      ],
+      "name": "vitamin B12",
+      "rxcui": "11248",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
     },
     "11289": {
       "dose_form": null,
@@ -139,6 +190,17 @@
       "salt": null,
       "status": "Active",
       "tty": "IN"
+    },
+    "142429": {
+      "dose_form": null,
+      "ingredients": [
+        "chlorpheniramine"
+      ],
+      "name": "chlorpheniramine maleate",
+      "rxcui": "142429",
+      "salt": "chlorpheniramine maleate",
+      "status": "Active",
+      "tty": "PIN"
     },
     "142442": {
       "dose_form": null,
@@ -323,9 +385,20 @@
       ],
       "name": "alendronic acid",
       "rxcui": "236083",
-      "salt": "alendronic acid",
+      "salt": null,
       "status": "Active",
       "tty": "PIN"
+    },
+    "2400": {
+      "dose_form": null,
+      "ingredients": [
+        "chlorpheniramine"
+      ],
+      "name": "chlorpheniramine",
+      "rxcui": "2400",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
     },
     "243670": {
       "dose_form": "Oral Tablet",
@@ -349,6 +422,17 @@
       "status": "Active",
       "tty": "SCD"
     },
+    "253182": {
+      "dose_form": null,
+      "ingredients": [
+        "insulin, regular, human"
+      ],
+      "name": "insulin, regular, human",
+      "rxcui": "253182",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "28889": {
       "dose_form": null,
       "ingredients": [
@@ -367,6 +451,17 @@
       ],
       "name": "lisinopril",
       "rxcui": "29046",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "301542": {
+      "dose_form": null,
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "rosuvastatin",
+      "rxcui": "301542",
       "salt": null,
       "status": "Active",
       "tty": "IN"
@@ -492,6 +587,17 @@
       "status": "Active",
       "tty": "IN"
     },
+    "36117": {
+      "dose_form": null,
+      "ingredients": [
+        "salmeterol"
+      ],
+      "name": "salmeterol",
+      "rxcui": "36117",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "36437": {
       "dose_form": null,
       "ingredients": [
@@ -525,6 +631,17 @@
       "status": "Active",
       "tty": "IN"
     },
+    "41126": {
+      "dose_form": null,
+      "ingredients": [
+        "fluticasone"
+      ],
+      "name": "fluticasone",
+      "rxcui": "41126",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "42463": {
       "dose_form": null,
       "ingredients": [
@@ -547,6 +664,17 @@
       "status": "Active",
       "tty": "IN"
     },
+    "435": {
+      "dose_form": null,
+      "ingredients": [
+        "albuterol"
+      ],
+      "name": "albuterol",
+      "rxcui": "435",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "4419": {
       "dose_form": null,
       "ingredients": [
@@ -554,6 +682,17 @@
       ],
       "name": "fish oils",
       "rxcui": "4419",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "46041": {
+      "dose_form": null,
+      "ingredients": [
+        "alendronate"
+      ],
+      "name": "alendronate",
+      "rxcui": "46041",
       "salt": null,
       "status": "Active",
       "tty": "IN"
@@ -569,6 +708,39 @@
       "status": "Active",
       "tty": "SCD"
     },
+    "4917": {
+      "dose_form": null,
+      "ingredients": [
+        "nitroglycerin"
+      ],
+      "name": "nitroglycerin",
+      "rxcui": "4917",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "50121": {
+      "dose_form": null,
+      "ingredients": [
+        "fluticasone"
+      ],
+      "name": "fluticasone propionate",
+      "rxcui": "50121",
+      "salt": "fluticasone propionate",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "52175": {
+      "dose_form": null,
+      "ingredients": [
+        "losartan"
+      ],
+      "name": "losartan",
+      "rxcui": "52175",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
     "5487": {
       "dose_form": null,
       "ingredients": [
@@ -576,6 +748,28 @@
       ],
       "name": "hydrochlorothiazide",
       "rxcui": "5487",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5489": {
+      "dose_form": null,
+      "ingredients": [
+        "hydrocodone"
+      ],
+      "name": "hydrocodone",
+      "rxcui": "5489",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5492": {
+      "dose_form": null,
+      "ingredients": [
+        "hydrocortisone"
+      ],
+      "name": "hydrocortisone",
+      "rxcui": "5492",
       "salt": null,
       "status": "Active",
       "tty": "IN"
@@ -664,6 +858,17 @@
       ],
       "name": "metformin",
       "rxcui": "6809",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "6918": {
+      "dose_form": null,
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "metoprolol",
+      "rxcui": "6918",
       "salt": null,
       "status": "Active",
       "tty": "IN"
@@ -919,7 +1124,7 @@
       ],
       "name": "alendronic acid 10 MG Oral Tablet",
       "rxcui": "904419",
-      "salt": "alendronic acid",
+      "salt": null,
       "status": "Active",
       "tty": "SCD"
     },

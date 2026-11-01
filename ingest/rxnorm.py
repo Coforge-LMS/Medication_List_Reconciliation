@@ -8,6 +8,7 @@ Anything unresolved keeps its alias-based identity.
 
 import json
 import os
+import re
 from collections.abc import Iterable
 from functools import cache as memoize
 from pathlib import Path
@@ -16,11 +17,22 @@ from typing import Any
 import httpx
 
 from contract import MedicationRecord, Rejection
+from ingest.checks import BRACKETED, KNOWN_UNITS, strength_pattern
 from ingest.fhir import RXNORM
 
 RXNAV_URL = "https://rxnav.nlm.nih.gov/REST"
 LIVE_TIMEOUT = 3.0
 DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.json"
+
+# Words that describe the product, not the drug, dropped to find the drug name in free text.
+PRODUCT_WORDS = frozenset(
+    "oral tablet tab capsule cap extended release er xr xl sr film coated chewable solution".split()
+)
+RELEASE_WORDS = frozenset({"er", "xr", "xl", "sr"})
+EXTENDED_RELEASE = "Extended Release"
+
+_STRENGTH = strength_pattern(KNOWN_UNITS, re.IGNORECASE)
+_TOKEN = re.compile(r"[^\W_]+")
 
 Concept = dict[str, Any]
 
@@ -113,7 +125,9 @@ def _salt(tty: str | None, name: str | None, ingredients: list[str], features: d
         strengths = features.get("ingredientAndStrength") or [{}]
         candidate = strengths[0].get("bossName")
     candidate = (candidate or "").lower()
-    return candidate if candidate and candidate != ingredients[0].lower() else None
+    if not candidate or candidate == ingredients[0].lower() or candidate.endswith(" acid"):
+        return None  # a free acid such as alendronic acid is the drug itself, not a named salt
+    return candidate
 
 
 def lookup(client: httpx.Client, name: str) -> Concept | None:
@@ -141,8 +155,9 @@ def refine[Item: (MedicationRecord, Rejection)](
             continue
         update: dict[str, Any] = {"normalized_name": _identity(concept)}
         if isinstance(item, MedicationRecord):
-            update["rxcui"] = concept["rxcui"]
-            update["raw"] = {**item.raw, "rxnorm": concept}
+            # A code the source stated is kept even when the concept was found by name instead.
+            update["rxcui"] = _coded_rxcui(item.raw) or concept["rxcui"]
+            update["raw"] = {**item.raw, "rxnorm": _with_stated_form(concept, item.name, cache)}
         result.append(item.model_copy(update=update))
     return result
 
@@ -153,17 +168,21 @@ def _identity(concept: Concept) -> str:
 
 
 def _resolve(item: MedicationRecord | Rejection, cache: dict[str, Any]) -> Concept | None:
-    """Coded RxCUI first, then the original name, then the alias-based name, then live RxNav."""
+    """Coded RxCUI, the name as given, its drug name, the alias-based name, then live RxNav.
+
+    The drug name comes before the alias-based name because aliases can drop a salt:
+    "Metoprolol Tartrate 25 mg" must stay tartrate, not become plain metoprolol.
+    """
     code = _coded_rxcui(item.raw)
     if code in cache["rxcuis"]:
         return cache["rxcuis"][code]
-    keys = [key for key in (_key(item.name), _key(item.normalized_name)) if key]
-    for key in keys:
+    given = list(dict.fromkeys(key for key in (_key(item.name), _drug_name(item.name)) if key))
+    for key in (*given, _key(item.normalized_name)):
         if cache["names"].get(key):
             return cache["rxcuis"][cache["names"][key]]
     if os.environ.get("RXNORM_LIVE") != "1":
         return None
-    return _live(code, item.name)
+    return _live(code, given)
 
 
 def _coded_rxcui(raw: Any) -> str | None:
@@ -171,8 +190,10 @@ def _coded_rxcui(raw: Any) -> str | None:
     concept = raw.get("medicationCodeableConcept") if isinstance(raw, dict) else None
     codings = concept.get("coding") if isinstance(concept, dict) else None
     for coding in codings if isinstance(codings, list) else []:
-        if isinstance(coding, dict) and coding.get("system") == RXNORM and coding.get("code"):
-            return str(coding["code"])
+        if isinstance(coding, dict) and coding.get("system") == RXNORM:
+            code = str(coding.get("code") or "")
+            if code.isascii() and code.isdigit():
+                return code
     return None
 
 
@@ -181,22 +202,55 @@ def _key(name: str | None) -> str:
     return " ".join(name.lower().split()) if name else ""
 
 
+def _words(name: str | None) -> list[str]:
+    """The lowercase words of a name, without [brand] tags or strengths."""
+    return _TOKEN.findall(_STRENGTH.sub(" ", BRACKETED.sub(" ", (name or "").lower())))
+
+
+def _drug_name(name: str | None) -> str:
+    """The drug in free text: "Metoprolol Tartrate 25 mg tab" gives "metoprolol tartrate"."""
+    return " ".join(w for w in _words(name) if w not in PRODUCT_WORDS and not w.isdigit())
+
+
+def _with_stated_form(concept: Concept, name: str, cache: dict[str, Any]) -> Concept:
+    """The concept, plus the dose form its record's own name states if RxNorm's concept has none.
+
+    A brand or plain drug name has no form in RxNorm, but "metformin 500 MG Oral Tablet" and
+    "Metformin ER" do say something, and that's what the dosage rule compares.
+    """
+    if concept.get("dose_form"):
+        return concept
+    text = f" {' '.join(_words(name))} "
+    forms = {c["dose_form"] for c in cache["rxcuis"].values() if c.get("dose_form")}
+    stated = [form for form in forms if f" {form.lower()} " in text]
+    if stated:
+        return {**concept, "dose_form": max(stated, key=len)}
+    if RELEASE_WORDS & set(text.split()) or " extended release " in text:
+        return {**concept, "dose_form": EXTENDED_RELEASE}
+    return concept
+
+
 def _live_client() -> httpx.Client:
     """The RxNav client for the optional live path."""
     return httpx.Client(timeout=LIVE_TIMEOUT)
 
 
-def _live(code: str | None, name: str | None) -> Concept | None:
-    """Ask RxNav once per value; any network problem counts as unresolved and isn't remembered."""
-    memo = f"rxcui:{code}" if code else f"name:{_key(name)}"
-    if memo in _live_found:
-        return _live_found[memo]
-    if not code and not name:
+def _live(code: str | None, names: list[str]) -> Concept | None:
+    """Ask RxNav about a code, then names, once each; failures aren't remembered as "no match"."""
+    queries = [(f"rxcui:{code}", describe, code)] if code else []
+    queries += [(f"name:{name}", lookup, name) for name in names]
+    for memo, _, _ in queries:
+        if _live_found.get(memo):
+            return _live_found[memo]
+    pending = [query for query in queries if query[0] not in _live_found]
+    if not pending:
         return None
     try:
         with _live_client() as client:
-            found = describe(client, code) if code else lookup(client, name)
-    except (httpx.HTTPError, ValueError, KeyError):
+            for memo, ask, value in pending:
+                _live_found[memo] = ask(client, value)
+                if _live_found[memo]:
+                    return _live_found[memo]
+    except (httpx.HTTPError, httpx.InvalidURL, ValueError, KeyError, TypeError, AttributeError):
         return None
-    _live_found[memo] = found
-    return found
+    return None

@@ -107,7 +107,7 @@ CASE-MIXED's 7 findings:
 - Sertraline's once daily (FHIR) vs twice daily (pharmacy) is a V2 `frequency_mismatch`; V1 stores and shows frequency, never compares it.
 - With no interview, CASE-MIXED gives the two-source result (`missing_from` is a single source).
 - The six rejected records (five invalid pharmacy rows and the intake warfarin) sit on drugs that appear nowhere else, so they show as rejected without changing any finding: a blank name, a unit `tab`, a date `03/02/2026`, a future date, and the unreadable warfarin dose.
-- CASE-BRAND's `Crestor` is deliberately not in `aliases.json`: FHIR normalizes to `rosuvastatin calcium` while pharmacy and intake say `crestor`.
+- CASE-BRAND's `Crestor` is deliberately not in `aliases.json`, so with aliases alone FHIR's `rosuvastatin calcium` and `crestor` don't match. RxNorm matches them in the running app (see "RxNorm cache").
 
 `CASE-BRAND` is the last patient in the bundle and the importer's "already imported" marker.
 
@@ -141,7 +141,7 @@ Search `Demopoulos` or `CASE-DEMO` on the app's home page and open the patient. 
 
 ## RxNorm cache (`rxnorm_cache.json`)
 
-The app matches drugs by RxNorm ingredient using this committed file, so it needs no network. It holds every RxNorm code on an active FHIR medication and every name in the pharmacy, intake and alias data. Rebuild it after those change, from the repo root, with network access:
+The app matches drugs by RxNorm ingredient using this committed file, so it needs no network. It holds every RxNorm code on an active FHIR medication, every name in the pharmacy, intake and alias data, and the salts and ingredients those concepts name. Rebuild it after those change, from the repo root, with network access:
 
 ```bash
 python -m data.generators.build_rxnorm_cache

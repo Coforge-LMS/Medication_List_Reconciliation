@@ -192,6 +192,63 @@ def test_salts_of_one_ingredient_are_reported_through_the_pipeline():
     }
 
 
+def test_salt_with_a_strength_is_still_reported_through_the_pipeline():
+    """ER succinate on FHIR vs a tartrate row with its strength: a difference, never silence."""
+    (f,) = _findings(
+        ("866427", "24 HR metoprolol succinate 25 MG Extended Release Oral Tablet"),
+        ("Metoprolol Tartrate 25 mg", "25"),
+    )
+    assert f.discrepancy_type == "dosage_mismatch" and f.medication == "metoprolol"
+    assert f.details["different_salt"] == {
+        "fhir": "metoprolol succinate",
+        "pharmacy": "metoprolol tartrate",
+    }
+
+
+def test_er_vs_a_plain_tablet_at_another_strength_reports_both_through_the_pipeline():
+    """A form stated beside any strength is compared, not only a display the cache holds."""
+    (f,) = _findings(
+        ("860975", "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet"),
+        ("metformin hydrochloride 1000 MG Oral Tablet", "1000"),
+    )
+    assert f.details["different_form"]["pharmacy"] == "Oral Tablet"
+    assert "FHIR dose 500 mg; pharmacy dose 1000 mg." in f.summary
+
+
+def test_er_abbreviation_is_compared_through_the_pipeline():
+    """ "Metformin ER" against a plain tablet differs; against an ER product it agrees."""
+    (f,) = _findings(
+        ("861007", "metformin hydrochloride 500 MG Oral Tablet"), ("Metformin ER", "500")
+    )
+    assert f.details["different_form"] == {"fhir": "Oral Tablet", "pharmacy": "Extended Release"}
+    er = ("860975", "24 HR Metformin hydrochloride 500 MG Extended Release Oral Tablet")
+    assert _findings(er, ("Metformin ER", "500")) == []
+
+
+def test_rejected_fhir_record_is_named_as_the_pharmacy_rows_counterpart():
+    """A coded rejection and a plain salt name meet, so it isn't presented as an omission."""
+    (f,) = _findings(
+        ("477045", "Chlorpheniramine Maleate 2 MG/ML Oral Solution"),
+        ("Chlorpheniramine Maleate", "4"),
+    )
+    assert f.discrepancy_type == "missing" and f.medication == "chlorpheniramine"
+    assert "1 FHIR record with this name was rejected" in f.summary
+
+
+def test_rejected_brand_is_named_as_the_generics_counterpart():
+    """Rejections go through RxNorm too: pharmacy's bad Crestor row meets FHIR's rosuvastatin."""
+    data = service.build_input(
+        [_medication_request("859751", "rosuvastatin calcium 20 MG Oral Tablet")],
+        "CASE-TEST",
+        [_pharmacy_row("Crestor", "ten")],
+        None,
+        ALIASES,
+    )
+    (f,) = run_rules(data)
+    assert f.medication == "rosuvastatin"
+    assert "1 pharmacy record with this name was rejected" in f.summary
+
+
 def test_records_keep_their_original_names_and_carry_rxcui(recorded_client, intake, saved):
     """Every record in a real run has an RxCUI, beside the name its source gave."""
     _, call = _found("CASE-MIXED", recorded_client, saved)
