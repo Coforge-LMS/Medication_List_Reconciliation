@@ -245,3 +245,44 @@ def test_matched_label_is_escaped(client, serve_run):
     html = client.get("/runs/7").text
     assert "Matched as: &lt;b&gt;sertraline&lt;/b&gt;" in html
     assert "<b>sertraline" not in html
+
+
+def _agreeing(**overrides):
+    """A run whose one medication is in all three sources with no finding."""
+    return make_run(
+        intake=[record("intake", "metformin", "0.5", "g", "twice a day")],
+        fhir=[record("fhir", "metformin", "500", frequency="BID")],
+        pharmacy=[record("pharmacy", "metformin", "500", frequency="twice daily")],
+        intake_interview=INTERVIEW,
+        rejected=[],
+        **overrides,
+    )
+
+
+def test_run_page_shows_medications_with_no_differences(client, serve_run):
+    """The tile and section appear beside findings, with each source's wording."""
+    serve_run(
+        _agreeing(findings=[Finding(discrepancy_type="missing", medication="x", summary="y")])
+    )
+    html = client.get("/runs/7").text
+    assert '<span class="count">1</span> No differences' in html
+    assert 'id="no-differences"' in html
+    for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
+        assert f"<td>{value}</td>" in html
+    assert "no source is treated as correct" in html
+
+
+def test_run_with_no_findings_still_lists_what_agrees(client, serve_run):
+    """A clean patient gets the plain statement and the list, with no findings tiles."""
+    serve_run(_agreeing(findings=[]))
+    html = client.get("/runs/7").text
+    assert "No discrepancies found" in html
+    assert 'id="no-differences"' in html
+    assert '<ul class="summary">' not in html
+
+
+def test_run_page_omits_the_section_when_nothing_agrees(client, serve_run):
+    """The default run's medications all have findings or a missing source."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert "no-differences" not in html and "No differences" not in html

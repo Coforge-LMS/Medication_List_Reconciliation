@@ -6,7 +6,15 @@ written by a newer one (tolerant reader).
 
 from datetime import UTC, datetime
 
-from contract import Finding, IntakeInterviewInfo, MedicationRecord
+from contract import (
+    Finding,
+    IntakeInterviewInfo,
+    MedicationRecord,
+    ReconciliationInput,
+    RunDetail,
+    format_dose,
+)
+from rules.base import by_name, identity, participating
 
 DISCLAIMER = (
     "Synthetic data. Reports discrepancies between sources for clinician review; "
@@ -45,6 +53,11 @@ def matched_as(record: MedicationRecord) -> str | None:
     return None if plain else record.normalized_name
 
 
+NO_DIFFERENCES_NOTE = (
+    "Each of these is in every source compared and has no finding. "
+    "Values are as each source states them; no source is treated as correct."
+)
+
 # Medication column headings in display order.
 SOURCE_HEADINGS: dict[str, str] = {
     "intake": "Patient-reported",
@@ -70,6 +83,35 @@ def group_findings(findings: list[Finding]) -> list[tuple[str, list[Finding]]]:
     for f in findings:
         groups.setdefault(f.discrepancy_type, []).append(f)
     return [(label_for(t), fs) for t, fs in groups.items()]
+
+
+def no_differences(run: RunDetail) -> list[tuple[str, dict[str, str]]]:
+    """(medication, {source: what it states}) for those every compared source lists, unflagged.
+
+    A rejected record with the name leaves it out, since that source's record wasn't compared.
+    This reports only that no finding was raised: no source is treated as correct.
+    """
+    data = ReconciliationInput(
+        fhir=run.fhir,
+        pharmacy=run.pharmacy,
+        intake=run.intake if run.intake_interview else None,
+        rejected=run.rejected,
+    )
+    groups = {source: by_name(records) for source, records in participating(data).items()}
+    flagged = {f.medication for f in run.findings} | {identity(r) for r in run.rejected}
+    shared = set.intersection(*(set(group) for group in groups.values())) - flagged
+    return [
+        (name, {source: _stated(group[name]) for source, group in groups.items()})
+        for name in sorted(shared)
+    ]
+
+
+def _stated(records: list[MedicationRecord]) -> str:
+    """Dose and frequency as one source states them: "0.5 g, twice a day"."""
+    return "; ".join(
+        ", ".join(filter(None, [format_dose(r.dose_amount, r.dose_unit), r.frequency]))
+        for r in records
+    )
 
 
 def utc_time(moment: datetime) -> str:

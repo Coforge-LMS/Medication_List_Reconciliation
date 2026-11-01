@@ -7,10 +7,12 @@ from fpdf import FPDF
 from app.labels import (
     DISCLAIMER,
     NLM_ATTRIBUTION,
+    NO_DIFFERENCES_NOTE,
     SOURCE_HEADINGS,
     group_findings,
     interview_line,
     matched_as,
+    no_differences,
     utc_time,
 )
 from contract import MedicationRecord, RunDetail, format_dose
@@ -52,6 +54,7 @@ def build_report(run: RunDetail) -> bytes:
     _header(pdf, run)
     _summary(pdf, run)
     _findings(pdf, run)
+    _no_differences(pdf, run)
     _medications(
         pdf,
         "Patient-reported medications",
@@ -87,6 +90,8 @@ def _summary(pdf: FPDF, run: RunDetail) -> None:
     _heading(pdf, "Summary")
     groups = group_findings(run.findings)
     counts = [f"{label}: {len(findings)}" for label, findings in groups]
+    if groups and (agreeing := no_differences(run)):
+        counts.append(f"No differences: {len(agreeing)}")
     intake = f"{len(run.intake)} patient-reported, " if run.intake_interview else ""
     _lines(
         pdf,
@@ -115,6 +120,21 @@ def _findings(pdf: FPDF, run: RunDetail) -> None:
             ],
             widths=(16, 33, 19, 16, 16),
         )
+
+
+def _no_differences(pdf: FPDF, run: RunDetail) -> None:
+    """Medications every compared source lists with no finding; no section if there are none."""
+    agreeing = no_differences(run)
+    if not agreeing:
+        return
+    _heading(pdf, "No differences")
+    _lines(pdf, NO_DIFFERENCES_NOTE)
+    _table(
+        pdf,
+        ["Medication", *SOURCE_HEADINGS.values()],
+        [[name, *(stated.get(s, EMPTY) for s in SOURCE_HEADINGS)] for name, stated in agreeing],
+        widths=(25, 25, 25, 25),
+    )
 
 
 def _medications(

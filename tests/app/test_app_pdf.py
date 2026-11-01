@@ -256,3 +256,26 @@ def test_report_labels_a_brand_with_its_ingredient():
     content = text(make_run(pharmacy=[brand]))
     assert "Zoloft (matched as sertraline) 50 mg" in content
     assert content.count("matched as") == 1
+
+
+def test_report_lists_medications_with_no_differences():
+    """The section and its summary count appear when findings exist too."""
+    content = text(
+        make_run(
+            intake=[record("intake", "metformin", "0.5", "g", "twice a day")],
+            fhir=[record("fhir", "metformin", "500", frequency="BID")],
+            pharmacy=[record("pharmacy", "metformin", "500", frequency="twice daily")],
+            intake_interview=INTERVIEW,
+            rejected=[],
+            findings=[Finding(discrepancy_type="missing", medication="x", summary="y")],
+        )
+    )
+    assert "No differences: 1" in content
+    assert "no source is treated as correct" in content
+    for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
+        assert value in content
+
+
+def test_report_omits_no_differences_when_nothing_agrees():
+    """A run with nothing in common has no empty section."""
+    assert "No differences" not in text(make_run())

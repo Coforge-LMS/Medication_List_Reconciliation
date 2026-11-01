@@ -10,9 +10,10 @@ from app.labels import (
     interview_line,
     label_for,
     matched_as,
+    no_differences,
 )
-from contract import IntakeInterviewInfo
-from tests.app.conftest import record
+from contract import Finding, IntakeInterviewInfo, Reason, Rejection
+from tests.app.conftest import INTERVIEW, make_run, record
 
 
 def test_known_types_have_labels():
@@ -107,3 +108,61 @@ def test_matched_as_appears_only_where_it_explains_something(name, normalized, r
         update={"normalized_name": normalized, "rxcui": rxcui}
     )
     assert matched_as(item) == label
+
+
+def _three_way(**overrides):
+    """A run where all three sources list metformin and no finding names it."""
+    fields = {
+        "intake": [record("intake", "metformin", "0.5", "g", "twice a day")],
+        "fhir": [record("fhir", "metformin", "500", frequency="BID")],
+        "pharmacy": [record("pharmacy", "metformin", "500", frequency="twice daily")],
+        "intake_interview": INTERVIEW,
+        "findings": [],
+        "rejected": [],
+    }
+    return make_run(**(fields | overrides))
+
+
+def test_no_differences_lists_each_source_as_it_states_the_medication():
+    """Each source's own dose and frequency wording is kept, so nothing is hidden by the match."""
+    assert no_differences(_three_way()) == [
+        (
+            "metformin",
+            {
+                "intake": "0.5 g, twice a day",
+                "fhir": "500 mg, BID",
+                "pharmacy": "500 mg, twice daily",
+            },
+        )
+    ]
+
+
+def test_no_differences_leaves_out_a_medication_with_a_finding():
+    """Any finding on the name, including a type from a newer release, keeps it out."""
+    finding = Finding(discrepancy_type="newer_type", medication="metformin", summary="x")
+    assert no_differences(_three_way(findings=[finding])) == []
+
+
+def test_no_differences_leaves_out_a_medication_with_a_rejected_record():
+    """A rejected record wasn't compared, so "no differences" would claim too much."""
+    reason = Reason(field="dose_amount", code="unreadable_dosage", message="not a number")
+    rejected = Rejection(
+        source="pharmacy", source_record_id="PH-1", name="Metformin", reasons=[reason]
+    )
+    assert no_differences(_three_way(rejected=[rejected])) == []
+
+
+def test_no_differences_needs_every_compared_source():
+    """A name one source lacks isn't reported, even if a stored run has no finding for it."""
+    assert no_differences(_three_way(pharmacy=[])) == []
+
+
+def test_no_differences_without_an_interview_compares_fhir_and_pharmacy():
+    """With no interview, intake takes no part and has no value."""
+    ((name, stated),) = no_differences(_three_way(intake=[], intake_interview=None))
+    assert name == "metformin" and set(stated) == {"fhir", "pharmacy"}
+
+
+def test_no_differences_is_empty_when_the_patient_reports_none():
+    """An interview with no medications takes part, so nothing is in every source."""
+    assert no_differences(_three_way(intake=[])) == []
