@@ -28,7 +28,7 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "861004",
+              "code": "861007",
               "display": "metformin hydrochloride 500 MG Oral Tablet"
             }
           ],
@@ -205,7 +205,7 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "312940",
+              "code": "312941",
               "display": "sertraline 50 MG Oral Tablet"
             }
           ],

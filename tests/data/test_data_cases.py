@@ -1,5 +1,9 @@
 """The three case patients through the real ingest and rules: what data/README.md promises."""
 
+import json
+import re
+from pathlib import Path
+
 import pytest
 
 from data.generators.common import load_config
@@ -86,6 +90,22 @@ def test_case_mixed_pharmacy_zoloft_matches_sertraline_only_through_rxnorm(recon
     assert zoloft.normalized_name == "sertraline" and zoloft.rxcui
     (frequency,) = [f for f in findings if f.discrepancy_type == "frequency_mismatch"]
     assert frequency.medication == "sertraline" and frequency.pharmacy_value == "twice daily"
+
+
+def test_case_codes_state_the_same_strength_as_their_records():
+    """A hand-written RxCUI must not name another strength, even if the ingredient matches."""
+    root = Path(__file__).resolve().parents[2] / "data"
+    concepts = json.loads((root / "rxnorm_cache.json").read_text("utf-8"))["rxcuis"]
+    bundle = json.loads((root / "fhir/cases/medrec-cases.json").read_text("utf-8"))
+    strength = re.compile(r"[\d.]+ MG")
+    requests = [e["resource"] for e in bundle["entry"]]
+    medications = [
+        r["medicationCodeableConcept"] for r in requests if r["resourceType"] == "MedicationRequest"
+    ]
+    assert len(medications) == 9
+    for medication in medications:
+        named = concepts[medication["coding"][0]["code"]]["name"]
+        assert strength.findall(named) == strength.findall(medication["text"]), medication["text"]
 
 
 def test_case_brand_crestor_is_deliberately_not_in_the_alias_list():

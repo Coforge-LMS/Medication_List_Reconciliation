@@ -60,7 +60,7 @@
     "melatonin": "6711",
     "metformin": "6809",
     "metformin hydrochloride": "235743",
-    "metformin hydrochloride 500 mg oral tablet": "861004",
+    "metformin hydrochloride 500 mg oral tablet": "861007",
     "metoprolol": "6918",
     "metoprolol succinate": "221124",
     "metoprolol tartrate": "203191",
@@ -83,7 +83,7 @@
     "rosuvastatin calcium 20 mg oral tablet": "859751",
     "salmeterol": "36117",
     "sertraline": "36437",
-    "sertraline 50 mg oral tablet": "312940",
+    "sertraline 50 mg oral tablet": "312941",
     "simvastatin": "36567",
     "simvastatin 10 mg oral tablet": "314231",
     "simvastatin 20 mg oral tablet": "312961",
@@ -489,13 +489,13 @@
       "status": "Active",
       "tty": "SCD"
     },
-    "312940": {
+    "312941": {
       "dose_form": "Oral Tablet",
       "ingredients": [
         "sertraline"
       ],
-      "name": "sertraline 25 MG Oral Tablet",
-      "rxcui": "312940",
+      "name": "sertraline 50 MG Oral Tablet",
+      "rxcui": "312941",
       "salt": null,
       "status": "Active",
       "tty": "SCD"
@@ -1040,13 +1040,13 @@
       "status": "Active",
       "tty": "SCD"
     },
-    "861004": {
+    "861007": {
       "dose_form": "Oral Tablet",
       "ingredients": [
         "metformin"
       ],
-      "name": "metformin hydrochloride 1000 MG Oral Tablet",
-      "rxcui": "861004",
+      "name": "metformin hydrochloride 500 MG Oral Tablet",
+      "rxcui": "861007",
       "salt": "metformin hydrochloride",
       "status": "Active",
       "tty": "SCD"

@@ -93,7 +93,7 @@ def test_nlm_attribution_is_nlms_exact_wording():
     [
         ("Zoloft", "sertraline", "82728", "sertraline"),
         ("Alendronic Acid", "alendronate", "236083", "alendronate"),
-        ("sertraline 50 MG Oral Tablet", "sertraline", "312940", None),
+        ("sertraline 50 MG Oral Tablet", "sertraline", "312941", None),
         ("Metformin Hydrochloride", "metformin", "235743", None),
         ("Combo Brand", "losartan / hctz", "1", "losartan / hctz"),
         ("losartan 50 MG / hctz 25 MG", "losartan / hctz", "1", None),
