@@ -206,3 +206,10 @@ def test_footer_has_the_nlm_attribution(client, serve_run):
     """RxNorm data requires NLM's attribution, in its exact words, on every page."""
     serve_run(None)
     assert NLM_ATTRIBUTION in client.get("/runs/999").text
+
+
+def test_each_known_finding_type_has_its_own_accent(client):
+    """Types are told apart at a glance; only an unknown type falls back to neutral."""
+    css = client.get("/static/app.css").text
+    for discrepancy_type in ("duplicate", "missing", "dosage_mismatch", "frequency_mismatch"):
+        assert f".type-{discrepancy_type} {{ --type:" in css

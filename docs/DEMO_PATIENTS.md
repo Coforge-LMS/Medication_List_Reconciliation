@@ -64,7 +64,7 @@ Findings: D = duplicate, M = missing, DM = dosage mismatch, F = frequency mismat
 ## Watch out for
 
 - **Findings use the RxNorm ingredient name:** `metoprolol`, `naproxen`, `fish oils`. The medication tables keep each source's own wording.
-- **Frequency wording:** findings say "once daily"; the medication tables keep each source's own wording, such as `QD`. As-needed and blank frequencies are never compared.
+- **Frequency wording:** findings say "once daily"; the medication tables keep each source's own wording, such as `QD`. As-needed and unreadable frequencies are never compared, and show as "(not compared)", as on Bud153 Lowe577's FHIR value. A blank frequency shows as "—".
 - **No "different form" finding in this data:** pharmacy and intake rows are bare drug names, so they state no dose form to compare. The form and salt checks are covered by automated tests.
 - **Numbers in names:** Synthea generates names like `Montero62`. They're real values in the data, not a display bug.
 - **`Effertz` finds two patients:** search `Todd` or `Wallace` to get one.

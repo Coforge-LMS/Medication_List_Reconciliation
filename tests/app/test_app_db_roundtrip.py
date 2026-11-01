@@ -67,7 +67,7 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         response = client.post("/api/patients/2178/reconcile")
         assert response.status_code == 201
         body = response.json()
-        assert len(body["findings"]) == 8  # data/README's 7, plus V2's sertraline frequency
+        assert len(body["findings"]) == 8  # data/README's CASE-MIXED table
         assert body["intake_interview"]["taken_by"] == "RN Okafor"
         assert {r["source"] for r in body["rejected"]} == {"pharmacy", "intake"}
         # Read back from Postgres: saved rows carry the RxCUI, in the existing column.
