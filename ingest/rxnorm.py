@@ -1,0 +1,202 @@
+"""Resolve medications to RxNorm ingredients from a committed cache; live RxNav only on request.
+
+Matching is by ingredient, so a brand, a salt and a generic meet. Strength and dose form are not
+part of identity: the dosage rule compares them, so a difference is reported and never merged.
+Set RXNORM_LIVE=1 to ask RxNav about what the cache doesn't hold (3-second timeout, no retries).
+Anything unresolved keeps its alias-based identity.
+"""
+
+import json
+import os
+from collections.abc import Iterable
+from functools import cache as memoize
+from pathlib import Path
+from typing import Any
+
+import httpx
+
+from contract import MedicationRecord, Rejection
+from ingest.fhir import RXNORM
+
+RXNAV_URL = "https://rxnav.nlm.nih.gov/REST"
+LIVE_TIMEOUT = 3.0
+DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.json"
+
+Concept = dict[str, Any]
+
+_live_found: dict[str, Concept | None] = {}  # successful live answers, including "no match"
+
+
+class RxNormCacheError(Exception):
+    """The RxNorm cache file is missing, isn't valid JSON, or has the wrong shape."""
+
+
+def load_cache(path: str | Path) -> dict[str, Any]:
+    """Read and check the cache: names point at known concepts, concepts have ingredients."""
+    path = Path(path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RxNormCacheError(f"cannot read RxNorm cache {path}: {exc.strerror}") from exc
+    try:
+        cache = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RxNormCacheError(
+            f"RxNorm cache {path} is not valid JSON: {exc.msg} at line {exc.lineno}"
+        ) from exc
+    if not isinstance(cache, dict) or not all(
+        isinstance(cache.get(key), dict) for key in ("_meta", "rxcuis", "names")
+    ):
+        raise RxNormCacheError(f"RxNorm cache {path} needs _meta, rxcuis and names objects")
+    for rxcui, concept in cache["rxcuis"].items():
+        if not isinstance(concept, dict) or not concept.get("ingredients"):
+            raise RxNormCacheError(f"RxNorm cache {path}: {rxcui} has no ingredients")
+    for name, rxcui in cache["names"].items():
+        if rxcui is not None and rxcui not in cache["rxcuis"]:
+            raise RxNormCacheError(f"RxNorm cache {path}: {name!r} points at unknown {rxcui}")
+    return cache
+
+
+@memoize
+def _cache_at(path: Path) -> dict[str, Any]:
+    """Load one cache file once."""
+    return load_cache(path)
+
+
+def default_cache() -> dict[str, Any]:
+    """The cache at RXNORM_CACHE (default data/rxnorm_cache.json)."""
+    return _cache_at(Path(os.environ.get("RXNORM_CACHE") or DEFAULT_CACHE))
+
+
+def describe(client: httpx.Client, rxcui: str) -> Concept | None:
+    """One concept from RxNav, or None if it lists no ingredient.
+
+    An obsolete concept is kept with its status: it still names its ingredient, and dropping it
+    would turn a match into a false "missing".
+    """
+    response = client.get(f"{RXNAV_URL}/rxcui/{rxcui}/historystatus.json")
+    response.raise_for_status()
+    history = response.json()["rxcuiStatusHistory"]
+    attributes = history.get("attributes") or {}
+    tty = attributes.get("tty")
+    derived = history.get("derivedConcepts") or {}
+    features = history.get("definitionalFeatures") or {}
+    if tty == "IN":
+        ingredients = [attributes.get("name")]
+    else:
+        ingredients = [i["ingredientName"] for i in derived.get("ingredientConcept") or []]
+    if not all(ingredients) or not ingredients:
+        return None
+    forms = features.get("doseFormConcept") or [{}]
+    return {
+        "rxcui": rxcui,
+        "tty": tty,
+        "name": attributes.get("name"),
+        "status": (history.get("metaData") or {}).get("status"),
+        "ingredients": sorted(ingredients),
+        "dose_form": forms[0].get("doseFormName"),
+        "salt": _salt(tty, attributes.get("name"), ingredients, features),
+    }
+
+
+def _salt(tty: str | None, name: str | None, ingredients: list[str], features: dict) -> str | None:
+    """The named salt of a single-ingredient concept, or None when it doesn't state one.
+
+    RxNorm's strength basis is sometimes just the ingredient even when the display names a salt
+    (rosuvastatin calcium), so a basis equal to the ingredient says nothing about the salt.
+    """
+    if len(ingredients) != 1:
+        return None
+    if tty == "PIN":
+        candidate = name
+    else:
+        strengths = features.get("ingredientAndStrength") or [{}]
+        candidate = strengths[0].get("bossName")
+    candidate = (candidate or "").lower()
+    return candidate if candidate and candidate != ingredients[0].lower() else None
+
+
+def lookup(client: httpx.Client, name: str) -> Concept | None:
+    """A name's concept by exact match; several matches are ambiguous and are never guessed."""
+    response = client.get(f"{RXNAV_URL}/rxcui.json", params={"name": name, "search": 0})
+    response.raise_for_status()
+    ids = (response.json().get("idGroup") or {}).get("rxnormId") or []
+    return describe(client, ids[0]) if len(ids) == 1 else None
+
+
+def refine[Item: (MedicationRecord, Rejection)](
+    items: Iterable[Item], cache: dict[str, Any] | None = None
+) -> list[Item]:
+    """Set the ingredient as normalized_name, and rxcui on records; original names are untouched.
+
+    Records also carry the concept in raw["rxnorm"], which is how the dosage rule learns the dose
+    form and salt. Items that don't resolve are returned unchanged, keeping their alias identity.
+    """
+    cache = default_cache() if cache is None else cache
+    result: list[Item] = []
+    for item in items:
+        concept = _resolve(item, cache)
+        if concept is None:
+            result.append(item)
+            continue
+        update: dict[str, Any] = {"normalized_name": _identity(concept)}
+        if isinstance(item, MedicationRecord):
+            update["rxcui"] = concept["rxcui"]
+            update["raw"] = {**item.raw, "rxnorm": concept}
+        result.append(item.model_copy(update=update))
+    return result
+
+
+def _identity(concept: Concept) -> str:
+    """The matching key: the ingredient, or all of them, so a combination stays its own drug."""
+    return " / ".join(sorted(ingredient.lower() for ingredient in concept["ingredients"]))
+
+
+def _resolve(item: MedicationRecord | Rejection, cache: dict[str, Any]) -> Concept | None:
+    """Coded RxCUI first, then the original name, then the alias-based name, then live RxNav."""
+    code = _coded_rxcui(item.raw)
+    if code in cache["rxcuis"]:
+        return cache["rxcuis"][code]
+    keys = [key for key in (_key(item.name), _key(item.normalized_name)) if key]
+    for key in keys:
+        if cache["names"].get(key):
+            return cache["rxcuis"][cache["names"][key]]
+    if os.environ.get("RXNORM_LIVE") != "1":
+        return None
+    return _live(code, item.name)
+
+
+def _coded_rxcui(raw: Any) -> str | None:
+    """The RxNorm code on a FHIR resource's medicationCodeableConcept, if there is one."""
+    concept = raw.get("medicationCodeableConcept") if isinstance(raw, dict) else None
+    codings = concept.get("coding") if isinstance(concept, dict) else None
+    for coding in codings if isinstance(codings, list) else []:
+        if isinstance(coding, dict) and coding.get("system") == RXNORM and coding.get("code"):
+            return str(coding["code"])
+    return None
+
+
+def _key(name: str | None) -> str:
+    """A cache key: lowercased, with whitespace collapsed."""
+    return " ".join(name.lower().split()) if name else ""
+
+
+def _live_client() -> httpx.Client:
+    """The RxNav client for the optional live path."""
+    return httpx.Client(timeout=LIVE_TIMEOUT)
+
+
+def _live(code: str | None, name: str | None) -> Concept | None:
+    """Ask RxNav once per value; any network problem counts as unresolved and isn't remembered."""
+    memo = f"rxcui:{code}" if code else f"name:{_key(name)}"
+    if memo in _live_found:
+        return _live_found[memo]
+    if not code and not name:
+        return None
+    try:
+        with _live_client() as client:
+            found = describe(client, code) if code else lookup(client, name)
+    except (httpx.HTTPError, ValueError, KeyError):
+        return None
+    _live_found[memo] = found
+    return found
