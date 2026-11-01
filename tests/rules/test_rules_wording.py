@@ -90,6 +90,30 @@ def test_no_frequency_summary_recommends_treatment(rec, data):
         assert not BANNED.search(f.summary), f.summary
 
 
+def test_no_frequency_summary_with_a_product_difference_recommends_treatment(rec, data):
+    """The form and salt lead-in keeps to facts on a frequency finding too."""
+    findings = run_rules(
+        data(
+            fhir=[
+                rec("fhir", "a", form="Extended Release Oral Tablet").model_copy(
+                    update={"frequency": "QD"}
+                ),
+                rec("fhir", "b", salt="metoprolol tartrate").model_copy(update={"frequency": "QD"}),
+            ],
+            pharmacy=[
+                rec("pharmacy", "a", form="Oral Tablet").model_copy(update={"frequency": "BID"}),
+                rec("pharmacy", "b", salt="metoprolol succinate").model_copy(
+                    update={"frequency": "BID"}
+                ),
+            ],
+        )
+    )
+    frequency = [f for f in findings if f.discrepancy_type == "frequency_mismatch"]
+    assert len(frequency) == 2 and all("Different" in f.summary for f in frequency)
+    for f in frequency:
+        assert not BANNED.search(f.summary), f.summary
+
+
 def test_no_form_or_salt_summary_recommends_treatment(rec, data):
     """The form and salt wording states the difference and nothing more."""
     findings = run_rules(

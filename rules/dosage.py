@@ -8,9 +8,10 @@ from rules.base import (
     ReconciliationRule,
     all_names,
     by_name,
-    concept_values,
+    differing_concept,
     participating,
     sentence,
+    with_product_differences,
 )
 
 
@@ -33,7 +34,10 @@ class DosageMismatchRule(ReconciliationRule):
             if len(present) < 2:
                 continue
             base = {source: _base_doses(group) for source, group in present.items()}
-            forms, salts = _differing(present, "dose_form"), _differing(present, "salt")
+            forms, salts = (
+                differing_concept(present, "dose_form"),
+                differing_concept(present, "salt"),
+            )
             if len({frozenset(doses) for doses in base.values()}) == 1 and not (forms or salts):
                 continue
             values = {source: _listed(group) for source, group in present.items()}
@@ -43,9 +47,7 @@ class DosageMismatchRule(ReconciliationRule):
             )
             if different_measure:
                 summary = f"Doses are recorded in a different measure: {summary}"
-            for label, differing in (("salt", salts), ("form", forms)):
-                if differing:
-                    summary = f"{_described(label, differing)} {summary}"
+            summary = with_product_differences(summary, forms, salts)
             findings.append(
                 Finding(
                     discrepancy_type=self.discrepancy_type,
@@ -61,31 +63,6 @@ class DosageMismatchRule(ReconciliationRule):
                 )
             )
         return findings
-
-
-def _differing(present: dict[str, list[MedicationRecord]], field: str) -> dict[str, str]:
-    """{source: value} for a concept field, if the sources stating one disagree; else empty.
-
-    A vaguer value agrees with a fuller one it begins: "Extended Release" from a name like
-    "Metformin ER" doesn't conflict with "Extended Release Oral Tablet".
-    """
-    stated = {source: concept_values(group, field) for source, group in present.items()}
-    stated = {source: values for source, values in stated.items() if values}
-    every = {value for values in stated.values() for value in values}
-
-    def fullest(value: str) -> str:
-        """The fuller value this one begins, if any source states one."""
-        return next((other for other in sorted(every) if other.startswith(f"{value} ")), value)
-
-    if len({frozenset(map(fullest, values)) for values in stated.values()}) < 2:
-        return {}
-    return {source: ", ".join(values) for source, values in stated.items()}
-
-
-def _described(label: str, differing: dict[str, str]) -> str:
-    """'Different form: FHIR Oral Tablet; pharmacy Extended Release Oral Tablet.'"""
-    listed = "; ".join(f"{SOURCE_LABELS[source]} {value}" for source, value in differing.items())
-    return f"Different {label}: {listed}."
 
 
 def _base_doses(records: list[MedicationRecord]) -> set[tuple]:

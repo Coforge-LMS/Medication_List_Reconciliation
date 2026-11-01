@@ -74,3 +74,34 @@ def concept_values(records: list[MedicationRecord], field: str) -> list[str]:
         if value:
             values.add(value)
     return sorted(values)
+
+
+def differing_concept(present: dict[Source, list[MedicationRecord]], field: str) -> dict[str, str]:
+    """{source: value} for a concept field, if the sources stating one disagree; else empty.
+
+    A vaguer value agrees with a fuller one it begins: "Extended Release" from a name like
+    "Metformin ER" doesn't conflict with "Extended Release Oral Tablet".
+    """
+    stated = {source: concept_values(group, field) for source, group in present.items()}
+    stated = {source: values for source, values in stated.items() if values}
+    every = {value for values in stated.values() for value in values}
+
+    def fullest(value: str) -> str:
+        """The fuller value this one begins, if any source states one."""
+        return next((other for other in sorted(every) if other.startswith(f"{value} ")), value)
+
+    if len({frozenset(map(fullest, values)) for values in stated.values()}) < 2:
+        return {}
+    return {source: ", ".join(values) for source, values in stated.items()}
+
+
+def with_product_differences(summary: str, forms: dict[str, str], salts: dict[str, str]) -> str:
+    """The summary, led by any form or salt difference, as ingredient matching may group products.
+
+    'Different form: FHIR Oral Tablet; pharmacy Extended Release Oral Tablet. FHIR dose ...'
+    """
+    for label, differing in (("salt", salts), ("form", forms)):
+        if differing:
+            listed = "; ".join(f"{SOURCE_LABELS[s]} {value}" for s, value in differing.items())
+            summary = f"Different {label}: {listed}. {summary}"
+    return summary

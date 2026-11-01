@@ -15,8 +15,10 @@ from rules.base import (
     ReconciliationRule,
     all_names,
     by_name,
+    differing_concept,
     participating,
     sentence,
+    with_product_differences,
 )
 
 PRN = "PRN"
@@ -142,6 +144,9 @@ class FrequencyMismatchRule(ReconciliationRule):
     A source with no scheduled frequency for the name isn't compared, so as-needed or unknown
     never counts as a difference, but what it says still appears in its value, marked as not
     compared, so it can't be mistaken for saying nothing. No source is treated as the right one.
+
+    Matching by ingredient can group different products, which may rightly have different
+    schedules, so the summary leads with any form or salt difference.
     """
 
     discrepancy_type: ClassVar[str] = "frequency_mismatch"
@@ -159,16 +164,22 @@ class FrequencyMismatchRule(ReconciliationRule):
             values = {
                 source: ", ".join(map(plain_text, found)) for source, found in compared.items()
             }
+            forms = differing_concept(present, "dose_form")
+            salts = differing_concept(present, "salt")
             findings.append(
                 Finding(
                     discrepancy_type=self.discrepancy_type,
                     medication=name,
-                    summary=sentence(
-                        "; ".join(
-                            f"{SOURCE_LABELS[source]} frequency {value}"
-                            for source, value in values.items()
-                        )
-                        + "."
+                    summary=with_product_differences(
+                        sentence(
+                            "; ".join(
+                                f"{SOURCE_LABELS[source]} frequency {value}"
+                                for source, value in values.items()
+                            )
+                            + "."
+                        ),
+                        forms,
+                        salts,
                     ),
                     **{
                         f"{source}_value": _value(group, codes[source])
@@ -177,6 +188,8 @@ class FrequencyMismatchRule(ReconciliationRule):
                     details={
                         **{f"{source}_codes": found for source, found in compared.items()},
                         "not_compared": [source for source in present if source not in compared],
+                        **({"different_form": forms} if forms else {}),
+                        **({"different_salt": salts} if salts else {}),
                     },
                 )
             )
