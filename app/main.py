@@ -25,6 +25,7 @@ from app.labels import (
     group_findings,
     interview_line,
     label_for,
+    matched_as,
     utc_time,
 )
 from app.pdf import build_report
@@ -86,6 +87,7 @@ templates.env.globals.update(
     disclaimer=DISCLAIMER,
     nlm_attribution=NLM_ATTRIBUTION,
     format_dose=format_dose,
+    matched_as=matched_as,
     source_headings=SOURCE_HEADINGS,
 )
 

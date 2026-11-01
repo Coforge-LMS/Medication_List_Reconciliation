@@ -6,7 +6,7 @@ written by a newer one (tolerant reader).
 
 from datetime import UTC, datetime
 
-from contract import Finding, IntakeInterviewInfo
+from contract import Finding, IntakeInterviewInfo, MedicationRecord
 
 DISCLAIMER = (
     "Synthetic data. Reports discrepancies between sources for clinician review; "
@@ -30,6 +30,19 @@ LABELS: dict[str, str] = {
 
 def label_for(discrepancy_type: str) -> str:
     return LABELS.get(discrepancy_type, f"Other ({discrepancy_type})")
+
+
+def matched_as(record: MedicationRecord) -> str | None:
+    """The ingredient RxNorm matched this record to, when its own name doesn't make that plain.
+
+    "Zoloft" gives "sertraline"; "sertraline 50 MG Oral Tablet" gives None, so the label appears
+    only where it explains something.
+    """
+    if not record.rxcui or not record.normalized_name:
+        return None
+    name = record.name.lower()
+    plain = all(ingredient in name for ingredient in record.normalized_name.split(" / "))
+    return None if plain else record.normalized_name
 
 
 # Medication column headings in display order.

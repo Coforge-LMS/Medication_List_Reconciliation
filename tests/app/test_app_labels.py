@@ -3,8 +3,16 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.labels import DISCLAIMER, NLM_ATTRIBUTION, SOURCE_HEADINGS, interview_line, label_for
+from app.labels import (
+    DISCLAIMER,
+    NLM_ATTRIBUTION,
+    SOURCE_HEADINGS,
+    interview_line,
+    label_for,
+    matched_as,
+)
 from contract import IntakeInterviewInfo
+from tests.app.conftest import record
 
 
 def test_known_types_have_labels():
@@ -78,3 +86,24 @@ def test_nlm_attribution_is_nlms_exact_wording():
         "not responsible for the product and does not endorse or recommend this or any other "
         "product."
     )
+
+
+@pytest.mark.parametrize(
+    ("name", "normalized", "rxcui", "label"),
+    [
+        ("Zoloft", "sertraline", "82728", "sertraline"),
+        ("Alendronic Acid", "alendronate", "236083", "alendronate"),
+        ("sertraline 50 MG Oral Tablet", "sertraline", "312940", None),
+        ("Metformin Hydrochloride", "metformin", "235743", None),
+        ("Combo Brand", "losartan / hctz", "1", "losartan / hctz"),
+        ("losartan 50 MG / hctz 25 MG", "losartan / hctz", "1", None),
+        ("losartan 50 MG", "losartan / hctz", "1", "losartan / hctz"),
+        ("Zestril", "lisinopril", None, None),  # an alias match, not RxNorm's
+    ],
+)
+def test_matched_as_appears_only_where_it_explains_something(name, normalized, rxcui, label):
+    """A brand or renamed drug is labelled; a name already containing the ingredient isn't."""
+    item = record("pharmacy", name).model_copy(
+        update={"normalized_name": normalized, "rxcui": rxcui}
+    )
+    assert matched_as(item) == label

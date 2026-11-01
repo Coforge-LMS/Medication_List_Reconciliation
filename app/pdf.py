@@ -10,6 +10,7 @@ from app.labels import (
     SOURCE_HEADINGS,
     group_findings,
     interview_line,
+    matched_as,
     utc_time,
 )
 from contract import MedicationRecord, RunDetail, format_dose
@@ -124,10 +125,19 @@ def _medications(
     _table(
         pdf,
         ["Medication", "Dose", "Frequency"],
-        [[r.name, format_dose(r.dose_amount, r.dose_unit), r.frequency or EMPTY] for r in records],
+        [
+            [_named(r), format_dose(r.dose_amount, r.dose_unit), r.frequency or EMPTY]
+            for r in records
+        ],
         widths=(55, 15, 30),
         empty=empty,
     )
+
+
+def _named(record: MedicationRecord) -> str:
+    """The record's own name, plus what RxNorm matched it to when that isn't plain from the name."""
+    matched = matched_as(record)
+    return f"{record.name} (matched as {matched})" if matched else record.name
 
 
 def _rejected(pdf: FPDF, run: RunDetail) -> None:

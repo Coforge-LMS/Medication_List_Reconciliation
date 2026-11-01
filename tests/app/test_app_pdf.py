@@ -246,3 +246,13 @@ def test_every_page_of_the_report_has_the_nlm_attribution():
 def test_footer_stays_inside_the_bottom_margin():
     """The longer footer starts below where the page body stops, so they can't overlap."""
     assert FOOTER_HEIGHT <= BOTTOM_MARGIN
+
+
+def test_report_labels_a_brand_with_its_ingredient():
+    """The report shows the match beside the source's own name."""
+    brand = record("pharmacy", "Zoloft", "50").model_copy(
+        update={"normalized_name": "sertraline", "rxcui": "82728"}
+    )
+    content = text(make_run(pharmacy=[brand]))
+    assert "Zoloft (matched as sertraline) 50 mg" in content
+    assert content.count("matched as") == 1

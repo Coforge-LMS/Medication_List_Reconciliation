@@ -79,6 +79,7 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         run_page = client.get(f"/runs/{body['run_id']}").text
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
         assert "<h3>Frequency mismatch</h3>" in run_page
+        assert 'Zoloft<div class="matched">Matched as: sertraline</div>' in run_page
         assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
 
         assert client.get("/runs/99999999999999999999").status_code == 404
