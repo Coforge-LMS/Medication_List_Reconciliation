@@ -18,7 +18,7 @@ docker compose up -d --build
 | 2 | `Cleary` | Clara Cleary (CASE-CLEAN) | Brand names matching generics across all three sources | **No discrepancies found** |
 | 3 | `Montero` | Cristobal567 Montero62 | No interview recorded: FHIR and pharmacy only | **3 findings**, two-source wording; Patient-reported column says "No data" |
 | 4 | `Dibbert` | Jona712 Dibbert990 | Patient says they take nothing | **3 findings**; "Patient reports no medications" |
-| 5 | `Brandt` | Beatrice Brandt (CASE-BRAND) | A brand name the V1 alias list doesn't know | **2 missing**, which V2's RxNorm step is meant to clear |
+| 5 | `Brandt` | Beatrice Brandt (CASE-BRAND) | A brand the alias list doesn't know, matched by RxNorm: `Crestor` is rosuvastatin | **No discrepancies found** (1.0.0 shows 2 missing here) |
 | 6 | `Demopoulos` | Dana Demopoulos (CASE-DEMO) | Ingesting a new patient live | **No Run button**; "No data" for Pharmacy and Patient-reported |
 
 ## Points to show on Marcus Mixton
@@ -49,7 +49,7 @@ Findings: D = duplicate, M = missing, DM = dosage mismatch. FHIR ids are from a 
 |---|---|---|---|---|---|---|
 | `Mixton` | Marcus Mixton | CASE-MIXED | 2178 | 5 records | 7: 2 D, 4 M, 1 DM | 6 |
 | `Cleary` | Clara Cleary | CASE-CLEAN | 2174 | 3 records | 0 | 0 |
-| `Brandt` | Beatrice Brandt | CASE-BRAND | 2184 | 1 record | 2: 2 M | 0 |
+| `Brandt` | Beatrice Brandt | CASE-BRAND | 2184 | 1 record | 0 | 0 |
 | `Lowe` | Bud153 Stan246 Lowe577 | 98ff8f7e… | 1119 | 8 records | 10: 3 D, 4 M, 3 DM | 2 |
 | `Montero` | Cristobal567 Alfredo17 Montero62 | c86c400e… | 1271 | **no interview** | 3: 1 D, 1 M, 1 DM | 3 |
 | `Walter` | Ezekiel373 Leslie90 Walter473 | 4f083ce3… | 1349 | 3 records | 3: 2 M, 1 DM | 1 |
@@ -63,6 +63,8 @@ Findings: D = duplicate, M = missing, DM = dosage mismatch. FHIR ids are from a 
 
 ## Watch out for
 
+- **Findings use the RxNorm ingredient name:** `metoprolol`, `naproxen`, `fish oils`. The medication tables keep each source's own wording.
+- **No "different form" finding in this data:** pharmacy and intake rows are bare drug names, so they state no dose form to compare. The form and salt checks are covered by automated tests.
 - **Numbers in names:** Synthea generates names like `Montero62`. They're real values in the data, not a display bug.
 - **`Effertz` finds two patients:** search `Todd` or `Wallace` to get one.
 - **Identifier search is exact:** `CASE-MIXED` works; `case-mixed` and partial identifiers find nothing.
