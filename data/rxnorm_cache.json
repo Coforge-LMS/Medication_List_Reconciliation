@@ -99,7 +99,8 @@
     "warfarin": "11289",
     "warfarin sodium": "114194",
     "warfarin sodium 5 mg oral tablet": "855332",
-    "zestril": "196472"
+    "zestril": "196472",
+    "zoloft": "82728"
   },
   "rxcuis": {
     "106258": {
@@ -927,6 +928,17 @@
       "salt": "tramadol hydrochloride",
       "status": "Active",
       "tty": "PIN"
+    },
+    "82728": {
+      "dose_form": null,
+      "ingredients": [
+        "sertraline"
+      ],
+      "name": "Zoloft",
+      "rxcui": "82728",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
     },
     "83367": {
       "dose_form": null,

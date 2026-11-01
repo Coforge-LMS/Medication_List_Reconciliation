@@ -248,6 +248,15 @@ def test_capsule_vs_tablet_is_reported_through_the_pipeline():
     assert f.details["different_form"]["pharmacy"] == "Oral Capsule"
 
 
+def test_case_mixed_pharmacy_brand_is_matched_and_compared(recorded_client, intake, saved):
+    """Pharmacy's Zoloft keeps its name, meets FHIR's sertraline, and their schedules compare."""
+    _, call = _found("CASE-MIXED", recorded_client, saved)
+    (zoloft,) = [r for r in call["data"].pharmacy if r.name == "Zoloft"]
+    assert zoloft.normalized_name == "sertraline" and zoloft.rxcui == "82728"
+    (f,) = [f for f in call["findings"] if f.discrepancy_type == "frequency_mismatch"]
+    assert f.details["pharmacy_codes"] == ["BID"] and f.details["fhir_codes"] == ["QD"]
+
+
 def test_rejected_fhir_record_is_named_as_the_pharmacy_rows_counterpart():
     """A coded rejection and a plain salt name meet, so it isn't presented as an omission."""
     (f,) = _findings(

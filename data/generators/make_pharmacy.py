@@ -70,7 +70,8 @@ CASE_ROWS = (
     ("CASE-MIXED", "Metformin Hydrochloride", "500", "mg", "twice daily", "2026-02-12"),
     ("CASE-MIXED", "Acetaminophen", "500", "mg", "twice daily", "2026-02-12"),
     ("CASE-MIXED", "Acetaminophen", "1000", "mg", "twice daily", "2026-02-19"),  # duplicate + dose
-    ("CASE-MIXED", "Sertraline", "50", "mg", "twice daily", "2026-02-12"),  # FHIR says once daily
+    # a brand outside the alias list, so only RxNorm matches it; FHIR says once daily
+    ("CASE-MIXED", "Zoloft", "50", "mg", "twice daily", "2026-02-12"),
     ("CASE-MIXED", "Omeprazole", "20", "mg", "once daily", "2026-02-12"),  # not on the FHIR list
     # no metoprolol row: on the FHIR list, absent here
     ("CASE-MIXED", "Warfarin Sodium", "ten", "mg", "once daily", "2026-02-12"),  # only row invalid

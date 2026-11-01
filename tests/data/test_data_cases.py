@@ -38,7 +38,7 @@ def test_case_mixed_three_way_findings(reconcile):
             ("duplicate", "acetaminophen"),  # pharmacy lists 500 mg and 1000 mg
             ("duplicate", "sertraline"),  # intake lists it twice
             ("dosage_mismatch", "acetaminophen"),  # 500 / 500+1000 / 1000
-            ("frequency_mismatch", "sertraline"),  # FHIR and intake QD, pharmacy twice daily
+            ("frequency_mismatch", "sertraline"),  # FHIR, intake QD; pharmacy Zoloft twice daily
             ("missing", "ibuprofen", ("intake",), ("fhir", "pharmacy"), 0),
             ("missing", "metoprolol", ("fhir",), ("intake", "pharmacy"), 0),
             ("missing", "omeprazole", ("pharmacy",), ("intake", "fhir"), 0),
@@ -69,12 +69,23 @@ def test_case_mixed_without_an_interview_is_the_two_source_result(reconcile):
     assert missing == {"metoprolol": "pharmacy", "omeprazole": "fhir", "warfarin": "pharmacy"}
 
 
-def test_case_brand_has_two_missing_in_v1(reconcile):
-    _, findings = reconcile("CASE-BRAND")
-    assert summary(findings) == [
-        ("missing", "crestor", ("intake", "pharmacy"), ("fhir",), 0),
-        ("missing", "rosuvastatin calcium", ("fhir",), ("intake", "pharmacy"), 0),
-    ]
+def test_case_brand_matches_through_rxnorm(reconcile):
+    """FHIR's rosuvastatin calcium and everyone else's Crestor are one ingredient: no findings."""
+    data, findings = reconcile("CASE-BRAND")
+    assert findings == []
+    assert {r.normalized_name for r in [*data.fhir, *data.pharmacy, *data.intake]} == {
+        "rosuvastatin"
+    }
+
+
+def test_case_mixed_pharmacy_zoloft_matches_sertraline_only_through_rxnorm(reconcile, config):
+    """The brand isn't an alias, so the frequency finding depends on RxNorm matching it."""
+    assert "zoloft" not in config.aliases
+    data, findings = reconcile("CASE-MIXED")
+    (zoloft,) = [r for r in data.pharmacy if r.name == "Zoloft"]
+    assert zoloft.normalized_name == "sertraline" and zoloft.rxcui
+    (frequency,) = [f for f in findings if f.discrepancy_type == "frequency_mismatch"]
+    assert frequency.medication == "sertraline" and frequency.pharmacy_value == "twice daily"
 
 
 def test_case_brand_crestor_is_deliberately_not_in_the_alias_list():
