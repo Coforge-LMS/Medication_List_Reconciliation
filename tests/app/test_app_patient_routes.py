@@ -44,6 +44,7 @@ def test_patient_page_shows_three_columns_and_the_run_button(client, wired):
     assert "Warfarin Sodium" in compared  # the rejected pharmacy row
     assert '<p id="interview">Intake taken 2026-10-28 by RN Okafor (patient)</p>' in html
     assert 'action="/patients/2178/reconcile"' in html and "/patients/2178/history" in html
+    assert 'data-busy-label="Reconciling…">Run reconciliation</button>' in html
     assert wired == []  # viewing never saves
 
 
@@ -145,7 +146,8 @@ def test_history_lists_runs_newest_first_with_labels(client, wired, monkeypatch)
     html = client.get("/patients/2178/history").text
     assert asked == ["CASE-MIXED"]
     assert html.index('href="/runs/8"') < html.index('href="/runs/7"')
-    assert "Missing medication: 2; Other (route_mismatch): 1" in html
+    assert '<span class="chip type-missing">Missing medication <b>2</b></span>' in html
+    assert '<span class="chip type-route_mismatch">Other (route_mismatch) <b>1</b></span>' in html
     assert "2026-10-31 09:00" in html and DISCLAIMER in html
 
 
@@ -203,7 +205,7 @@ def test_patient_without_pharmacy_data_shows_no_data_and_no_run_button(
     assert response.status_code == 200
     html = response.text
     assert "metoprolol tartrate" in html  # FHIR side is still shown
-    assert "No pharmacy records on file for this patient" in html
+    assert "No pharmacy records on file" in html
     assert "No data" in html and "/reconcile" not in html
     assert "/patients/2178/history" in html
 

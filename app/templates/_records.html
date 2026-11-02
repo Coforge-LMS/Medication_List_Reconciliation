@@ -1,4 +1,4 @@
-{# Three medication columns and the rejected records; expects `columns` and `rejected`.
+{# Three medication columns and any rejected records; expects `columns` and `rejected`.
    Columns whose heading is in the optional `no_data` list say so instead of "No accepted records". #}
 <h2>Medications compared</h2>
 <div class="columns">
@@ -25,8 +25,8 @@
   {% endfor %}
 </div>
 
-<h2>Rejected records</h2>
 {% if rejected %}
+<h2 id="rejected">Rejected records</h2>
 <div class="card table-wrap">
   <table>
     <thead><tr><th>Source</th><th>Name</th><th>Reasons</th></tr></thead>
@@ -41,6 +41,4 @@
     </tbody>
   </table>
 </div>
-{% else %}
-<p class="muted">None</p>
 {% endif %}

@@ -21,13 +21,15 @@ from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
 from app.labels import (
     DISCLAIMER,
     NLM_ATTRIBUTION,
-    NO_DIFFERENCES_NOTE,
     SOURCE_HEADINGS,
+    finding_cells,
+    finding_note,
     group_findings,
     interview_line,
     label_for,
     matched_as,
     no_differences,
+    no_differences_note,
     utc_time,
 )
 from app.pdf import build_report
@@ -90,7 +92,9 @@ templates.env.globals.update(
     nlm_attribution=NLM_ATTRIBUTION,
     format_dose=format_dose,
     matched_as=matched_as,
-    no_differences_note=NO_DIFFERENCES_NOTE,
+    finding_cells=finding_cells,
+    finding_note=finding_note,
+    no_differences_note=no_differences_note,
     source_headings=SOURCE_HEADINGS,
 )
 

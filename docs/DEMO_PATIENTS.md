@@ -28,7 +28,7 @@ docker compose up -d --build
 - **RxNorm:** pharmacy's list says `Zoloft`, marked "Matched as: sertraline". It isn't in the alias list, so only RxNorm connects it to FHIR's sertraline.
 - **Sertraline:** the patient reported it twice (duplicate). Its frequency also differs: the patient and FHIR say once daily, pharmacy's Zoloft says twice daily. Without the RxNorm match there would be 2 false `missing` findings instead of this comparison. "Once a day", "at bedtime" and FHIR's `QD` all count as once daily, so they don't differ from each other.
 - **Ibuprofen:** only the patient reports it. **Omeprazole:** only pharmacy has it. **Metoprolol:** only FHIR has it.
-- **Warfarin:** on the FHIR list. The summary says one patient-reported and one pharmacy record with this name were rejected, so a rejection isn't presented as a true omission. The Rejected records table shows why: dose "ten" and "patient unsure of dose".
+- **Warfarin:** on the FHIR list. The patient-reported and pharmacy cells show **Rejected** badges rather than "Not listed", so a rejection isn't presented as a true omission (the PDF says it in words). Clicking a badge jumps to the Rejected records table, which shows why: dose "ten" and "patient unsure of dose".
 - **Say:** the app reports differences for clinician review. It doesn't treat any source as the truth and doesn't recommend treatment.
 
 ## Adding the live patient (step 6)

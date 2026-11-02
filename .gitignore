@@ -227,3 +227,7 @@ misc/
 tools/
 # Database archives and verification reports are local artifacts.
 backups/
+.github/agents
+.github/hooks
+.github/skills
+

@@ -37,14 +37,25 @@ def test_unknown_type_renders_as_other(client, serve_run):
     assert "FHIR route oral; pharmacy route topical." in section
 
 
+def _row(html, medication):
+    """The finding row whose first cell is this medication."""
+    match = re.search(rf'<tr>\s*<td class="med">{medication}\b.*?</tr>', html, re.S)
+    assert match, medication
+    return match.group(0)
+
+
 def test_each_finding_shows_all_three_values(client, serve_run):
-    """Findings have Patient-reported, FHIR and Pharmacy cells, with a dash when empty."""
+    """Findings have Patient-reported, FHIR and Pharmacy cells; a source without it says so.
+
+    The row's cells already say where the medication is, so that sentence isn't repeated.
+    """
     serve_run(make_run())
     missing = _section(client.get("/runs/7").text, "Missing medication")
-    assert "<th>Patient-reported</th><th>FHIR</th><th>Pharmacy</th>" in missing
-    assert re.search(
-        r"<td>ibuprofen</td>.*?<td>200 mg</td>\s*<td>—</td>\s*<td>—</td>", missing, re.S
-    )
+    assert "<th>Medication</th><th>Patient-reported</th><th>FHIR</th><th>Pharmacy</th>" in missing
+    row = _row(missing, "ibuprofen")
+    assert '<span class="value">200 mg</span>' in row
+    assert row.count("Not listed</span>") == 2
+    assert "not on the FHIR list" not in row
 
 
 def test_three_medication_columns_in_order(client, serve_run):
@@ -188,7 +199,7 @@ def test_impossible_run_ids_are_404_without_querying(client, serve_run, monkeypa
 
 
 def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
-    """A frequency mismatch is a known type now, with its stored plain wording."""
+    """A frequency mismatch is a known type now; its cells carry the plain wording."""
     finding = Finding(
         discrepancy_type="frequency_mismatch",
         medication="sertraline",
@@ -198,8 +209,8 @@ def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
     )
     serve_run(make_run(findings=[finding]))
     section = _section(client.get("/runs/7").text, "Frequency mismatch")
-    assert "FHIR frequency once daily; pharmacy frequency twice daily." in section
-    assert "<td>once daily</td>" in section and "<td>twice daily</td>" in section
+    assert '<span class="value">once daily</span>' in section
+    assert '<span class="value">twice daily</span>' in section
 
 
 def test_footer_has_the_nlm_attribution(client, serve_run):
@@ -214,10 +225,20 @@ def test_each_known_finding_type_has_its_own_accent(client):
     for discrepancy_type in ("duplicate", "missing", "dosage_mismatch", "frequency_mismatch"):
         assert f".type-{discrepancy_type} {{ --type:" in css
     variables = ("duplicate", "missing", "mismatch", "frequency", "other")
-    light, dark = css.split("@media (prefers-color-scheme: dark)")
-    for scheme in (light, dark):
-        colours = [re.search(rf"--{name}: (#\w+);", scheme).group(1) for name in variables]
-        assert len(set(colours)) == len(variables)
+    colours = [re.search(rf"--{name}: (#\w+);", css).group(1) for name in variables]
+    assert len(set(colours)) == len(variables)
+
+
+def test_pages_stay_light_whatever_the_system_theme(client):
+    """One light theme only, so a Mac in dark mode doesn't turn the pages near-black."""
+    css = client.get("/static/app.css").text
+    assert "color-scheme: light;" in css and "prefers-color-scheme" not in css
+
+
+def test_rejected_records_section_is_left_out_when_there_are_none(client, serve_run):
+    """An empty Rejected records heading is noise; findings only point there when it exists."""
+    serve_run(make_run(rejected=[]))
+    assert "Rejected records" not in client.get("/runs/7").text
 
 
 def _with_brand():
@@ -268,7 +289,7 @@ def test_run_page_shows_medications_with_no_differences(client, serve_run):
     assert '<span class="count">1</span> No differences' in html
     assert 'id="no-differences"' in html
     for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
-        assert f"<td>{value}</td>" in html
+        assert f'<span class="value">{value}</span>' in html
     assert "no source is treated as correct" in html
 
 
@@ -286,3 +307,57 @@ def test_run_page_omits_the_section_when_nothing_agrees(client, serve_run):
     serve_run(make_run())
     html = client.get("/runs/7").text
     assert "no-differences" not in html and "No differences" not in html
+
+
+def test_summary_tiles_jump_to_their_sections(client, serve_run):
+    """Each tile links to its finding group, so a count leads straight to the findings."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert '<a href="#group-missing"><span class="count">2</span> Missing medication</a>' in html
+    assert 'id="group-missing"' in html and 'id="group-route_mismatch"' in html
+
+
+def test_script_is_served_from_the_app_with_no_external_host(client, serve_run):
+    """The busy-button script ships with the app, like the stylesheet."""
+    serve_run(make_run())
+    assert f'src="/static/app.js?v={__version__}"' in client.get("/runs/7").text
+    response = client.get("/static/app.js")
+    assert response.status_code == 200
+    assert "http://" not in response.text and "https://" not in response.text
+
+
+def test_motion_has_a_reduced_motion_path(client):
+    """Page transitions and tile entrances are switched off for people who ask for less motion."""
+    css = client.get("/static/app.css").text
+    reduced = css.split("@media (prefers-reduced-motion: reduce)")[1]
+    assert "@view-transition { navigation: none; }" in reduced
+
+
+def _with_rejected_warfarin():
+    """A run where FHIR lists warfarin and pharmacy's warfarin record was rejected."""
+    finding = Finding(
+        discrepancy_type="missing",
+        medication="warfarin",
+        summary=(
+            "On the FHIR list; not reported by the patient and not in pharmacy records. "
+            "1 pharmacy record with this name was rejected (see Rejected records)."
+        ),
+        fhir_value="5 mg",
+        details={
+            "present_in": ["fhir"],
+            "missing_from": ["intake", "pharmacy"],
+            "rejected_count": 1,
+            "rejected_record_ids": ["PH-9"],
+        },
+    )
+    return make_run(findings=[finding])
+
+
+def test_a_rejected_record_is_a_badge_linking_to_rejected_records(client, serve_run):
+    """The rejection shows in the source's own cell, so the row needs no sentence about it."""
+    serve_run(_with_rejected_warfarin())
+    html = client.get("/runs/7").text
+    row = _row(html, "warfarin")
+    assert 'class="badge rejected" href="#rejected"' in row and "Not listed</span>" in row
+    assert "was rejected (see Rejected records)" not in row
+    assert '<h2 id="rejected">Rejected records</h2>' in html
