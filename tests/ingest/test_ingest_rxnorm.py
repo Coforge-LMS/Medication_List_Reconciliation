@@ -565,7 +565,7 @@ def test_live_is_tried_again_after_the_cooldown(monkeypatch):
     assert rxnorm.refine([item], CACHE) == [item]  # still pausing
     now[0] += rxnorm.LIVE_COOLDOWN + 1
     (refined,) = rxnorm.refine([item], CACHE)
-    assert refined.normalized_name == "ibuprofen"
+    assert refined.raw["rxnorm"]["rxcui"] == "5640"
 
 
 def _live_with(monkeypatch, handler):
@@ -591,7 +591,7 @@ def test_one_server_error_does_not_pause_lookups(monkeypatch):
     assert rxnorm.refine([item], CACHE) == [item]
     assert rxnorm._live_found == {}  # not remembered as a no-match
     (refined,) = rxnorm.refine([item], CACHE)
-    assert refined.normalized_name == "ibuprofen"
+    assert refined.raw["rxnorm"]["rxcui"] == "5640"
 
 
 def test_a_good_answer_clears_the_failure_count(monkeypatch):
@@ -625,7 +625,7 @@ def test_a_client_error_answers_that_query_and_does_not_pause(monkeypatch, statu
     _live_with(monkeypatch, handler)
     refused, known = record("Aspirin"), record("Ibuprofen")
     (first, second) = rxnorm.refine([refused, known], CACHE)
-    assert first == refused and second.normalized_name == "ibuprofen"
+    assert first == refused and second.raw["rxnorm"]["rxcui"] == "5640"
     assert rxnorm._live_found["name:aspirin"] is None
     assert rxnorm._live_retry_at == 0.0
     before = len(asked)
@@ -677,7 +677,24 @@ def test_budget_does_not_stop_remembered_answers(monkeypatch):
 
     _live_with(monkeypatch, slow)
     (_, refined) = rxnorm.refine([record("Aspirin"), item], CACHE)
-    assert refined.normalized_name == "ibuprofen"
+    assert refined.raw["rxnorm"]["rxcui"] == "5640"
+
+
+def test_budget_running_out_mid_record_still_uses_a_remembered_name(monkeypatch):
+    """The code's call can use up the budget; a remembered name needs no call, so it counts."""
+    now = [1000.0]
+    monkeypatch.setattr(rxnorm.time, "monotonic", lambda: now[0])
+    _live_with(monkeypatch, _resolves_ibuprofen)
+    rxnorm.refine([record("Ibuprofen")], CACHE)
+
+    def slow_code(request):
+        """The code lists no ingredient, and answering it takes longer than the budget."""
+        now[0] += rxnorm.LIVE_BUDGET + 1
+        return httpx.Response(200, json={"rxcuiStatusHistory": {"attributes": {}}})
+
+    _live_with(monkeypatch, slow_code)
+    (refined,) = rxnorm.refine([record("Ibuprofen", code="999", source="fhir")], CACHE)
+    assert refined.raw["rxnorm"]["rxcui"] == "5640"
 
 
 def test_live_memory_is_limited_and_drops_the_oldest(monkeypatch):
