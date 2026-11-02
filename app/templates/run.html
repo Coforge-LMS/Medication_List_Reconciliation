@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Run {{ run.run_id }} · MedRec{% endblock %}
 {% block content %}
+{% import "_icons.html" as icon %}
 <div class="page-head">
   <h1><a class="plain" href="/patients/{{ run.patient.fhir_patient_id }}">{{ run.patient.name or run.patient.identifier }}</a></h1>
   <p class="muted">{{ run.patient.identifier }} · Run {{ run.run_id }} · {{ run.started_at | utc_time }} UTC</p>
   <p id="interview">{{ interview }}</p>
   <div class="actions">
-    <a class="button" href="/runs/{{ run.run_id }}/report.pdf">Download PDF</a>
-    <a href="/patients/{{ run.patient.fhir_patient_id }}/history">History</a>
+    <a class="button" href="/runs/{{ run.run_id }}/report.pdf">{{ icon.download() }}Download PDF</a>
+    <a class="button quiet" href="/patients/{{ run.patient.fhir_patient_id }}/history">{{ icon.history() }}History</a>
   </div>
 </div>
 

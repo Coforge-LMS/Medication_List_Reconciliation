@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Patients · MedRec{% endblock %}
 {% block content %}
+{% import "_icons.html" as icon %}
 <h1>Patients</h1>
+<p class="muted">Find a patient to compare their patient-reported, FHIR and pharmacy medication lists.</p>
 <form class="search" method="get" action="/" role="search">
   <label class="visually-hidden" for="q">Patient name or identifier</label>
-  <input id="q" name="q" type="search" value="{{ query }}" placeholder="Name or identifier">
-  <button type="submit">Search</button>
+  <div class="search-field">
+    {{ icon.search() }}
+    <input id="q" name="q" type="search" value="{{ query }}" placeholder="Name or identifier" autocomplete="off">
+  </div>
+  <button type="submit" data-busy-label="Searching…">Search</button>
 </form>
 
 {% if results is not none %}
@@ -27,7 +32,7 @@
   </table>
 </div>
 {% else %}
-<p class="muted">No patients match "{{ query }}".</p>
+<p class="empty">No patients match "{{ query }}".</p>
 {% endif %}
 {% endif %}
 
@@ -48,6 +53,9 @@
   </table>
 </div>
 {% else %}
-<p class="muted">No patients reconciled yet.</p>
+<div class="empty">
+  <p>No patients reconciled yet.</p>
+  <p class="muted">Search above, open a patient and run a reconciliation; they'll appear here.</p>
+</div>
 {% endif %}
 {% endblock %}

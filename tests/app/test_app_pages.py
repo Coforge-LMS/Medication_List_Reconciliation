@@ -301,3 +301,12 @@ def test_run_page_omits_the_section_when_nothing_agrees(client, serve_run):
     serve_run(make_run())
     html = client.get("/runs/7").text
     assert "no-differences" not in html and "No differences" not in html
+
+
+def test_script_is_served_from_the_app_with_no_external_host(client, serve_run):
+    """The busy-button script ships with the app, like the stylesheet."""
+    serve_run(make_run())
+    assert f'src="/static/app.js?v={__version__}"' in client.get("/runs/7").text
+    response = client.get("/static/app.js")
+    assert response.status_code == 200
+    assert "http://" not in response.text and "https://" not in response.text

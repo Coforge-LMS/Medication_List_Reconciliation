@@ -19,13 +19,16 @@
         <td>{{ r.started_at | utc_time }}</td>
         <td>{{ r.app_version }}</td>
         <td>{{ r.finding_count }}</td>
-        <td>{% for t, n in r.counts_by_type.items() %}{{ label_for(t) }}: {{ n }}{% if not loop.last %}; {% endif %}{% endfor %}</td>
+        <td class="chips">{% for t, n in r.counts_by_type.items() %}<span class="chip type-{{ t }}">{{ label_for(t) }} <b>{{ n }}</b></span>{% else %}<span class="muted">None</span>{% endfor %}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% else %}
-<p class="muted">No runs yet</p>
+<div class="empty">
+  <p>No runs yet</p>
+  <p class="muted">Run a reconciliation from <a href="/patients/{{ fhir_id }}">the patient's page</a>; each run is saved here.</p>
+</div>
 {% endif %}
 {% endblock %}

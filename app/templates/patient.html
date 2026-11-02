@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ patient.name or patient.identifier }} · MedRec{% endblock %}
 {% block content %}
+{% import "_icons.html" as icon %}
 <div class="page-head">
   <h1>{{ patient.name or patient.identifier }}</h1>
   <p class="muted">
@@ -10,13 +11,13 @@
   {% if can_run %}
   <div class="actions">
     <form method="post" action="/patients/{{ fhir_id }}/reconcile">
-      <button type="submit">Run reconciliation</button>
+      <button type="submit" data-busy-label="Reconciling…">Run reconciliation</button>
     </form>
-    <a href="/patients/{{ fhir_id }}/history">History</a>
+    <a class="button quiet" href="/patients/{{ fhir_id }}/history">{{ icon.history() }}History</a>
   </div>
   {% else %}
   <p class="notice">No pharmacy records on file, so there is nothing to compare.</p>
-  <div class="actions"><a href="/patients/{{ fhir_id }}/history">History</a></div>
+  <div class="actions"><a class="button quiet" href="/patients/{{ fhir_id }}/history">{{ icon.history() }}History</a></div>
   {% endif %}
 </div>
 {% include "_records.html" %}
