@@ -37,19 +37,25 @@ def test_unknown_type_renders_as_other(client, serve_run):
     assert "FHIR route oral; pharmacy route topical." in section
 
 
-def test_each_finding_shows_all_three_values(client, serve_run):
-    """Findings have Patient-reported, FHIR and Pharmacy cells, with a dash when empty.
+def _row(html, medication):
+    """The finding row whose first cell is this medication."""
+    match = re.search(rf'<tr>\s*<td class="med">{medication}\b.*?</tr>', html, re.S)
+    assert match, medication
+    return match.group(0)
 
-    The summary sits under the medication's name rather than in a column of its own.
+
+def test_each_finding_shows_all_three_values(client, serve_run):
+    """Findings have Patient-reported, FHIR and Pharmacy cells; a source without it says so.
+
+    The row's cells already say where the medication is, so that sentence isn't repeated.
     """
     serve_run(make_run())
     missing = _section(client.get("/runs/7").text, "Missing medication")
     assert "<th>Medication</th><th>Patient-reported</th><th>FHIR</th><th>Pharmacy</th>" in missing
-    assert re.search(
-        r'<td class="med">ibuprofen<div class="note">[^<]+</div></td>\s*'
-        r"<td>200 mg</td>\s*<td>—</td>\s*<td>—</td>",
-        missing,
-    )
+    row = _row(missing, "ibuprofen")
+    assert '<span class="value">200 mg</span>' in row
+    assert row.count("Not listed</span>") == 2
+    assert "not on the FHIR list" not in row
 
 
 def test_three_medication_columns_in_order(client, serve_run):
@@ -193,7 +199,7 @@ def test_impossible_run_ids_are_404_without_querying(client, serve_run, monkeypa
 
 
 def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
-    """A frequency mismatch is a known type now, with its stored plain wording."""
+    """A frequency mismatch is a known type now; its cells carry the plain wording."""
     finding = Finding(
         discrepancy_type="frequency_mismatch",
         medication="sertraline",
@@ -203,8 +209,8 @@ def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
     )
     serve_run(make_run(findings=[finding]))
     section = _section(client.get("/runs/7").text, "Frequency mismatch")
-    assert "FHIR frequency once daily; pharmacy frequency twice daily." in section
-    assert "<td>once daily</td>" in section and "<td>twice daily</td>" in section
+    assert '<span class="value">once daily</span>' in section
+    assert '<span class="value">twice daily</span>' in section
 
 
 def test_footer_has_the_nlm_attribution(client, serve_run):
@@ -283,7 +289,7 @@ def test_run_page_shows_medications_with_no_differences(client, serve_run):
     assert '<span class="count">1</span> No differences' in html
     assert 'id="no-differences"' in html
     for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
-        assert f"<td>{value}</td>" in html
+        assert f'<span class="value">{value}</span>' in html
     assert "no source is treated as correct" in html
 
 
@@ -325,3 +331,33 @@ def test_motion_has_a_reduced_motion_path(client):
     css = client.get("/static/app.css").text
     reduced = css.split("@media (prefers-reduced-motion: reduce)")[1]
     assert "@view-transition { navigation: none; }" in reduced
+
+
+def _with_rejected_warfarin():
+    """A run where FHIR lists warfarin and pharmacy's warfarin record was rejected."""
+    finding = Finding(
+        discrepancy_type="missing",
+        medication="warfarin",
+        summary=(
+            "On the FHIR list; not reported by the patient and not in pharmacy records. "
+            "1 pharmacy record with this name was rejected (see Rejected records)."
+        ),
+        fhir_value="5 mg",
+        details={
+            "present_in": ["fhir"],
+            "missing_from": ["intake", "pharmacy"],
+            "rejected_count": 1,
+            "rejected_record_ids": ["PH-9"],
+        },
+    )
+    return make_run(findings=[finding])
+
+
+def test_a_rejected_record_is_a_badge_linking_to_rejected_records(client, serve_run):
+    """The rejection shows in the source's own cell, so the row needs no sentence about it."""
+    serve_run(_with_rejected_warfarin())
+    html = client.get("/runs/7").text
+    row = _row(html, "warfarin")
+    assert 'class="badge rejected" href="#rejected"' in row and "Not listed</span>" in row
+    assert "was rejected (see Rejected records)" not in row
+    assert '<h2 id="rejected">Rejected records</h2>' in html

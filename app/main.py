@@ -22,6 +22,8 @@ from app.labels import (
     DISCLAIMER,
     NLM_ATTRIBUTION,
     SOURCE_HEADINGS,
+    finding_cells,
+    finding_note,
     group_findings,
     interview_line,
     label_for,
@@ -90,6 +92,8 @@ templates.env.globals.update(
     nlm_attribution=NLM_ATTRIBUTION,
     format_dose=format_dose,
     matched_as=matched_as,
+    finding_cells=finding_cells,
+    finding_note=finding_note,
     no_differences_note=no_differences_note,
     source_headings=SOURCE_HEADINGS,
 )

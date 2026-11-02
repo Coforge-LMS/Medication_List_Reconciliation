@@ -2,6 +2,7 @@
 {% block title %}Run {{ run.run_id }} · MedRec{% endblock %}
 {% block content %}
 {% import "_icons.html" as icon %}
+{% import "_cells.html" as show %}
 <div class="page-head">
   <h1 class="patient-name"><a class="plain" href="/patients/{{ run.patient.fhir_patient_id }}">{{ run.patient.name or run.patient.identifier }}</a></h1>
   <p class="muted">{{ run.patient.identifier }} · Run {{ run.run_id }} · {{ run.started_at | utc_time }} UTC</p>
@@ -34,11 +35,10 @@
       </thead>
       <tbody>
         {% for f in findings %}
+        {% set note = finding_note(f) %}
         <tr>
-          <td class="med">{{ f.medication }}<div class="note">{{ f.summary }}</div></td>
-          <td>{{ f.intake_value or "—" }}</td>
-          <td>{{ f.fhir_value or "—" }}</td>
-          <td>{{ f.pharmacy_value or "—" }}</td>
+          <td class="med">{{ f.medication }}{% if note %}<div class="note">{{ note }}</div>{% endif %}</td>
+          {% for c in finding_cells(f, run) %}<td>{{ show.cell(c) }}</td>{% endfor %}
         </tr>
         {% endfor %}
       </tbody>
@@ -61,7 +61,7 @@
         {% for name, stated in no_differences %}
         <tr>
           <td>{{ name }}</td>
-          {% for source in source_headings %}<td>{{ stated.get(source, "—") }}</td>{% endfor %}
+          {% for source in source_headings %}<td>{% if source in stated %}{{ show.values(stated[source]) }}{% else %}<span class="badge quiet">No interview</span>{% endif %}</td>{% endfor %}
         </tr>
         {% endfor %}
       </tbody>

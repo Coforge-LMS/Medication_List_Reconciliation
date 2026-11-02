@@ -250,6 +250,37 @@ tbody tr:last-child td { border-bottom: 0; }
 .finding-table .med .note { font-weight: 400; }
 .columns td:nth-child(n+2) { white-space: nowrap; }
 
+/* Badges: what a cell has instead of a value, read at a glance */
+.value { display: block; }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .1rem .55rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.badge .icon { width: 1em; height: 1em; }
+.badge.not-listed { background: #fdeeee; color: #9b2c2c; }
+.badge.rejected {
+  background: #fff4e0;
+  color: #8a4b00;
+  box-shadow: inset 0 0 0 1px #f3d8a6;
+  transition: box-shadow .15s;
+}
+.badge.rejected:hover { box-shadow: inset 0 0 0 1px #8a4b00; }
+.badge.quiet { background: var(--head); color: var(--muted); font-weight: 500; }
+.badge.count {
+  margin-bottom: .3rem;
+  background: color-mix(in srgb, var(--type, var(--other)) 10%, white);
+  color: color-mix(in srgb, var(--type, var(--other)) 75%, var(--ink));
+}
+td .value + .value { margin-top: .15rem; }
+
 /* Finding summary tiles: each one jumps to its section */
 .summary {
   display: grid;

@@ -1,0 +1,16 @@
+{# How a value or a missing value reads in a table: badges instead of sentences and dashes. #}
+{% import "_icons.html" as icon %}
+
+{# A stored value; "a; b" goes on separate lines, and "(not compared)" becomes a small badge. #}
+{% macro values(text) -%}
+{% for line in text.split("; ") %}<span class="value">{% for part in line.split(", ") %}{% if part.endswith(" (not compared)") %}{{ part[:-15] }} <span class="badge quiet" title="No schedule to compare">not compared</span>{% else %}{{ part }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</span>{% endfor %}
+{%- endmacro %}
+
+{# One finding cell: the source's value, or why it has none. #}
+{% macro cell(c) -%}
+{% if c.kind == "value" %}{% if c.count %}<span class="badge count">{{ c.count }} records</span>{% endif %}{{ values(c.text) }}
+{% elif c.kind == "not_listed" %}<span class="badge not-listed">{{ icon.cross() }}Not listed</span>
+{% elif c.kind == "rejected" %}<a class="badge rejected" href="#rejected" title="A record with this name was rejected; see Rejected records">{{ icon.alert() }}Rejected</a>
+{% elif c.kind == "no_interview" %}<span class="badge quiet">No interview</span>
+{% else %}<span class="badge quiet">{{ c.text }}</span>{% endif %}
+{%- endmacro %}
