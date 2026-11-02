@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ patient.name or patient.identifier }} · MedRec{% endblock %}
 {% block content %}
-<div class="card">
+<div class="page-head">
   <h1>{{ patient.name or patient.identifier }}</h1>
   <p class="muted">
     {{ patient.identifier }}{% if patient.birth_date %} · born {{ patient.birth_date }}{% endif %}{% if patient.gender %} · {{ patient.gender }}{% endif %}
@@ -15,7 +15,7 @@
     <a href="/patients/{{ fhir_id }}/history">History</a>
   </div>
   {% else %}
-  <p class="notice">No pharmacy records on file for this patient, so there is nothing to compare.</p>
+  <p class="notice">No pharmacy records on file, so there is nothing to compare.</p>
   <div class="actions"><a href="/patients/{{ fhir_id }}/history">History</a></div>
   {% endif %}
 </div>

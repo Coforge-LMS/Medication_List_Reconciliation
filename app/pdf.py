@@ -7,12 +7,12 @@ from fpdf import FPDF
 from app.labels import (
     DISCLAIMER,
     NLM_ATTRIBUTION,
-    NO_DIFFERENCES_NOTE,
     SOURCE_HEADINGS,
     group_findings,
     interview_line,
     matched_as,
     no_differences,
+    no_differences_note,
     utc_time,
 )
 from contract import MedicationRecord, RunDetail, format_dose
@@ -128,7 +128,7 @@ def _no_differences(pdf: FPDF, run: RunDetail) -> None:
     if not agreeing:
         return
     _heading(pdf, "No differences")
-    _lines(pdf, NO_DIFFERENCES_NOTE)
+    _lines(pdf, no_differences_note(agreeing))
     _table(
         pdf,
         ["Medication", *SOURCE_HEADINGS.values()],

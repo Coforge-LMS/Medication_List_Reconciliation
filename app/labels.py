@@ -51,11 +51,16 @@ def matched_as(record: MedicationRecord) -> str | None:
     return None if plain else record.normalized_name
 
 
-NO_DIFFERENCES_NOTE = (
-    "Each of these is in every source compared and has no finding. "
-    "Values are as each source states them; no source is treated as correct. "
-    "A frequency marked (not compared) gives no schedule to compare, so it may still differ."
-)
+NO_DIFFERENCES_NOTE = "In every source compared, with no finding; no source is treated as correct."
+NOT_COMPARED_NOTE = "A frequency marked (not compared) had no schedule to compare; it may differ."
+
+
+def no_differences_note(rows: list[tuple[str, dict[str, str]]]) -> str:
+    """The note under No differences, naming (not compared) only when a row shows it."""
+    if any("(not compared)" in value for _, stated in rows for value in stated.values()):
+        return f"{NO_DIFFERENCES_NOTE} {NOT_COMPARED_NOTE}"
+    return NO_DIFFERENCES_NOTE
+
 
 # Medication column headings in display order.
 SOURCE_HEADINGS: dict[str, str] = {

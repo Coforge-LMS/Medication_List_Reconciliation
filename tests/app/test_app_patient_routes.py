@@ -203,7 +203,7 @@ def test_patient_without_pharmacy_data_shows_no_data_and_no_run_button(
     assert response.status_code == 200
     html = response.text
     assert "metoprolol tartrate" in html  # FHIR side is still shown
-    assert "No pharmacy records on file for this patient" in html
+    assert "No pharmacy records on file" in html
     assert "No data" in html and "/reconcile" not in html
     assert "/patients/2178/history" in html
 

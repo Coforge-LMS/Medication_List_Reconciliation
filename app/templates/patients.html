@@ -2,9 +2,9 @@
 {% block title %}Patients · MedRec{% endblock %}
 {% block content %}
 <h1>Patients</h1>
-<form class="card search" method="get" action="/" role="search">
-  <label for="q">Search the FHIR server by name or exact identifier</label>
-  <input id="q" name="q" type="search" value="{{ query }}" placeholder="e.g. Mixton or CASE-MIXED">
+<form class="search" method="get" action="/" role="search">
+  <label class="visually-hidden" for="q">Patient name or identifier</label>
+  <input id="q" name="q" type="search" value="{{ query }}" placeholder="Name or identifier">
   <button type="submit">Search</button>
 </form>
 

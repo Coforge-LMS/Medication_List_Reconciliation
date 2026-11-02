@@ -6,11 +6,14 @@ import pytest
 from app.labels import (
     DISCLAIMER,
     NLM_ATTRIBUTION,
+    NO_DIFFERENCES_NOTE,
+    NOT_COMPARED_NOTE,
     SOURCE_HEADINGS,
     interview_line,
     label_for,
     matched_as,
     no_differences,
+    no_differences_note,
 )
 from contract import Finding, IntakeInterviewInfo, Reason, Rejection
 from tests.app.conftest import INTERVIEW, make_run, record
@@ -26,6 +29,15 @@ def test_unknown_type_from_a_newer_release_renders_as_other():
 
 def test_disclaimer_never_recommends():
     assert "does not recommend treatment" in DISCLAIMER
+
+
+def test_no_differences_note_explains_not_compared_only_when_a_row_shows_it():
+    """The (not compared) caveat appears only beside a value that carries the mark."""
+    compared = [("metformin", {"fhir": "500 mg, twice daily", "pharmacy": "500 mg, twice daily"})]
+    unscheduled = [("ibuprofen", {"fhir": "200 mg, as needed (not compared)"})]
+    assert no_differences_note(compared) == NO_DIFFERENCES_NOTE
+    assert no_differences_note(compared + unscheduled).endswith(NOT_COMPARED_NOTE)
+    assert "no source is treated as correct" in no_differences_note(compared)
 
 
 def _interview(no_medications=False):

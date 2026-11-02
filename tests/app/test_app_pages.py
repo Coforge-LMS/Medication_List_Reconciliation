@@ -38,12 +38,17 @@ def test_unknown_type_renders_as_other(client, serve_run):
 
 
 def test_each_finding_shows_all_three_values(client, serve_run):
-    """Findings have Patient-reported, FHIR and Pharmacy cells, with a dash when empty."""
+    """Findings have Patient-reported, FHIR and Pharmacy cells, with a dash when empty.
+
+    The summary sits under the medication's name rather than in a column of its own.
+    """
     serve_run(make_run())
     missing = _section(client.get("/runs/7").text, "Missing medication")
-    assert "<th>Patient-reported</th><th>FHIR</th><th>Pharmacy</th>" in missing
+    assert "<th>Medication</th><th>Patient-reported</th><th>FHIR</th><th>Pharmacy</th>" in missing
     assert re.search(
-        r"<td>ibuprofen</td>.*?<td>200 mg</td>\s*<td>—</td>\s*<td>—</td>", missing, re.S
+        r'<td class="med">ibuprofen<div class="note">[^<]+</div></td>\s*'
+        r"<td>200 mg</td>\s*<td>—</td>\s*<td>—</td>",
+        missing,
     )
 
 
@@ -222,6 +227,12 @@ def test_pages_stay_light_whatever_the_system_theme(client):
     """One light theme only, so a Mac in dark mode doesn't turn the pages near-black."""
     css = client.get("/static/app.css").text
     assert "color-scheme: light;" in css and "prefers-color-scheme" not in css
+
+
+def test_rejected_records_section_is_left_out_when_there_are_none(client, serve_run):
+    """An empty Rejected records heading is noise; findings only point there when it exists."""
+    serve_run(make_run(rejected=[]))
+    assert "Rejected records" not in client.get("/runs/7").text
 
 
 def _with_brand():
