@@ -57,7 +57,7 @@ def matched_as(record: MedicationRecord) -> str | None:
 NO_DIFFERENCES_NOTE = (
     "Each of these is in every source compared and has no finding. "
     "Values are as each source states them; no source is treated as correct. "
-    "Frequencies marked (not compared) state no schedule to compare, so they may still differ."
+    "A frequency marked (not compared) gives no schedule to compare, so it may still differ."
 )
 
 # Medication column headings in display order.
@@ -111,15 +111,17 @@ def no_differences(run: RunDetail) -> list[tuple[str, dict[str, str]]]:
 def _stated(records: list[MedicationRecord]) -> str:
     """Dose and frequency as one source states them: "0.5 g, twice a day"."""
     return "; ".join(
-        ", ".join(filter(None, [format_dose(r.dose_amount, r.dose_unit), _frequency(r.frequency)]))
-        for r in records
+        f"{format_dose(r.dose_amount, r.dose_unit)}, {_frequency(r.frequency)}" for r in records
     )
 
 
-def _frequency(text: str | None) -> str | None:
-    """Stored frequency wording, marked when the frequency rule doesn't compare it."""
+def _frequency(text: str | None) -> str:
+    """Stored frequency wording, marked when the frequency rule doesn't compare it.
+
+    A blank is marked too: "10 mg" beside "10 mg, twice daily" would otherwise read as agreement.
+    """
     if not text:
-        return None
+        return "no frequency (not compared)"
     return f"{text} (not compared)" if normalize_frequency(text) in (None, PRN) else text
 
 
