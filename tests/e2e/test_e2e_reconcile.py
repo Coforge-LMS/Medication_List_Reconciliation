@@ -1,4 +1,5 @@
 import io
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -129,9 +130,8 @@ def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
     report = client.get(f"{run_url}/report.pdf")
     assert report.status_code == 200
     assert report.headers["content-type"] == "application/pdf"
-    assert report.headers["content-disposition"] == (
-        f'attachment; filename="reconciliation-run-{run_id}.pdf"'
-    )
+    filename = rf"MedRec-Marcus-Mixton-CASE-MIXED-run-{run_id}-\d{{4}}-\d\d-\d\d\.pdf"
+    assert re.fullmatch(f'attachment; filename="{filename}"', report.headers["content-disposition"])
     assert report.content.startswith(b"%PDF-")
     text = " ".join(
         " ".join(p.extract_text().split()) for p in PdfReader(io.BytesIO(report.content)).pages

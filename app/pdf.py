@@ -1,5 +1,7 @@
 """PDF report of one saved run, in fpdf2 with bundled DejaVu fonts so µ and — render anywhere."""
 
+import re
+import unicodedata
 from pathlib import Path
 
 from fpdf import FPDF
@@ -42,13 +44,31 @@ class _Report(FPDF):
         self.cell(0, 4, f"Page {self.page_no()}", align="C")
 
 
+def report_filename(run: RunDetail) -> str:
+    """A download name that says whose report it is: MedRec-Marcus-Mixton-CASE-MIXED-run-7-....
+
+    Letters outside ASCII are reduced to their base letter, so every browser keeps the name.
+    """
+    patient = run.patient
+    parts = [
+        "MedRec",
+        patient.name or "",
+        patient.identifier,
+        f"run-{run.run_id}",
+        f"{run.started_at:%Y-%m-%d}",
+    ]
+    ascii_text = unicodedata.normalize("NFKD", " ".join(parts)).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Za-z0-9]+", "-", ascii_text).strip("-") + ".pdf"
+
+
 def build_report(run: RunDetail) -> bytes:
     """Render a run: patient, interview, summary, findings, the three lists and rejections."""
     pdf = _Report(format="A4")
     pdf.add_font(FAMILY, fname=FONTS / "DejaVuSans.ttf")
     pdf.add_font(FAMILY, style="B", fname=FONTS / "DejaVuSans-Bold.ttf")
     pdf.set_auto_page_break(True, margin=BOTTOM_MARGIN)
-    pdf.set_title(f"Reconciliation run {run.run_id}")
+    name = run.patient.name or run.patient.identifier
+    pdf.set_title(f"{name} · Medication reconciliation, run {run.run_id}")
     pdf.add_page()
 
     _header(pdf, run)

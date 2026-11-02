@@ -7,7 +7,14 @@ from pypdf import PdfReader
 from sqlalchemy.exc import OperationalError
 
 from app.labels import DISCLAIMER, NLM_ATTRIBUTION
-from app.pdf import BOTTOM_MARGIN, FOOTER_HEIGHT, MAX_CELL_CHARS, TRUNCATED, build_report
+from app.pdf import (
+    BOTTOM_MARGIN,
+    FOOTER_HEIGHT,
+    MAX_CELL_CHARS,
+    TRUNCATED,
+    build_report,
+    report_filename,
+)
 from contract import Finding, Reason, Rejection
 from db import repo
 from tests.app.conftest import INTERVIEW, make_run, record
@@ -134,7 +141,7 @@ def test_report_route_returns_a_pdf_download(client, serve_run):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.headers["content-disposition"] == (
-        'attachment; filename="reconciliation-run-7.pdf"'
+        'attachment; filename="MedRec-Marcus-Mixton-CASE-MIXED-run-7-2026-10-30.pdf"'
     )
     assert response.content.startswith(b"%PDF-")
     assert "Marcus Mixton" in " ".join(pages(response.content))
@@ -279,3 +286,24 @@ def test_report_lists_medications_with_no_differences():
 def test_report_omits_no_differences_when_nothing_agrees():
     """A run with nothing in common has no empty section."""
     assert "No differences" not in text(make_run())
+
+
+@pytest.mark.parametrize(
+    ("name", "identifier", "expected"),
+    [
+        ("Marcus Mixton", "CASE-MIXED", "MedRec-Marcus-Mixton-CASE-MIXED-run-7-2026-10-30.pdf"),
+        ("José O'Brien", "CASE-X", "MedRec-Jose-O-Brien-CASE-X-run-7-2026-10-30.pdf"),
+        (None, "CASE-X", "MedRec-CASE-X-run-7-2026-10-30.pdf"),
+    ],
+    ids=["plain", "accents-and-quote", "no-name"],
+)
+def test_download_name_says_whose_report_it_is(name, identifier, expected):
+    """The file name carries the patient, identifier, run and date, in characters any OS keeps."""
+    patient = make_run().patient.model_copy(update={"name": name, "identifier": identifier})
+    assert report_filename(make_run(patient=patient)) == expected
+
+
+def test_report_title_names_the_patient_and_run():
+    """A PDF viewer's title bar shows whose report it is."""
+    reader = PdfReader(io.BytesIO(build_report(make_run())))
+    assert reader.metadata.title == "Marcus Mixton · Medication reconciliation, run 7"
