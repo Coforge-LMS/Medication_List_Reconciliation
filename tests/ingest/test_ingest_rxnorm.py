@@ -306,6 +306,40 @@ def test_form_is_read_from_the_name_when_the_concept_has_none(name, form):
     assert refined.raw["rxnorm"]["dose_form"] == form
 
 
+@pytest.mark.parametrize(
+    ("name", "form"),
+    [
+        ("Diltiazem CD 120 mg", "Extended Release"),
+        ("Propranolol LA 80 mg", "Extended Release"),
+        ("Zolpidem CR", "Extended Release"),
+        ("Omeprazole DR", "Delayed Release"),
+        ("Aspirin EC 81 mg", "Delayed Release"),
+        ("Omeprazole Delayed Release", "Delayed Release"),
+        ("Omeprazole DR 20 mg Oral Capsule", "Delayed Release Oral Capsule"),
+        ("Metformin ER Chewable Tablet", "Extended Release Chewable Tablet"),
+        ("Amoxicillin Oral Suspension ER", "Extended Release Oral Suspension"),
+        ("Omeprazole ER Delayed Release Oral Tablet", "Delayed Release Oral Tablet"),
+        ("Metformin XR Extended Release Oral Tablet", "Extended Release Oral Tablet"),
+    ],
+)
+def test_release_wording_combines_with_a_stated_form_and_never_replaces_it(name, form):
+    """An abbreviation adds to what the name states; a form with its own release is kept."""
+    assert rxnorm._stated_form(name, {"rxcuis": {}}) == form
+
+
+@pytest.mark.parametrize(
+    ("name", "drug"),
+    [
+        ("Diltiazem CD 120 mg", "diltiazem"),
+        ("Aspirin EC", "aspirin"),
+        ("Omeprazole DR", "omeprazole"),
+    ],
+)
+def test_release_abbreviations_are_not_part_of_the_drug_name(name, drug):
+    """So "Diltiazem CD" still finds diltiazem in the cache."""
+    assert rxnorm._drug_name(name) == drug
+
+
 def test_stated_form_keeps_the_rest_of_the_concept():
     """Reading a form adds to the concept; its salt, ingredients and rxcui stay."""
     (refined,) = rxnorm.refine(

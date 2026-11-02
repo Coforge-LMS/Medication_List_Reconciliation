@@ -28,11 +28,14 @@ DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.jso
 
 # Words that describe the product, not the drug, dropped to find the drug name in free text.
 PRODUCT_WORDS = frozenset(
-    "oral tablet tab capsule cap extended delayed release er xr xl sr film coated chewable "
-    "disintegrating sublingual solution suspension".split()
+    "oral tablet tab capsule cap extended delayed release er xr xl sr cr cd la dr ec film coated "
+    "chewable disintegrating sublingual solution suspension".split()
 )
-RELEASE_WORDS = frozenset({"er", "xr", "xl", "sr"})
-EXTENDED_RELEASE = "Extended Release"
+# What a name's abbreviations say about release, in the words RxNorm's forms begin with.
+RELEASE_WORDS = {
+    "Extended Release": frozenset({"er", "xr", "xl", "sr", "cr", "cd", "la"}),
+    "Delayed Release": frozenset({"dr", "ec"}),
+}
 # RxNorm's names for forms a free-text name may state; the cache adds any others it holds.
 STATED_FORMS = (
     "Oral Tablet",
@@ -47,7 +50,6 @@ STATED_FORMS = (
     "Disintegrating Oral Tablet",
     "Sublingual Tablet",
 )
-PLAIN_ORAL_FORMS = frozenset({"Oral Tablet", "Oral Capsule"})
 FORM_WORDINGS = {"chewable oral tablet": "Chewable Tablet"}  # common wording RxNorm doesn't use
 
 _STRENGTH = strength_pattern(KNOWN_UNITS, re.IGNORECASE)
@@ -257,22 +259,25 @@ def _with_stated_form(concept: Concept, name: str, cache: dict[str, Any]) -> Con
 
 
 def _stated_form(name: str, cache: dict[str, Any]) -> str | None:
-    """The dose form free text states, combining a release word with a plain oral form.
+    """The dose form free text states, combining a release word with any form it doesn't include.
 
     "Metformin ER 500 mg Oral Tablet" is an extended release tablet, not a plain one. With no
-    route to combine, "Metformin ER" says only "Extended Release", and the rule treats that as
-    agreeing with any fuller form it begins.
+    form to combine, "Metformin ER" says only "Extended Release", and the rule treats that as
+    agreeing with any fuller form it begins. A form that states its own release wins over a
+    conflicting abbreviation, so neither detail is silently replaced by a vaguer one.
     """
     text = f" {' '.join(_words(name))} "
     cached = {c["dose_form"] for c in cache["rxcuis"].values() if c.get("dose_form")}
     wordings = {form.lower(): form for form in {*STATED_FORMS, *cached}} | FORM_WORDINGS
     found = [wording for wording in wordings if f" {wording} " in text]
     stated = wordings[max(found, key=len)] if found else None
-    if not (RELEASE_WORDS & set(text.split()) or " extended release " in text):
+    if stated and stated.startswith(tuple(RELEASE_WORDS)):
         return stated
-    if stated in PLAIN_ORAL_FORMS:
-        return f"{EXTENDED_RELEASE} {stated}"
-    return stated if stated and stated.startswith(EXTENDED_RELEASE) else EXTENDED_RELEASE
+    words = set(text.split())
+    for release, abbreviations in RELEASE_WORDS.items():
+        if abbreviations & words or f" {release.lower()} " in text:
+            return f"{release} {stated}" if stated else release
+    return stated
 
 
 def _live_client() -> httpx.Client:
