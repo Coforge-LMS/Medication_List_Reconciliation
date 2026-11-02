@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build an immutable release image from its Git tag
+# Build an immutable release image from its Git tag, never the checkout.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
