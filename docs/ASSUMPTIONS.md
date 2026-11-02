@@ -51,7 +51,7 @@ OWNER: Sarthak Kakkar, to review and finalize
 | A19 | Finding summaries state facts only; a test bans treatment verbs there. The exact disclaimer text is asserted separately in the UI and PDF. | Decided | Brief; FDA CDS guidance criteria 3–4 [R11] |
 | A20 | Stack: FastAPI + Jinja2/HTMX + SQLAlchemy 2.0 + psycopg 3 + httpx + fpdf2 with bundled DejaVu fonts. Exact pins, no upgrades before Friday. | Decided | [R04], [R06] |
 | A21 | V1 shows frequency as stored. Plain-language display ("once daily", not "QD") ships with the V2 frequency normalizer, so no V2 logic lands in V1. | Decided | ISMP / Joint Commission guidance [R11]; brief: "no V2 logic in V1" |
-| A22 | V2 RxNorm: ingredient-level identity. A different strength, form or route is reported as `dosage_mismatch`, never merged and never split into two "missing" findings. Offline cache; live only when `RXNORM_LIVE=1`. | Decided | [R07] |
+| A22 | V2 RxNorm: ingredient-level identity. A different strength, form or route is reported as `dosage_mismatch`, never merged and never split into two "missing" findings. The one exception is a source listing two salts of a drug, where a salt another source lacks is also reported as `missing`. Offline cache; live only when `RXNORM_LIVE=1`. | Decided | [R07] |
 | A34 | Reconciliation is three-way per medication over the sources that have data. No source is presented as the truth (patient recall is unreliable). An empty intake list gives the two-source result. | Decided | Lead decision 2026-10-29; [R11] |
 
 ## Devang Borkar: containers, CI, releases, privacy

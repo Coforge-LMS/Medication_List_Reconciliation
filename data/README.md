@@ -111,7 +111,7 @@ CASE-MIXED's 8 findings:
 - The six rejected records (five invalid pharmacy rows and the intake warfarin) sit on drugs that appear nowhere else, so they show as rejected without changing any finding: a blank name, a unit `tab`, a date `03/02/2026`, a future date, and the unreadable warfarin dose.
 - CASE-BRAND's `Crestor` is deliberately not in `aliases.json`, so with aliases alone FHIR's `rosuvastatin calcium` and `crestor` don't match. RxNorm matches them in the running app (see "RxNorm cache").
 
-`CASE-BRAND` is the last patient in the bundle and the importer's "already imported" marker.
+`CASE-BRAND` is the last patient in the bundle and the importer's "already imported" marker. So after changing a FHIR file, run `docker compose down -v` to pick it up: an existing HAPI volume keeps the old contents. An old RxCUI that's no longer in the cache still resolves by the record's name, and the source's code is what gets saved.
 
 Run the data tests with `pytest tests/data`. The seed test needs `TEST_DATABASE_URL` (CI sets it) and skips without it.
 
@@ -151,7 +151,7 @@ python -m data.generators.build_rxnorm_cache
 
 The build calls live RxNav and refuses to write a cache with gaps: an unresolved or ambiguous name must be decided by hand in its `MANUAL` map. Review the diff before committing. Code `897685` (Calan) is obsolete in RxNorm but is kept, with its status, because it still names its ingredient.
 
-Add `RXNORM_LIVE=1` to `.env` and recreate the app to have it ask RxNav about anything the cache doesn't hold. Each request has a 3-second timeout; on any failure the record keeps its alias-based name and live lookups pause for 60 seconds. It's off by default, and the demo doesn't need it.
+Add `RXNORM_LIVE=1` to `.env` and recreate the app to have it ask RxNav about anything the cache doesn't hold. Calls run inside the request that needs them, with a 3-second timeout per call, and one list stops starting calls after 5 seconds. A record with no answer keeps its alias-based name. A 4xx counts as that query's answer; two failures in a row (timeout, 5xx, 408, 429 or an odd response) pause live lookups for 60 seconds. At most 1,024 answers are kept in memory. It's off by default, and the demo doesn't need it.
 
 Uses RxNorm data from the U.S. National Library of Medicine; the app's footer carries NLM's required attribution.
 
