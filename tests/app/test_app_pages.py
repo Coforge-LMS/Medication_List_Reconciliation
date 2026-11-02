@@ -214,10 +214,14 @@ def test_each_known_finding_type_has_its_own_accent(client):
     for discrepancy_type in ("duplicate", "missing", "dosage_mismatch", "frequency_mismatch"):
         assert f".type-{discrepancy_type} {{ --type:" in css
     variables = ("duplicate", "missing", "mismatch", "frequency", "other")
-    light, dark = css.split("@media (prefers-color-scheme: dark)")
-    for scheme in (light, dark):
-        colours = [re.search(rf"--{name}: (#\w+);", scheme).group(1) for name in variables]
-        assert len(set(colours)) == len(variables)
+    colours = [re.search(rf"--{name}: (#\w+);", css).group(1) for name in variables]
+    assert len(set(colours)) == len(variables)
+
+
+def test_pages_stay_light_whatever_the_system_theme(client):
+    """One light theme only, so a Mac in dark mode doesn't turn the pages near-black."""
+    css = client.get("/static/app.css").text
+    assert "color-scheme: light;" in css and "prefers-color-scheme" not in css
 
 
 def _with_brand():
