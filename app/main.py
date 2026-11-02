@@ -32,7 +32,7 @@ from app.labels import (
     no_differences_note,
     utc_time,
 )
-from app.pdf import build_report
+from app.pdf import build_report, report_filename
 from app.pharmacy import PharmacyDataError
 from app.version import __version__
 from contract import AliasConfig, RunDetail, format_dose
@@ -229,7 +229,7 @@ def run_report(request: Request, run_id: int, session: SessionDep):
     return Response(
         build_report(run),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="reconciliation-run-{run_id}.pdf"'},
+        headers={"Content-Disposition": f'attachment; filename="{report_filename(run)}"'},
     )
 
 
