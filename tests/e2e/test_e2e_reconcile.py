@@ -137,7 +137,8 @@ def test_case_mixed_detail_reconcile_history_and_pdf(db, e2e_client):
         " ".join(p.extract_text().split()) for p in PdfReader(io.BytesIO(report.content)).pages
     )
     assert "CASE-MIXED" in text and INTERVIEW_LINE in text
-    intake_table = text.split("Patient-reported medications", 1)[1].split("FHIR medications", 1)[0]
+    compared = text.split("Medications compared", 1)[1]
+    intake_table = compared.split("Patient-reported Name", 1)[1].split("FHIR Name", 1)[0]
     assert "Metformin 0.5 g" in intake_table
     assert "Ibuprofen 200 mg" in intake_table
     assert DISCLAIMER in text

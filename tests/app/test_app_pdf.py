@@ -31,13 +31,26 @@ def text(run) -> str:
 
 
 def test_report_is_a_pdf_with_patient_details_and_the_exact_disclaimer():
-    """Output starts with %PDF- and names the patient, the run time, the version and disclaimer."""
+    """Output starts with %PDF- and names the patient, the run and its time, and the disclaimer."""
     report = build_report(make_run())
     assert report.startswith(b"%PDF-")
     content = " ".join(pages(report))
-    assert "Marcus Mixton" in content and "CASE-MIXED" in content
-    assert "Run 7, started 2026-10-30 14:05 UTC, app version 1.0.0" in content
+    assert "Marcus Mixton CASE-MIXED · Run 7 · 2026-10-30 14:05 UTC" in content
     assert DISCLAIMER in content
+
+
+def test_disclaimer_is_a_footnote_not_part_of_the_header():
+    """The disclaimer sits once per page at the foot, after the page's content."""
+    first = pages(build_report(make_run()))[0]
+    assert first.count(DISCLAIMER) == 1
+    assert first.index("Medications compared") < first.index(DISCLAIMER)
+
+
+def test_report_names_neither_the_fhir_id_nor_synthetic_data():
+    """The FHIR id is an internal number and the data's origin isn't the clinician's concern."""
+    content = text(make_run())
+    assert "FHIR id" not in content and "2178" not in content
+    assert "ynthetic" not in content
 
 
 def test_zero_findings_says_no_discrepancies_found():
@@ -49,7 +62,7 @@ def test_findings_never_claim_no_discrepancies():
     """A run with findings gives counts per type instead of the clean statement."""
     content = text(make_run())
     assert "No discrepancies found" not in content
-    assert "Missing medication: 2" in content and "Dosage mismatch: 1" in content
+    assert "2 Missing medication" in content and "1 Dosage mismatch" in content
 
 
 def test_unknown_type_renders_as_other_with_its_stored_summary():
@@ -57,7 +70,7 @@ def test_unknown_type_renders_as_other_with_its_stored_summary():
     content = text(make_run())
     assert "Other (route_mismatch)" in content
     assert "FHIR route oral; pharmacy route topical." in content
-    assert "— oral topical" in content  # no intake value, then the stored FHIR and pharmacy values
+    assert "sertraline ✕ Not listed oral topical" in content  # cells, then the stored summary
 
 
 def test_micro_signs_and_em_dash_render():
@@ -65,12 +78,12 @@ def test_micro_signs_and_em_dash_render():
     finding = Finding(
         discrepancy_type="dosage_mismatch",
         medication="cyanocobalamin",
-        summary="Doses differ — see values.",
+        summary="Different form: FHIR Oral Tablet — coated; pharmacy Oral Tablet.",
         intake_value="50 µg",  # U+00B5 micro sign
         fhir_value="100 μg",  # U+03BC Greek mu
     )
     content = text(make_run(findings=[finding]))
-    assert "Doses differ — see values." in content
+    assert "Different form: FHIR Oral Tablet — coated; pharmacy Oral Tablet." in content
     assert "50 µg" in content and "100 μg" in content
 
 
@@ -91,23 +104,40 @@ def test_interview_line_states(interview, line):
 def test_each_source_has_a_medication_table():
     """Patient-reported, FHIR and Pharmacy tables list their records, frequency as stored."""
     content = text(make_run())
-    assert content.index("Patient-reported medications") < content.index("FHIR medications")
-    assert content.index("FHIR medications") < content.index("Pharmacy medications")
+    compared = content[content.index("Medications compared") :]
+    assert compared.index("Patient-reported Name") < compared.index("FHIR Name")
+    assert compared.index("FHIR Name") < compared.index("Pharmacy Name")
     assert "ibuprofen 200 mg once daily" in content
     assert "metoprolol tartrate 25 mg once daily" in content
     assert "metformin 1000 mg once daily" in content
 
 
-def test_empty_medication_table_says_none():
-    """A source with no accepted records prints (none) rather than an empty table."""
-    assert "Patient-reported medications (none)" in text(make_run(intake=[]))
+def test_empty_medication_table_says_none_reported():
+    """A source with no accepted records says so rather than printing an empty table."""
+    assert "Patient-reported None reported FHIR" in text(make_run(intake=[]))
 
 
 def test_each_finding_shows_all_three_values():
-    """Findings carry the three value columns, with a dash for a source without one."""
+    """Findings carry the three value columns; a source without one says so, with no sentence."""
     content = text(make_run())
-    assert "Medication Summary Patient-reported FHIR Pharmacy" in content
-    assert "200 mg — —" in content  # ibuprofen: only the intake value
+    assert "Medication Patient-reported FHIR Pharmacy" in content
+    assert "ibuprofen 200 mg ✕ Not listed ✕ Not listed" in content
+    assert "Reported by the patient; not on the FHIR list" not in content
+
+
+def test_a_rejected_record_shows_as_a_badge_in_its_source_column():
+    """Pharmacy's rejected warfarin reads Rejected, not Not listed, and needs no sentence."""
+    finding = Finding(
+        discrepancy_type="missing",
+        medication="warfarin",
+        summary="On the FHIR list; not in pharmacy records. 1 pharmacy record with this name was "
+        "rejected (see Rejected records).",
+        fhir_value="5 mg",
+        details={"missing_from": ["intake", "pharmacy"], "rejected_record_ids": ["PH-9"]},
+    )
+    content = text(make_run(findings=[finding]))
+    assert "warfarin ✕ Not listed 5 mg ⚠ Rejected" in content
+    assert "see Rejected records" not in content
 
 
 def test_rejected_records_are_listed_with_reasons():
@@ -177,7 +207,8 @@ def test_report_with_the_database_down_is_a_503_page(client, serve_run, monkeypa
 def test_report_without_an_interview_says_no_data_for_the_patient_side():
     """No interview isn't an empty list: the table says No data and the count isn't a false 0."""
     content = text(make_run(intake_interview=None, intake=[]))
-    assert "Patient-reported medications No data" in content
+    assert "Patient-reported No interview recorded FHIR" in content
+    assert "metformin No interview 500 mg 1000 mg" in content
     assert "Records compared: 2 FHIR, 1 pharmacy. Rejected: 1." in content
 
 
@@ -185,7 +216,7 @@ def test_report_with_a_no_medications_interview_keeps_the_count_and_none():
     """The patient was asked and reports nothing, so that source did take part."""
     interview = INTERVIEW.model_copy(update={"no_medications": True})
     content = text(make_run(intake_interview=interview, intake=[]))
-    assert "Patient-reported medications (none)" in content
+    assert "Patient-reported None reported FHIR" in content
     assert "Records compared: 0 patient-reported, 2 FHIR, 1 pharmacy." in content
 
 
@@ -219,14 +250,14 @@ def test_very_long_values_in_every_table_column_still_build_a_report(length):
 def test_long_cell_is_visibly_truncated_and_short_ones_are_not():
     """A cut value says so, so nothing disappears silently; values under the cap are untouched."""
     at_cap = "words " * (MAX_CELL_CHARS // 6)
-    over = Finding(discrepancy_type="missing", medication="x", summary="words " * 200)
+    over = Finding(discrepancy_type="route_mismatch", medication="x", summary="words " * 200)
     assert " ".join(TRUNCATED.split()) in text(make_run(findings=[over]))
-    under = Finding(discrepancy_type="missing", medication="x", summary=at_cap)
+    under = Finding(discrepancy_type="route_mismatch", medication="x", summary=at_cap)
     assert "truncated" not in text(make_run(findings=[under]))
 
 
 def test_frequency_finding_has_its_own_label_in_the_report():
-    """The report labels it and prints the plain wording, not an abbreviation."""
+    """The report labels it and its cells print the plain wording, not an abbreviation."""
     finding = Finding(
         discrepancy_type="frequency_mismatch",
         medication="sertraline",
@@ -235,8 +266,8 @@ def test_frequency_finding_has_its_own_label_in_the_report():
         pharmacy_value="twice daily",
     )
     content = text(make_run(findings=[finding]))
-    assert "Frequency mismatch: 1" in content and "Other (" not in content
-    assert "FHIR frequency once daily; pharmacy frequency twice daily." in content
+    assert "1 Frequency mismatch" in content and "Other (" not in content
+    assert "sertraline ✕ Not listed once daily twice daily" in content
 
 
 def test_every_page_of_the_report_has_the_nlm_attribution():
@@ -277,7 +308,7 @@ def test_report_lists_medications_with_no_differences():
             findings=[Finding(discrepancy_type="missing", medication="x", summary="y")],
         )
     )
-    assert "No differences: 1" in content
+    assert "1 No differences" in content
     assert "no source is treated as correct" in content
     for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
         assert value in content
@@ -307,3 +338,24 @@ def test_report_title_names_the_patient_and_run():
     """A PDF viewer's title bar shows whose report it is."""
     reader = PdfReader(io.BytesIO(build_report(make_run())))
     assert reader.metadata.title == "Marcus Mixton · Medication reconciliation, run 7"
+
+
+def test_every_table_cell_names_its_own_fill(monkeypatch):
+    """Without one, fpdf2 reuses the last colour drawn and a whole row came out in a type colour."""
+    from fpdf.table import Row
+
+    styles = []
+    original = Row.cell
+
+    def recording_cell(self, text="", *args, style=None, **kwargs):
+        """Row.cell, noting the style each body cell asked for."""
+        styles.append((text, style))
+        return original(self, text, *args, style=style, **kwargs)
+
+    monkeypatch.setattr(Row, "cell", recording_cell)
+    build_report(make_run(intake=[record("intake", "ibuprofen", "200", frequency=None)]))
+    body = [(text, style) for text, style in styles if style is not None]
+    assert body and all(style.fill_color is not None for _, style in body)
+    headings = {"Medication", "Patient-reported", "FHIR", "Pharmacy", "Name", "Dose", "Frequency"}
+    headings |= {"Source", "Reason"}
+    assert {text for text, style in styles if style is None} <= headings
