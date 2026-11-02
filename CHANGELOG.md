@@ -54,6 +54,6 @@ the public contract is the HTTP API and persisted data described in the README.
 - Future changes must preserve the HTTP and persisted-data contracts; rollback
   swaps the app image while retaining the existing database and newer runs.
 
-[Unreleased]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Coforge-LMS/Medication_List_Reconciliation/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Coforge-LMS/Medication_List_Reconciliation/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Coforge-LMS/Medication_List_Reconciliation/releases/tag/v1.0.0
