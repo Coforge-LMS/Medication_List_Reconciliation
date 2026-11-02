@@ -328,7 +328,7 @@ There is no plugin framework. Records reach the rules **already normalized**.
 
 Settings come from `.env` (gitignored). Defaults live in `.env.example` (`APP_VERSION=dev`, demo-only credentials).
 
-**Release images** come from `scripts/build_release.sh vX.Y.Z`. The script runs `git worktree add` on the tag, builds `medrec-app:X.Y.Z` with label `org.opencontainers.image.revision=$(git rev-list -n1 vX.Y.Z)`, then removes the worktree. Release and rollback always use `--no-build` [R08, R10].
+**Release images** come from `scripts/build_release.sh X.Y.Z`. The script resolves `vX.Y.Z` to a commit, runs `git worktree add` on that commit, builds `medrec-app:X.Y.Z` with label `org.opencontainers.image.revision=$(git rev-list -n1 vX.Y.Z)`, then removes the worktree. Release and rollback always use `--no-build` [R08, R10].
 
 The brief's 13 steps (6 and 11 commit together, so a failed run leaves no orphan snapshot):
 ```mermaid
@@ -447,7 +447,8 @@ Run with `uv run pytest`. DB tests need `TEST_DATABASE_URL`:
 - **Release:**
   - Version lives only in `pyproject.toml`, read with `tomllib`, and shown in the footer and `/healthz`.
   - CHANGELOG follows Keep a Changelog.
-  - Annotated tags `v1.0.0` and `v1.1.0` + `gh release create`.
+  - Git tags `v1.0.0` and `v1.1.0` + `gh release create`. Lightweight and annotated
+    tags are supported; preserve the published lightweight `v1.0.0` unchanged.
   - Images come from `scripts/build_release.sh` (tag worktree + revision label) [R10].
 - **Backup:** `scripts/backup.sh` runs `docker compose exec -T app-db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner' > backups/medrec-<ts>.dump`.
 - **Verify:** `pg_restore` into a scratch DB `medrec_restore_check`, compare per-table row counts, then drop the scratch DB. `backups/` is gitignored. HAPI data is reproducible by re-import, so it isn't in the default backup [R10].

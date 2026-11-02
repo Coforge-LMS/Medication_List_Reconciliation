@@ -6,6 +6,29 @@ the public contract is the HTTP API and persisted data described in the README.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-02
+
+### Added
+
+- Frequency mismatch findings across comparable patient-reported, FHIR and
+  pharmacy schedules, with deterministic normalization of equivalent wording.
+- Offline RxNorm cache matching brands to ingredients while preserving original
+  source values, strength differences, salts, forms and routes; optional live
+  RxNav resolution and NLM attribution.
+- A no-differences section showing medications shared by all compared sources,
+  with unavailable or unrecognized frequencies marked as not compared.
+
+### Changed
+
+- Release builds accept lightweight and annotated Git tags, resolve the tag to
+  its commit and verify the image revision and application version.
+
+### Compatibility
+
+- No schema changes. Version 1.0.0 can read newer saved runs and displays the
+  new finding type as `Other (frequency_mismatch)`, including stored summaries.
+- Rollback retains the same database volume and all newer history.
+
 ## [1.0.0] - 2026-10-31
 
 ### Added
@@ -31,5 +54,6 @@ the public contract is the HTTP API and persisted data described in the README.
 - Future changes must preserve the HTTP and persisted-data contracts; rollback
   swaps the app image while retaining the existing database and newer runs.
 
-[Unreleased]: https://github.com/Coforge-LMS/Medication_List_Reconciliation/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/Coforge-LMS/Medication_List_Reconciliation/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/Coforge-LMS/Medical_List_Reconciliation/releases/tag/v1.0.0
