@@ -3,7 +3,7 @@
 {% block content %}
 {% import "_icons.html" as icon %}
 <div class="page-head">
-  <h1><a class="plain" href="/patients/{{ run.patient.fhir_patient_id }}">{{ run.patient.name or run.patient.identifier }}</a></h1>
+  <h1 class="patient-name"><a class="plain" href="/patients/{{ run.patient.fhir_patient_id }}">{{ run.patient.name or run.patient.identifier }}</a></h1>
   <p class="muted">{{ run.patient.identifier }} · Run {{ run.run_id }} · {{ run.started_at | utc_time }} UTC</p>
   <p id="interview">{{ interview }}</p>
   <div class="actions">
@@ -18,14 +18,14 @@
 {% else %}
 <ul class="summary">
   {% for label, findings in groups %}
-  <li class="type-{{ findings[0].discrepancy_type }}"><span class="count">{{ findings | length }}</span> {{ label }}</li>
+  <li class="type-{{ findings[0].discrepancy_type }}" style="--i: {{ loop.index0 }}"><a href="#group-{{ findings[0].discrepancy_type }}"><span class="count">{{ findings | length }}</span> {{ label }}</a></li>
   {% endfor %}
   {% if no_differences %}
-  <li class="type-no_differences"><span class="count">{{ no_differences | length }}</span> No differences</li>
+  <li class="type-no_differences" style="--i: {{ groups | length }}"><a href="#no-differences"><span class="count">{{ no_differences | length }}</span> No differences</a></li>
   {% endif %}
 </ul>
 {% for label, findings in groups %}
-<section class="card finding-group type-{{ findings[0].discrepancy_type }}">
+<section class="card finding-group type-{{ findings[0].discrepancy_type }}" id="group-{{ findings[0].discrepancy_type }}">
   <h3>{{ label }}</h3>
   <div class="table-wrap">
     <table class="finding-table">

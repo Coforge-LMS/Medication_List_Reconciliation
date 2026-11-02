@@ -3,7 +3,7 @@
 {% block content %}
 {% import "_icons.html" as icon %}
 <div class="page-head">
-  <h1>{{ patient.name or patient.identifier }}</h1>
+  <h1 class="patient-name">{{ patient.name or patient.identifier }}</h1>
   <p class="muted">
     {{ patient.identifier }}{% if patient.birth_date %} · born {{ patient.birth_date }}{% endif %}{% if patient.gender %} · {{ patient.gender }}{% endif %}
   </p>

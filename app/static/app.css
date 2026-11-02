@@ -250,7 +250,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .finding-table .med .note { font-weight: 400; }
 .columns td:nth-child(n+2) { white-space: nowrap; }
 
-/* Finding summary tiles */
+/* Finding summary tiles: each one jumps to its section */
 .summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
@@ -259,11 +259,21 @@ tbody tr:last-child td { border-bottom: 0; }
   padding: 0;
   list-style: none;
 }
-.summary li {
+.summary a {
+  display: block;
+  height: 100%;
   padding: .85rem 1rem;
   background: color-mix(in srgb, var(--type, var(--other)) 7%, white);
   border: 1px solid color-mix(in srgb, var(--type, var(--other)) 22%, white);
   border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), border-color .2s;
+}
+.summary a:hover {
+  border-color: color-mix(in srgb, var(--type, var(--other)) 45%, white);
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-2px);
 }
 .summary .count {
   display: block;
@@ -283,6 +293,7 @@ tbody tr:last-child td { border-bottom: 0; }
   background: var(--type, var(--other));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--type, var(--other)) 18%, white);
 }
+.finding-group:target { animation: arrive 1.4s var(--ease-out); }
 
 /* History chips */
 .chips { display: flex; flex-wrap: wrap; gap: .35rem; }
@@ -309,8 +320,26 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .columns .card { margin-bottom: 0; }
 
+/* Motion: page changes cross-fade, the patient's name carries over, and the tiles arrive in order. */
+@view-transition { navigation: auto; }
+.patient-name { view-transition-name: patient-name; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; }
+::view-transition-group(patient-name) { animation-duration: .35s; animation-timing-function: var(--ease-out); }
+
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@keyframes arrive {
+  from { box-shadow: 0 0 0 4px color-mix(in srgb, var(--type, var(--other)) 35%, white), var(--shadow-raised); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+  .summary li { animation: rise .45s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+}
 
 @media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  *, *::before, *::after { transition-duration: .01ms !important; }
+  .summary a:hover { transform: none; }
   button.is-busy::before { animation: none; border-color: var(--on-accent); }
 }

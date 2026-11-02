@@ -303,6 +303,14 @@ def test_run_page_omits_the_section_when_nothing_agrees(client, serve_run):
     assert "no-differences" not in html and "No differences" not in html
 
 
+def test_summary_tiles_jump_to_their_sections(client, serve_run):
+    """Each tile links to its finding group, so a count leads straight to the findings."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert '<a href="#group-missing"><span class="count">2</span> Missing medication</a>' in html
+    assert 'id="group-missing"' in html and 'id="group-route_mismatch"' in html
+
+
 def test_script_is_served_from_the_app_with_no_external_host(client, serve_run):
     """The busy-button script ships with the app, like the stylesheet."""
     serve_run(make_run())
@@ -310,3 +318,10 @@ def test_script_is_served_from_the_app_with_no_external_host(client, serve_run):
     response = client.get("/static/app.js")
     assert response.status_code == 200
     assert "http://" not in response.text and "https://" not in response.text
+
+
+def test_motion_has_a_reduced_motion_path(client):
+    """Page transitions and tile entrances are switched off for people who ask for less motion."""
+    css = client.get("/static/app.css").text
+    reduced = css.split("@media (prefers-reduced-motion: reduce)")[1]
+    assert "@view-transition { navigation: none; }" in reduced
