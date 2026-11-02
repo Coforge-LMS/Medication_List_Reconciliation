@@ -195,3 +195,132 @@ def test_intake_rejection_is_ignored_without_an_interview(rec, rejected, data):
     )
     assert f.summary == "Listed in FHIR; no pharmacy record."
     assert f.details == {"missing_from": "pharmacy", "rejected_count": 0, "rejected_record_ids": []}
+
+
+def _metoprolol(rec, source, salt, dose="25"):
+    """A metoprolol record stating a salt as RxNorm would, or stating none."""
+    return rec(source, salt or "Metoprolol", dose, normalized_name="metoprolol", salt=salt)
+
+
+TARTRATE, SUCCINATE = "metoprolol tartrate", "metoprolol succinate"
+
+
+def test_source_listing_two_salts_reports_the_one_another_source_lacks(rec, data):
+    """Tartrate and succinate on FHIR, tartrate alone in pharmacy: succinate is missing."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE, "50")],
+            pharmacy=[_metoprolol(rec, "pharmacy", TARTRATE)],
+        )
+    )
+    assert f.medication == SUCCINATE and f.details["missing_from"] == "pharmacy"
+    assert f.fhir_value == "50 mg" and f.pharmacy_value is None
+    assert f.summary == (
+        "Listed in FHIR; no pharmacy record. "
+        "Same ingredient, other salt: pharmacy metoprolol tartrate."
+    )
+
+
+def test_missing_salt_with_an_interview_uses_the_three_way_wording(rec, data):
+    """A source with no record of the drug gets the name finding, and the salt finding stands."""
+    findings = rule.evaluate(
+        data(
+            fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE)],
+            pharmacy=[_metoprolol(rec, "pharmacy", TARTRATE)],
+            intake=[],
+        )
+    )
+    by_medication = {f.medication: f for f in findings}
+    assert set(by_medication) == {"metoprolol", SUCCINATE}
+    salt = by_medication[SUCCINATE]
+    assert salt.details["present_in"] == ["fhir"] and salt.details["missing_from"] == ["pharmacy"]
+    assert salt.summary == (
+        "On the FHIR list; not in pharmacy records. "
+        "Same ingredient, other salt: pharmacy metoprolol tartrate."
+    )
+
+
+def test_a_source_not_stating_a_salt_is_not_missing_it(rec, data):
+    """A bare "Metoprolol" could be either salt: unknown is neither present nor absent."""
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE)],
+                pharmacy=[_metoprolol(rec, "pharmacy", None)],
+            )
+        )
+        == []
+    )
+
+
+def test_a_bare_record_beside_a_stated_salt_could_be_the_other_salt(rec, data):
+    """Tartrate plus a bare record doesn't prove succinate is absent."""
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE)],
+                pharmacy=[
+                    _metoprolol(rec, "pharmacy", TARTRATE),
+                    _metoprolol(rec, "pharmacy", None),
+                ],
+            )
+        )
+        == []
+    )
+
+
+def test_one_salt_on_each_side_is_left_to_the_dosage_rule(rec, data):
+    """Tartrate against succinate is one difference, not two missing medications."""
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[_metoprolol(rec, "fhir", TARTRATE)],
+                pharmacy=[_metoprolol(rec, "pharmacy", SUCCINATE)],
+            )
+        )
+        == []
+    )
+
+
+def test_both_sources_listing_both_salts_lack_nothing(rec, data):
+    """The same two salts on each side leave nothing missing."""
+    both = [TARTRATE, SUCCINATE]
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[_metoprolol(rec, "fhir", salt) for salt in both],
+                pharmacy=[_metoprolol(rec, "pharmacy", salt) for salt in both],
+            )
+        )
+        == []
+    )
+
+
+def test_each_source_can_lack_a_salt_the_other_has(rec, data):
+    """Two salts on each side, one in common: each side's other salt is reported once."""
+    findings = rule.evaluate(
+        data(
+            fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE)],
+            pharmacy=[
+                _metoprolol(rec, "pharmacy", TARTRATE),
+                _metoprolol(rec, "pharmacy", "metoprolol fumarate"),
+            ],
+        )
+    )
+    assert {(f.medication, f.details["missing_from"]) for f in findings} == {
+        (SUCCINATE, "pharmacy"),
+        ("metoprolol fumarate", "fhir"),
+    }
+
+
+def test_missing_salt_counts_a_rejected_record_of_the_same_drug(rec, rejected, data):
+    """A rejection in the source lacking the salt is named, so it isn't read as an omission."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[_metoprolol(rec, "fhir", TARTRATE), _metoprolol(rec, "fhir", SUCCINATE)],
+            pharmacy=[_metoprolol(rec, "pharmacy", TARTRATE)],
+            rejected=[rejected("pharmacy", "Metoprolol", normalized_name="metoprolol")],
+        )
+    )
+    assert f.medication == SUCCINATE and f.details["rejected_count"] == 1
+    assert "1 pharmacy record with this name was rejected" in f.summary
