@@ -106,19 +106,25 @@ def test_builds_tagged_commit_even_with_a_dirty_checkout(release_repo, annotated
     assert len(git("worktree", "list", "--porcelain").split("worktree ")) == 2
 
 
-@pytest.mark.parametrize("tag_kind", ["missing", "blob", "wrong-version"])
-def test_rejects_invalid_release_before_building(release_repo, tag_kind):
+@pytest.mark.parametrize(
+    ("tag_kind", "version", "message"),
+    [
+        ("missing", "1.0.0", "v1.0.0 must exist and point to a commit"),
+        ("blob", "1.0.0", "v1.0.0 must exist and point to a commit"),
+        ("wrong-version", "1.1.0", "v1.1.0 contains project version 1.0.0, expected 1.1.0"),
+    ],
+)
+def test_rejects_invalid_release_before_building(release_repo, tag_kind, version, message):
+    """Each bad tag fails with its own reason, before anything is built."""
     _, git, _, state, build = release_repo
     if tag_kind == "blob":
         git("tag", "v1.0.0", git("rev-parse", "HEAD:pyproject.toml"))
     elif tag_kind == "wrong-version":
         git("tag", "v1.1.0")
-    result = build("1.1.0" if tag_kind == "wrong-version" else "1.0.0")
+    result = build(version)
     assert result.returncode != 0
     assert not state.exists()
-    assert "must exist and point to a commit" in result.stderr or (
-        "contains project version 1.0.0, expected 1.1.0" in result.stderr
-    )
+    assert message in result.stderr
 
 
 def test_existing_image_cannot_be_overwritten_with_another_revision(release_repo):
