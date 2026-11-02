@@ -17,10 +17,7 @@ from contract import (
 from rules.base import by_name, identity, participating
 from rules.frequency import PRN, normalize_frequency
 
-DISCLAIMER = (
-    "Synthetic data. Reports discrepancies between sources for clinician review; "
-    "does not recommend treatment."
-)
+DISCLAIMER = "For clinician review; does not recommend treatment."
 
 # Required wherever RxNorm data from RxNav is used, in NLM's own words.
 NLM_ATTRIBUTION = (

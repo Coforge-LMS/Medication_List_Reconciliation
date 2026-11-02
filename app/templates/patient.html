@@ -4,7 +4,7 @@
 <div class="card">
   <h1>{{ patient.name or patient.identifier }}</h1>
   <p class="muted">
-    {{ patient.identifier }}{% if patient.birth_date %} · born {{ patient.birth_date }}{% endif %}{% if patient.gender %} · {{ patient.gender }}{% endif %} · FHIR id {{ fhir_id }}
+    {{ patient.identifier }}{% if patient.birth_date %} · born {{ patient.birth_date }}{% endif %}{% if patient.gender %} · {{ patient.gender }}{% endif %}
   </p>
   <p id="interview">{{ interview }}</p>
   {% if can_run %}

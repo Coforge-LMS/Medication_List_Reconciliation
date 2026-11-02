@@ -9,12 +9,10 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/">MedRec</a>
-    <span class="tagline">Medication list reconciliation</span>
   </header>
   <main>{% block content %}{% endblock %}</main>
   <footer>
-    <div>MedRec {{ version }}</div>
-    <div>{{ disclaimer }}</div>
+    <div>MedRec {{ version }} · {{ disclaimer }}</div>
     <div class="attribution">{{ nlm_attribution }}</div>
   </footer>
 </body>
