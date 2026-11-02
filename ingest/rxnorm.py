@@ -2,14 +2,16 @@
 
 Matching is by ingredient, so a brand, a salt and a generic meet. Strength and dose form are not
 part of identity: the dosage rule compares them, so a difference is reported and never merged.
-Set RXNORM_LIVE=1 to ask RxNav about what the cache doesn't hold (3-second timeout, no retries).
-Anything unresolved keeps its alias-based identity.
+Set RXNORM_LIVE=1 to ask RxNav about what the cache doesn't hold, with no retries. Those calls run
+inside the request that needs them, so each is bounded: LIVE_TIMEOUT per call and LIVE_BUDGET to
+start calls for one list. Anything unresolved keeps its alias-based identity.
 """
 
 import json
 import os
 import re
 import time
+from collections import OrderedDict
 from collections.abc import Iterable
 from functools import cache as memoize
 from pathlib import Path
@@ -23,7 +25,10 @@ from ingest.fhir import RXNORM
 
 RXNAV_URL = "https://rxnav.nlm.nih.gov/REST"
 LIVE_TIMEOUT = 3.0
-LIVE_COOLDOWN = 60.0  # seconds to stop asking after a failure, so each record doesn't wait again
+LIVE_BUDGET = 5.0  # seconds one refine() may keep starting calls, however long its list
+LIVE_COOLDOWN = 60.0  # seconds to stop asking once RxNav looks down
+LIVE_FAILURES_TO_PAUSE = 2  # in a row, so one blip doesn't turn lookups off for the whole cooldown
+LIVE_MEMO_LIMIT = 1024  # answers kept in memory; the oldest goes first
 DEFAULT_CACHE = Path(__file__).resolve().parents[1] / "data" / "rxnorm_cache.json"
 
 # Words that describe the product, not the drug, dropped to find the drug name in free text.
@@ -57,8 +62,10 @@ _TOKEN = re.compile(r"[^\W_]+")
 
 Concept = dict[str, Any]
 
-_live_found: dict[str, Concept | None] = {}  # successful live answers, including "no match"
+_live_found: OrderedDict[str, Concept | None] = OrderedDict()  # answers, including "no match"
+_live_failures = 0  # failures in a row since the last answer
 _live_retry_at = 0.0  # time.monotonic() value before which live RxNav isn't asked again
+_NOT_ASKED = object()
 
 
 class RxNormCacheError(Exception):
@@ -181,9 +188,10 @@ def refine[Item: (MedicationRecord, Rejection)](
     form and salt. Items that don't resolve are returned unchanged, keeping their alias identity.
     """
     cache = default_cache() if cache is None else cache
+    live_until = time.monotonic() + LIVE_BUDGET
     result: list[Item] = []
     for item in items:
-        concept = _resolve(item, cache)
+        concept = _resolve(item, cache, live_until)
         if concept is None:
             result.append(item)
             continue
@@ -201,7 +209,9 @@ def _identity(concept: Concept) -> str:
     return " / ".join(sorted(ingredient.lower() for ingredient in concept["ingredients"]))
 
 
-def _resolve(item: MedicationRecord | Rejection, cache: dict[str, Any]) -> Concept | None:
+def _resolve(
+    item: MedicationRecord | Rejection, cache: dict[str, Any], live_until: float
+) -> Concept | None:
     """Coded RxCUI, the name as given, its drug name, the alias-based name, then live RxNav.
 
     The drug name comes before the alias-based name because aliases can drop a salt:
@@ -216,7 +226,7 @@ def _resolve(item: MedicationRecord | Rejection, cache: dict[str, Any]) -> Conce
             return cache["rxcuis"][cache["names"][key]]
     if os.environ.get("RXNORM_LIVE") != "1":
         return None
-    return _live(code, given)
+    return _live(code, given, live_until)
 
 
 def _coded_rxcui(raw: Any) -> str | None:
@@ -285,29 +295,57 @@ def _live_client() -> httpx.Client:
     return httpx.Client(timeout=LIVE_TIMEOUT)
 
 
-def _live(code: str | None, names: list[str]) -> Concept | None:
-    """Ask RxNav about a code, then names, once each.
+def _live(code: str | None, names: list[str], until: float) -> Concept | None:
+    """Ask RxNav about a code, then names, once each, until an answer or the time limit.
 
-    A failure isn't remembered as "no match", but it pauses live lookups for LIVE_COOLDOWN, so a
-    dead RxNav costs one timeout rather than one for every record on every page.
+    A failure isn't remembered as "no match". Two in a row pause live lookups for LIVE_COOLDOWN,
+    so a dead RxNav costs two timeouts rather than one for every record on every page.
     """
-    global _live_retry_at
     queries = [(f"rxcui:{code}", describe, code)] if code else []
     queries += [(f"name:{name}", lookup, name) for name in names]
     # In order, so a remembered name can't stand in for a code that hasn't been asked about yet.
-    while queries and queries[0][0] in _live_found:
-        memo = queries.pop(0)[0]
-        if _live_found[memo]:
-            return _live_found[memo]
+    while queries and (known := _live_found.get(queries[0][0], _NOT_ASKED)) is not _NOT_ASKED:
+        queries.pop(0)
+        if known:
+            return known
     if not queries or time.monotonic() < _live_retry_at:
         return None
     try:
         with _live_client() as client:
             for memo, ask, value in queries:
-                if memo not in _live_found:
-                    _live_found[memo] = ask(client, value)
-                if _live_found[memo]:
-                    return _live_found[memo]
+                found = _live_found.get(memo, _NOT_ASKED)
+                if found is _NOT_ASKED:
+                    if time.monotonic() >= until:
+                        return None
+                    found = _ask(client, memo, ask, value)
+                if found:
+                    return found
     except (httpx.HTTPError, httpx.InvalidURL, ValueError, KeyError, TypeError, AttributeError):
-        _live_retry_at = time.monotonic() + LIVE_COOLDOWN
+        _note_failure()
     return None
+
+
+def _ask(client: httpx.Client, memo: str, ask: Any, value: str) -> Concept | None:
+    """One query's answer, remembered. A 4xx answers this query; it doesn't say RxNav is down."""
+    global _live_failures
+    try:
+        found = ask(client, value)
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status >= 500 or status in (408, 429):
+            raise
+        found = None
+    _live_failures = 0
+    _live_found[memo] = found
+    while len(_live_found) > LIVE_MEMO_LIMIT:
+        _live_found.popitem(last=False)
+    return found
+
+
+def _note_failure() -> None:
+    """Count a failure, and pause live lookups once there have been enough in a row."""
+    global _live_failures, _live_retry_at
+    _live_failures += 1
+    if _live_failures >= LIVE_FAILURES_TO_PAUSE:
+        _live_failures = 0
+        _live_retry_at = time.monotonic() + LIVE_COOLDOWN

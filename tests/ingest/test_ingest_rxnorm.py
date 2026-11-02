@@ -80,6 +80,7 @@ def no_live(monkeypatch):
     monkeypatch.delenv("RXNORM_LIVE", raising=False)
     rxnorm._live_found.clear()
     monkeypatch.setattr(rxnorm, "_live_retry_at", 0.0)
+    monkeypatch.setattr(rxnorm, "_live_failures", 0)
 
     def unexpected():
         """Fail if the live path opens a client."""
@@ -518,8 +519,8 @@ def test_unexpected_rxnav_body_falls_back_instead_of_crashing(monkeypatch, body)
     assert rxnorm.refine([item], CACHE) == [item]
 
 
-def test_dead_rxnav_costs_one_attempt_for_many_records(monkeypatch):
-    """After a failure, later records skip the network, so a page doesn't wait 3 seconds each."""
+def test_dead_rxnav_costs_two_attempts_for_many_records(monkeypatch):
+    """After two failures, later records skip the network, so a page doesn't wait on each."""
     attempts = []
 
     def handler(request):
@@ -535,7 +536,7 @@ def test_dead_rxnav_costs_one_attempt_for_many_records(monkeypatch):
     monkeypatch.setenv("RXNORM_LIVE", "1")
     items = [record(name) for name in ("Ibuprofen", "Naproxen", "Aspirin", "Digoxin")]
     assert rxnorm.refine(items, CACHE) == items
-    assert len(attempts) == 1
+    assert len(attempts) == rxnorm.LIVE_FAILURES_TO_PAUSE == 2
 
 
 def test_live_is_tried_again_after_the_cooldown(monkeypatch):
@@ -559,12 +560,141 @@ def test_live_is_tried_again_after_the_cooldown(monkeypatch):
     )
     monkeypatch.setenv("RXNORM_LIVE", "1")
     item = record("Ibuprofen")
-    assert rxnorm.refine([item], CACHE) == [item]
+    assert rxnorm.refine([item, item], CACHE) == [item, item]
     healthy[0] = True
     assert rxnorm.refine([item], CACHE) == [item]  # still pausing
     now[0] += rxnorm.LIVE_COOLDOWN + 1
     (refined,) = rxnorm.refine([item], CACHE)
     assert refined.normalized_name == "ibuprofen"
+
+
+def _live_with(monkeypatch, handler):
+    """Serve live RxNav from handler, with the flag on."""
+    monkeypatch.setattr(
+        rxnorm, "_live_client", lambda: httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    monkeypatch.setenv("RXNORM_LIVE", "1")
+
+
+def _resolves_ibuprofen(request):
+    """A healthy RxNav that knows one drug."""
+    if request.url.path.endswith("/rxcui.json"):
+        return httpx.Response(200, json={"idGroup": {"rxnormId": ["5640"]}})
+    return httpx.Response(200, json=_history("IN", "ibuprofen"))
+
+
+def test_one_server_error_does_not_pause_lookups(monkeypatch):
+    """A single blip costs that record, not the next minute of lookups."""
+    responses = [httpx.Response(500)]
+    _live_with(monkeypatch, lambda r: responses.pop() if responses else _resolves_ibuprofen(r))
+    item = record("Ibuprofen")
+    assert rxnorm.refine([item], CACHE) == [item]
+    assert rxnorm._live_found == {}  # not remembered as a no-match
+    (refined,) = rxnorm.refine([item], CACHE)
+    assert refined.normalized_name == "ibuprofen"
+
+
+def test_a_good_answer_clears_the_failure_count(monkeypatch):
+    """Only failures in a row pause: fail, answer, fail leaves lookups on."""
+    outcomes = [httpx.Response(500), None, httpx.Response(500)]
+
+    def handler(request):
+        """Fail, resolve one name, then fail."""
+        if request.url.path.endswith("/historystatus.json"):
+            return _resolves_ibuprofen(request)
+        outcome = outcomes.pop(0)
+        return outcome or _resolves_ibuprofen(request)
+
+    _live_with(monkeypatch, handler)
+    rxnorm.refine([record("Aspirin"), record("Ibuprofen"), record("Digoxin")], CACHE)
+    assert rxnorm._live_retry_at == 0.0
+
+
+@pytest.mark.parametrize("status", [400, 404])
+def test_a_client_error_answers_that_query_and_does_not_pause(monkeypatch, status):
+    """A 4xx says this query has no answer: it's remembered, and other records still ask."""
+    asked = []
+
+    def handler(request):
+        """Refuse the first drug and resolve the next."""
+        asked.append(str(request.url))
+        if "name=aspirin" in str(request.url):
+            return httpx.Response(status)
+        return _resolves_ibuprofen(request)
+
+    _live_with(monkeypatch, handler)
+    refused, known = record("Aspirin"), record("Ibuprofen")
+    (first, second) = rxnorm.refine([refused, known], CACHE)
+    assert first == refused and second.normalized_name == "ibuprofen"
+    assert rxnorm._live_found["name:aspirin"] is None
+    assert rxnorm._live_retry_at == 0.0
+    before = len(asked)
+    assert rxnorm.refine([refused], CACHE) == [refused]
+    assert len(asked) == before  # remembered
+
+
+@pytest.mark.parametrize("status", [408, 429, 503])
+def test_rate_limits_and_server_errors_count_as_failures(monkeypatch, status):
+    """These say RxNav can't answer now, so nothing is remembered and the pause can start."""
+    _live_with(monkeypatch, lambda r: httpx.Response(status))
+    items = [record("Aspirin"), record("Digoxin")]
+    assert rxnorm.refine(items, CACHE) == items
+    assert rxnorm._live_found == {} and rxnorm._live_retry_at > 0
+
+
+def test_time_budget_stops_new_calls_for_a_long_list(monkeypatch):
+    """A slow but working RxNav can't hold one list for a call per record."""
+    now = [1000.0]
+    monkeypatch.setattr(rxnorm.time, "monotonic", lambda: now[0])
+    names = []
+
+    def handler(request):
+        """Each name search takes 2 seconds and finds nothing."""
+        names.append(request.url.params["name"])
+        now[0] += 2.0
+        return httpx.Response(200, json={"idGroup": {}})
+
+    _live_with(monkeypatch, handler)
+    items = [record(name) for name in ("Aspirin", "Digoxin", "Naproxen", "Warfarin", "Zinc")]
+    assert rxnorm.refine(items, CACHE) == items
+    assert len(names) == 3  # started at 0, 2 and 4 seconds; 6 is past the budget
+    assert "name:warfarin" not in rxnorm._live_found  # not asked, so not a "no match"
+
+
+def test_budget_does_not_stop_remembered_answers(monkeypatch):
+    """A remembered answer needs no call, so it's used however late in the list it comes."""
+    now = [1000.0]
+    monkeypatch.setattr(rxnorm.time, "monotonic", lambda: now[0])
+    _live_with(monkeypatch, _resolves_ibuprofen)
+    item = record("Ibuprofen")
+    rxnorm.refine([item], CACHE)
+    assert rxnorm._live_found["name:ibuprofen"]
+
+    def slow(request):
+        """Use up the budget on another drug."""
+        now[0] += rxnorm.LIVE_BUDGET + 1
+        return httpx.Response(200, json={"idGroup": {}})
+
+    _live_with(monkeypatch, slow)
+    (_, refined) = rxnorm.refine([record("Aspirin"), item], CACHE)
+    assert refined.normalized_name == "ibuprofen"
+
+
+def test_live_memory_is_limited_and_drops_the_oldest(monkeypatch):
+    """Memory stays bounded however many different names come through."""
+    monkeypatch.setattr(rxnorm, "LIVE_MEMO_LIMIT", 2)
+    _live_with(monkeypatch, lambda r: httpx.Response(200, json={"idGroup": {}}))
+    rxnorm.refine([record(name) for name in ("Aspirin", "Digoxin", "Naproxen")], CACHE)
+    assert list(rxnorm._live_found) == ["name:digoxin", "name:naproxen"]
+
+
+def test_code_removed_from_the_cache_still_resolves_by_name():
+    """An old HAPI volume keeps a corrected case code; the record's name still finds the drug."""
+    old = record("metformin hydrochloride 500 MG Oral Tablet", code="861004", source="fhir")
+    (refined,) = rxnorm.refine([old])
+    assert refined.normalized_name == "metformin"
+    assert refined.rxcui == "861004"  # what the source states is kept
+    assert refined.raw["rxnorm"]["rxcui"] == "861007"
 
 
 def test_live_client_is_bounded_to_three_seconds():
