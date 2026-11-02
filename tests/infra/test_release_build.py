@@ -1,5 +1,6 @@
 """Exercise tag selection and release guards in a disposable Git repository."""
 
+import json
 import os
 import shutil
 import subprocess
@@ -89,15 +90,19 @@ def release_repo(tmp_path):
 
 @pytest.mark.parametrize("annotated", [False, True])
 def test_builds_tagged_commit_even_with_a_dirty_checkout(release_repo, annotated):
+    """The image comes from the tag, not HEAD, a same-named branch or uncommitted edits."""
     checkout, git, revision, state, build = release_repo
     git("tag", *(["-a", "-m", "Release 1.0.0"] if annotated else []), "v1.0.0")
-    # A same-named branch and uncommitted version must not change the build source.
-    git("branch", "v1.0.0")
+    # A later commit with a same-named branch, then uncommitted edits: none is the tag.
     (checkout / "pyproject.toml").write_text('[project]\nversion = "9.9.9"\n')
+    git("commit", "--quiet", "-am", "after the release")
+    git("branch", "v1.0.0")
+    (checkout / "pyproject.toml").write_text('[project]\nversion = "8.8.8"\n')
     result = build()
     assert result.returncode == 0, result.stderr
     assert f"revision={revision}" in result.stdout
-    assert '"version": "1.0.0"' in state.read_text()
+    image = json.loads(state.read_text())
+    assert image == {"revision": revision, "version": "1.0.0"}
     assert len(git("worktree", "list", "--porcelain").split("worktree ")) == 2
 
 
