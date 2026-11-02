@@ -7,7 +7,7 @@ Bash, uv and Python 3.12.
 
 ## Run a release image
 
-The release image is built locally from an annotated tag; no image registry is
+The release image is built locally from a lightweight or annotated tag; no image registry is
 required. `compose.release.yaml` has no build configuration, so startup cannot
 accidentally replace a release image with code from the current checkout.
 
@@ -21,7 +21,7 @@ docker compose up -d --no-build --wait --wait-timeout 300
 docker compose ps -a
 docker compose logs --timestamps importer app-seed
 curl --fail "http://127.0.0.1:${APP_PORT:-8000}/healthz"
-docker image inspect medrec-app:1.0.0 --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+docker inspect "$(docker compose ps -q app)" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
 git rev-list -n 1 v1.0.0
 ```
 
@@ -94,9 +94,21 @@ Once 1.1.0 exists and both tagged images have been built:
 scripts/backup.sh
 APP_VERSION=1.0.0 docker compose up -d --no-build --no-deps --wait app
 curl --fail "http://127.0.0.1:${APP_PORT:-8000}/healthz"
-docker image inspect medrec-app:1.0.0 --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+docker inspect "$(docker compose ps -q app)" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
 git rev-list -n 1 v1.0.0
-# Check newer runs in History; unknown types show Other (frequency_mismatch).
+# Check the saved 1.1.0 run in History and its run page; unknown types show
+# Other (frequency_mismatch), with the original summary and source values.
 # Run a new reconciliation to verify V1 writes, then roll forward:
+scripts/backup.sh
 APP_VERSION=1.1.0 docker compose up -d --no-build --no-deps --wait app
+curl --fail "http://127.0.0.1:${APP_PORT:-8000}/healthz"
+docker inspect "$(docker compose ps -q app)" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+git rev-list -n 1 v1.1.0
 ```
+
+After roll-forward, expect version 1.1.0 and matching revisions. Reopen the same
+run: `Frequency mismatch` must replace the fallback label, its summary must be
+unchanged, and both versions' runs must remain in History. Record run IDs,
+backup verification/counts, health output, revisions and the app-db volume name
+before and after switching in README. Never delete or restore that volume
+during this demonstration.

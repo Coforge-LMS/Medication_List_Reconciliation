@@ -1,7 +1,7 @@
 # Medication List Reconciliation
 
 Compare synthetic FHIR, pharmacy and patient-reported medication lists to find
-duplicates, missing medications and dosage differences. View saved runs and
+duplicates, missing medications, dosage and frequency differences. View saved runs and
 export findings to PDF. Findings support review; they never recommend treatment.
 
 ## Prerequisites
@@ -41,15 +41,17 @@ Saved data remains in the database volumes.
 
 After the changes are reviewed, merged and tests pass, update the version in
 `pyproject.toml`, refresh `uv.lock`, and add the CHANGELOG entry. With Bash, uv
-and Python 3.12 installed, build from an annotated tag:
+and Python 3.12 installed, build from a Git tag. Lightweight and annotated tags
+are supported; the published `v1.0.0` is lightweight and must remain unchanged.
+For the new release, after its preparation PR is merged:
 
 ```sh
 git switch main
 git pull --ff-only
-git tag -a v1.0.0 -m "MedRec 1.0.0"
-scripts/build_release.sh 1.0.0
+git tag -a v1.1.0 -m "MedRec 1.1.0"
+scripts/build_release.sh 1.1.0
 export COMPOSE_FILE=compose.release.yaml
-export APP_VERSION=1.0.0
+export APP_VERSION=1.1.0
 docker compose up -d --no-build --wait --wait-timeout 300
 curl --fail http://127.0.0.1:8000/healthz
 ```
@@ -61,8 +63,16 @@ Recorded health-check output from the local 1.0.0 run:
 ```
 
 Verify startup and backup before publishing the tag with
-`git push origin v1.0.0`. Use the same steps for future versions. See
+`git push origin v1.1.0`. Use the same steps for future versions. See
 [publishing a release](docs/RELEASING.md) for the full procedure.
+
+The TEA-57 preparation rebuilt the unchanged lightweight `v1.0.0` on
+2026-11-02. The build verified both the image's app version and revision:
+
+```text
+RELEASE IMAGE VERIFIED: medrec-app:1.0.0
+revision=516011b6ccec1a306a96f7933183df311d5a0684
+```
 
 ## Back up and restore
 
@@ -117,19 +127,37 @@ Once both 1.0.0 and 1.1.0 images have been built from their tags:
 
 ```sh
 export COMPOSE_FILE=compose.release.yaml
+export APP_VERSION=1.0.0
+scripts/build_release.sh 1.0.0
+scripts/build_release.sh 1.1.0
 scripts/backup.sh
 APP_VERSION=1.1.0 docker compose up -d --no-build --no-deps --wait app
-# Create a run, then back up the newer history before rolling back.
+# Reconcile CASE-MIXED; keep its run URL and frequency finding summary.
+# Back up the newer history before rolling back.
 scripts/backup.sh
 APP_VERSION=1.0.0 docker compose up -d --no-build --no-deps --wait app
 curl --fail http://127.0.0.1:8000/healthz
+docker inspect "$(docker compose ps -q app)" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}'
+git rev-list -n 1 v1.0.0
 ```
 
-Confirm the version is 1.0.0, open History to check that newer runs remain, and
-create another reconciliation. Unknown finding types display as `Other (<value>)`.
+Confirm the version is 1.0.0 and both revision hashes match. Open History and
+the saved 1.1.0 run: `Other (frequency_mismatch)` and its original summary must
+remain visible. Create another reconciliation to verify 1.0.0 still writes.
+Take another verified backup, then roll forward:
+
+```sh
+scripts/backup.sh
+APP_VERSION=1.1.0 docker compose up -d --no-build --no-deps --wait app
+curl --fail http://127.0.0.1:8000/healthz
+```
+
+Confirm `/healthz` reports 1.1.0, the old run again says `Frequency mismatch`,
+and both versions' runs remain in History. See the
+[operations guide](docs/OPERATIONS.md#compatibility-and-rollback) for the full checks.
 Rollback changes only the app image on the existing database volume; restoring
 an older backup would discard newer history. The two-version demonstration
-requires the 1.1.0 release and has not yet been run.
+requires the final 1.1.0 tag after review and merge and has not yet been run.
 
 ## Medication record shape
 
@@ -156,7 +184,8 @@ For example:
 `source` is `fhir`, `pharmacy` or `intake`. Dose must be positive; accepted units
 are `mg`, `g`, `mcg` and `mL`. Dates use `YYYY-MM-DD` and cannot be in the future.
 Frequency, normalized name and RxNorm code may be absent; `raw` preserves the
-source fields. Version 1.0.0 stores frequency without comparing it.
+source fields. Version 1.0.0 stores frequency without comparing it. Version
+1.1.0 compares supported schedules and uses the committed RxNorm cache offline.
 
 ## Alias configuration
 

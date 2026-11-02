@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build an immutable release image from its annotated Git tag, never the checkout.
+# Build an immutable release image from its Git tag, never the checkout.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -9,11 +9,10 @@ if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 tag="v$version"
-if [[ $(git cat-file -t "refs/tags/$tag") != tag ]]; then
-    echo "$tag must be an annotated tag" >&2
+if ! revision=$(git rev-parse --verify "refs/tags/$tag^{commit}" 2>/dev/null); then
+    echo "$tag must exist and point to a commit (lightweight or annotated)" >&2
     exit 1
 fi
-revision=$(git rev-parse "$tag^{commit}")
 image="medrec-app:$version"
 if docker image inspect "$image" >/dev/null 2>&1; then
     existing=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")
@@ -36,7 +35,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-git worktree add --detach "$scratch/source" "$tag"
+git worktree add --detach "$scratch/source" "$revision"
 
 # uv is already required for local development; tomllib reads the actual tag's version.
 actual=$(uv run --no-project --python 3.12 python -c \
