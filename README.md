@@ -156,8 +156,12 @@ Confirm `/healthz` reports 1.1.0, the old run again says `Frequency mismatch`,
 and both versions' runs remain in History. See the
 [operations guide](docs/OPERATIONS.md#compatibility-and-rollback) for the full checks.
 Rollback changes only the app image on the existing database volume; restoring
-an older backup would discard newer history. The two-version demonstration
-requires the final 1.1.0 tag after review and merge and has not yet been run.
+an older backup would discard newer history.
+
+The tagged 1.1.0 → 1.0.0 → 1.1.0 demonstration passed on 2026-11-02:
+verified backups, matching versions/revisions, preserved runs and correct
+history/HTML/PDF labels on the same database volume. See
+[verification results](docs/releases/1.1.0.md#verification-status).
 
 ## Medication record shape
 
