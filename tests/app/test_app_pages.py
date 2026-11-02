@@ -6,11 +6,11 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from app.labels import DISCLAIMER
+from app.labels import DISCLAIMER, NLM_ATTRIBUTION
 from app.version import __version__
 from contract import Finding
 from db import repo
-from tests.app.conftest import INTERVIEW, make_run
+from tests.app.conftest import INTERVIEW, make_run, record
 
 
 def _section(html: str, heading: str) -> str:
@@ -200,3 +200,89 @@ def test_frequency_finding_has_its_own_label_on_the_run_page(client, serve_run):
     section = _section(client.get("/runs/7").text, "Frequency mismatch")
     assert "FHIR frequency once daily; pharmacy frequency twice daily." in section
     assert "<td>once daily</td>" in section and "<td>twice daily</td>" in section
+
+
+def test_footer_has_the_nlm_attribution(client, serve_run):
+    """RxNorm data requires NLM's attribution, in its exact words, on every page."""
+    serve_run(None)
+    assert NLM_ATTRIBUTION in client.get("/runs/999").text
+
+
+def test_each_known_finding_type_has_its_own_accent(client):
+    """Types are told apart at a glance; only an unknown type falls back to neutral."""
+    css = client.get("/static/app.css").text
+    for discrepancy_type in ("duplicate", "missing", "dosage_mismatch", "frequency_mismatch"):
+        assert f".type-{discrepancy_type} {{ --type:" in css
+    variables = ("duplicate", "missing", "mismatch", "frequency", "other")
+    light, dark = css.split("@media (prefers-color-scheme: dark)")
+    for scheme in (light, dark):
+        colours = [re.search(rf"--{name}: (#\w+);", scheme).group(1) for name in variables]
+        assert len(set(colours)) == len(variables)
+
+
+def _with_brand():
+    """A run whose pharmacy list holds a brand RxNorm matched to its ingredient."""
+    brand = record("pharmacy", "Zoloft", "50").model_copy(
+        update={"normalized_name": "sertraline", "rxcui": "82728"}
+    )
+    return make_run(pharmacy=[brand])
+
+
+def test_medication_table_labels_a_brand_with_its_ingredient(client, serve_run):
+    """The match is visible beside the source's own name, with the plain record unlabelled."""
+    serve_run(_with_brand())
+    html = client.get("/runs/7").text
+    assert 'Zoloft<div class="matched">Matched as: sertraline</div>' in html
+    assert html.count('class="matched"') == 1
+
+
+def test_matched_label_is_escaped(client, serve_run):
+    """The ingredient comes from data, so it can't inject markup into the page."""
+    brand = record("pharmacy", "Zoloft", "50").model_copy(
+        update={"normalized_name": "<b>sertraline</b>", "rxcui": "82728"}
+    )
+    serve_run(make_run(pharmacy=[brand]))
+    html = client.get("/runs/7").text
+    assert "Matched as: &lt;b&gt;sertraline&lt;/b&gt;" in html
+    assert "<b>sertraline" not in html
+
+
+def _agreeing(**overrides):
+    """A run whose one medication is in all three sources with no finding."""
+    return make_run(
+        intake=[record("intake", "metformin", "0.5", "g", "twice a day")],
+        fhir=[record("fhir", "metformin", "500", frequency="BID")],
+        pharmacy=[record("pharmacy", "metformin", "500", frequency="twice daily")],
+        intake_interview=INTERVIEW,
+        rejected=[],
+        **overrides,
+    )
+
+
+def test_run_page_shows_medications_with_no_differences(client, serve_run):
+    """The tile and section appear beside findings, with each source's wording."""
+    serve_run(
+        _agreeing(findings=[Finding(discrepancy_type="missing", medication="x", summary="y")])
+    )
+    html = client.get("/runs/7").text
+    assert '<span class="count">1</span> No differences' in html
+    assert 'id="no-differences"' in html
+    for value in ("0.5 g, twice a day", "500 mg, BID", "500 mg, twice daily"):
+        assert f"<td>{value}</td>" in html
+    assert "no source is treated as correct" in html
+
+
+def test_run_with_no_findings_still_lists_what_agrees(client, serve_run):
+    """A clean patient gets the plain statement and the list, with no findings tiles."""
+    serve_run(_agreeing(findings=[]))
+    html = client.get("/runs/7").text
+    assert "No discrepancies found" in html
+    assert 'id="no-differences"' in html
+    assert '<ul class="summary">' not in html
+
+
+def test_run_page_omits_the_section_when_nothing_agrees(client, serve_run):
+    """The default run's medications all have findings or a missing source."""
+    serve_run(make_run())
+    html = client.get("/runs/7").text
+    assert "no-differences" not in html and "No differences" not in html

@@ -15,6 +15,7 @@ from data.generators.common import (
 )
 from ingest.normalize import apply
 from ingest.pharmacy import validate
+from ingest.rxnorm import refine
 from rules.runner import run_rules
 
 
@@ -56,7 +57,7 @@ def intake_rows():
 
 @pytest.fixture(scope="session")
 def reconcile(config, synthea, cases, pharmacy_rows, interviews, intake_rows):
-    """reconcile(patient_id) -> (ReconciliationInput, findings), the way app.service will do it."""
+    """reconcile(patient_id) -> (ReconciliationInput, findings), the way app.service does it."""
     fhir = synthea | cases
 
     def run(patient_id, with_intake=True):
@@ -72,12 +73,12 @@ def reconcile(config, synthea, cases, pharmacy_rows, interviews, intake_rows):
                 if r["interview_ref"] == interview["interview_ref"]
             ]
             intake, intake_rejected = validate(rows, "intake")
-            intake = apply(intake, config)
+            intake = refine(apply(intake, config))
         data = ReconciliationInput(
-            fhir=fhir[patient_id],
-            pharmacy=apply(pharmacy, config),
+            fhir=refine(fhir[patient_id]),
+            pharmacy=refine(apply(pharmacy, config)),
             intake=intake,
-            rejected=apply(pharmacy_rejected + intake_rejected, config),
+            rejected=refine(apply(pharmacy_rejected + intake_rejected, config)),
         )
         return data, run_rules(data)
 

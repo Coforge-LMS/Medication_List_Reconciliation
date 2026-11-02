@@ -20,10 +20,14 @@ from app import service
 from app.fhir_client import FhirClient, FhirError, InvalidFhirId, patient_row
 from app.labels import (
     DISCLAIMER,
+    NLM_ATTRIBUTION,
+    NO_DIFFERENCES_NOTE,
     SOURCE_HEADINGS,
     group_findings,
     interview_line,
     label_for,
+    matched_as,
+    no_differences,
     utc_time,
 )
 from app.pdf import build_report
@@ -32,6 +36,7 @@ from app.version import __version__
 from contract import AliasConfig, RunDetail, format_dose
 from db import repo
 from db.session import get_engine, get_session
+from ingest import rxnorm
 from ingest.aliases import load_aliases
 from ingest.fhir import PatientMappingError, map_patient
 
@@ -67,8 +72,9 @@ AliasesDep = Annotated[AliasConfig, Depends(get_aliases)]
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Refuse to start on a bad alias config; create missing tables when a DB is set."""
+    """Refuse to start on a bad alias config or RxNorm cache; create tables when a DB is set."""
     get_aliases()
+    rxnorm.default_cache()
     if os.environ.get("DATABASE_URL"):
         repo.init_db(get_engine())
     yield
@@ -81,7 +87,10 @@ templates.env.filters["utc_time"] = utc_time
 templates.env.globals.update(
     version=__version__,
     disclaimer=DISCLAIMER,
+    nlm_attribution=NLM_ATTRIBUTION,
     format_dose=format_dose,
+    matched_as=matched_as,
+    no_differences_note=NO_DIFFERENCES_NOTE,
     source_headings=SOURCE_HEADINGS,
 )
 
@@ -198,6 +207,7 @@ def run_page(request: Request, run_id: int, session: SessionDep):
             "run": run,
             "interview": interview_line(run.intake_interview),
             "groups": group_findings(run.findings),
+            "no_differences": no_differences(run),
             "headings": list(SOURCE_HEADINGS.values()),
             "columns": _columns(run),
             "rejected": run.rejected,

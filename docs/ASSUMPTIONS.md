@@ -21,7 +21,7 @@ OWNER: Rachit Shah, to review and finalize
 | A6 | Only `status=active` MedicationRequests count as current medications | Assumed | [R01]–[R03]; confirm with a clinician (Q2) |
 | A7 | Accepted units are mg, g, mcg and mL. Anything else (tablets, units, puffs, per-mL strengths, combination products) is rejected as `unreadable_dosage`. | Decided | Brief; ISMP prefers "mcg" over "µg" [R11] |
 | A8 | Pharmacy `dose_amount` is per administration, matching the FHIR side (strength × doseQuantity) | Decided | Comparability of the dosage rule |
-| A9 | The alias list stays deliberately small. The generator picks brands only from it (except CASE-BRAND), so V2's RxNorm normalization visibly reduces false "missing" findings. | Decided | Brief: V2 must show fewer false "missing" |
+| A9 | The alias list stays deliberately small. The generator picks brands only from it (except CASE-BRAND's Crestor and CASE-MIXED's Zoloft), so V2's RxNorm normalization visibly reduces false "missing" findings. | Decided | Brief: V2 must show fewer false "missing" |
 | A10 | The importer skips only when the last case patient exists, so a partial import is never treated as done | Decided | Red-team review |
 | A31 | Patient intake history is simulated from a seeded generator (patient-report patterns on top of Synthea meds) and seeded into the app DB, not typed in a form | Decided | Lead decision 2026-10-29; brief puts forms out of scope; [R11] (patient interview) |
 | A32 | An intake item with no usable dose ("not sure") is rejected as `unreadable_dosage` ("patient unsure of dose"), not accepted without a dose | Decided | Lead decision 2026-10-29; keeps the contract's dose required |
@@ -51,7 +51,7 @@ OWNER: Sarthak Kakkar, to review and finalize
 | A19 | Finding summaries state facts only; a test bans treatment verbs there. The exact disclaimer text is asserted separately in the UI and PDF. | Decided | Brief; FDA CDS guidance criteria 3–4 [R11] |
 | A20 | Stack: FastAPI + Jinja2/HTMX + SQLAlchemy 2.0 + psycopg 3 + httpx + fpdf2 with bundled DejaVu fonts. Exact pins, no upgrades before Friday. | Decided | [R04], [R06] |
 | A21 | V1 shows frequency as stored. Plain-language display ("once daily", not "QD") ships with the V2 frequency normalizer, so no V2 logic lands in V1. | Decided | ISMP / Joint Commission guidance [R11]; brief: "no V2 logic in V1" |
-| A22 | V2 RxNorm: ingredient-level identity. A different strength, form or route is reported as `dosage_mismatch`, never merged and never split into two "missing" findings. Offline cache; live only when `RXNORM_LIVE=1`. | Decided | [R07] |
+| A22 | V2 RxNorm: ingredient-level identity. A different strength, form or route is reported as `dosage_mismatch`, never merged and never split into two "missing" findings. The one exception is a source listing two salts of a drug, where a salt another source lacks is also reported as `missing`. Offline cache; live only when `RXNORM_LIVE=1`. | Decided | [R07] |
 | A34 | Reconciliation is three-way per medication over the sources that have data. No source is presented as the truth (patient recall is unreliable). An empty intake list gives the two-source result. | Decided | Lead decision 2026-10-29; [R11] |
 
 ## Devang Borkar: containers, CI, releases, privacy

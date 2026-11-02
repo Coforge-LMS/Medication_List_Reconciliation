@@ -1,0 +1,1156 @@
+{
+  "_meta": {
+    "api_version": "3.1.356",
+    "built": "2026-11-01",
+    "rxnorm_version": "05-Oct-2026"
+  },
+  "names": {
+    "120 actuat fluticasone propionate 0.044 mg/actuat metered dose inhaler [flovent]": "895996",
+    "24 hr metformin hydrochloride 500 mg extended release oral tablet": "860975",
+    "24 hr metoprolol succinate 100 mg extended release oral tablet": "866412",
+    "24 hr metoprolol succinate 25 mg extended release oral tablet": "866427",
+    "24 hr metoprolol succinate 50 mg extended release oral tablet": "866436",
+    "60 actuat fluticasone propionate 0.25 mg/actuat / salmeterol 0.05 mg/actuat dry powder inhaler": "896209",
+    "acetaminophen": "161",
+    "acetaminophen 300 mg / hydrocodone bitartrate 5 mg oral tablet": "856987",
+    "acetaminophen 325 mg oral tablet [tylenol]": "209387",
+    "acetaminophen 500 mg oral tablet": "198440",
+    "albuterol": "435",
+    "albuterol 0.83 mg/ml inhalation solution": "630208",
+    "albuterol 5 mg/ml inhalation solution": "245314",
+    "alendronate": "46041",
+    "alendronic acid": "236083",
+    "alendronic acid 10 mg oral tablet": "904419",
+    "amlodipine": "17767",
+    "amlodipine 5 mg oral tablet": "329528",
+    "aspirin": "1191",
+    "aspirin 81 mg oral tablet": "243670",
+    "atorvastatin": "83367",
+    "atorvastatin 20 mg oral tablet": "617310",
+    "cetirizine": "20610",
+    "chlorpheniramine": "2400",
+    "chlorpheniramine maleate": "142429",
+    "chlorpheniramine maleate 2 mg/ml oral solution": "477045",
+    "clopidogrel": "32968",
+    "clopidogrel 75 mg oral tablet": "309362",
+    "crestor": "320864",
+    "digoxin": "3407",
+    "digoxin 0.125 mg oral tablet": "197604",
+    "famotidine": "4278",
+    "fish oil": "4419",
+    "fish oils": "4419",
+    "fluticasone": "41126",
+    "fluticasone propionate": "50121",
+    "hydrochlorothiazide": "5487",
+    "hydrochlorothiazide 25 mg / losartan potassium 100 mg oral tablet": "979471",
+    "hydrochlorothiazide 25 mg oral tablet": "310798",
+    "hydrocodone": "5489",
+    "hydrocortisone": "5492",
+    "hydrocortisone 10 mg/ml topical cream": "106258",
+    "ibuprofen": "5640",
+    "ibuprofen 400 mg oral tablet [ibu]": "206905",
+    "insulin isophane, human 70 unt/ml / insulin, regular, human 30 unt/ml injectable suspension [humulin]": "106892",
+    "insulin, regular, human": "253182",
+    "lipitor": "153165",
+    "lisinopril": "29046",
+    "lisinopril 10 mg oral tablet": "314076",
+    "loratadine": "28889",
+    "losartan": "52175",
+    "magnesium": "6574",
+    "melatonin": "6711",
+    "metformin": "6809",
+    "metformin hydrochloride": "235743",
+    "metformin hydrochloride 500 mg oral tablet": "861007",
+    "metoprolol": "6918",
+    "metoprolol succinate": "221124",
+    "metoprolol tartrate": "203191",
+    "metoprolol tartrate 25 mg oral tablet": "866924",
+    "naproxen": "7258",
+    "naproxen 500 mg oral tablet": "198014",
+    "naproxen sodium": "142442",
+    "naproxen sodium 220 mg oral tablet": "849574",
+    "nitroglycerin": "4917",
+    "nitroglycerin 0.4 mg/actuat mucosal spray": "705129",
+    "norvasc": "58927",
+    "omeprazole": "7646",
+    "pantoprazole": "40790",
+    "prasugrel": "613391",
+    "prasugrel 10 mg oral tablet": "855812",
+    "pravastatin": "42463",
+    "rosuvastatin": "301542",
+    "rosuvastatin calcium": "323828",
+    "rosuvastatin calcium 10 mg oral tablet [crestor]": "859747",
+    "rosuvastatin calcium 20 mg oral tablet": "859751",
+    "salmeterol": "36117",
+    "sertraline": "36437",
+    "sertraline 50 mg oral tablet": "312941",
+    "simvastatin": "36567",
+    "simvastatin 10 mg oral tablet": "314231",
+    "simvastatin 20 mg oral tablet": "312961",
+    "tamsulosin": "77492",
+    "tramadol": "10689",
+    "tramadol hydrochloride": "82110",
+    "tramadol hydrochloride 50 mg oral tablet": "835603",
+    "verapamil": "11170",
+    "verapamil hydrochloride": "203138",
+    "verapamil hydrochloride 80 mg oral tablet [calan]": "897685",
+    "vitamin b12": "11248",
+    "vitamin b12 5 mg/ml injectable solution": "2001499",
+    "warfarin": "11289",
+    "warfarin sodium": "114194",
+    "warfarin sodium 5 mg oral tablet": "855332",
+    "zestril": "196472",
+    "zoloft": "82728"
+  },
+  "rxcuis": {
+    "106258": {
+      "dose_form": "Topical Cream",
+      "ingredients": [
+        "hydrocortisone"
+      ],
+      "name": "hydrocortisone 10 MG/ML Topical Cream",
+      "rxcui": "106258",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "10689": {
+      "dose_form": null,
+      "ingredients": [
+        "tramadol"
+      ],
+      "name": "tramadol",
+      "rxcui": "10689",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "106892": {
+      "dose_form": "Injectable Suspension",
+      "ingredients": [
+        "insulin isophane",
+        "insulin, regular, human"
+      ],
+      "name": "insulin isophane, human 70 UNT/ML / insulin, regular, human 30 UNT/ML Injectable Suspension [Humulin]",
+      "rxcui": "106892",
+      "salt": null,
+      "status": "Active",
+      "tty": "SBD"
+    },
+    "11170": {
+      "dose_form": null,
+      "ingredients": [
+        "verapamil"
+      ],
+      "name": "verapamil",
+      "rxcui": "11170",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "11248": {
+      "dose_form": null,
+      "ingredients": [
+        "vitamin B12"
+      ],
+      "name": "vitamin B12",
+      "rxcui": "11248",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "11289": {
+      "dose_form": null,
+      "ingredients": [
+        "warfarin"
+      ],
+      "name": "warfarin",
+      "rxcui": "11289",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "114194": {
+      "dose_form": null,
+      "ingredients": [
+        "warfarin"
+      ],
+      "name": "warfarin sodium",
+      "rxcui": "114194",
+      "salt": "warfarin sodium",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "1191": {
+      "dose_form": null,
+      "ingredients": [
+        "aspirin"
+      ],
+      "name": "aspirin",
+      "rxcui": "1191",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "142429": {
+      "dose_form": null,
+      "ingredients": [
+        "chlorpheniramine"
+      ],
+      "name": "chlorpheniramine maleate",
+      "rxcui": "142429",
+      "salt": "chlorpheniramine maleate",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "142442": {
+      "dose_form": null,
+      "ingredients": [
+        "naproxen"
+      ],
+      "name": "naproxen sodium",
+      "rxcui": "142442",
+      "salt": "naproxen sodium",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "153165": {
+      "dose_form": null,
+      "ingredients": [
+        "atorvastatin"
+      ],
+      "name": "Lipitor",
+      "rxcui": "153165",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
+    },
+    "161": {
+      "dose_form": null,
+      "ingredients": [
+        "acetaminophen"
+      ],
+      "name": "acetaminophen",
+      "rxcui": "161",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "17767": {
+      "dose_form": null,
+      "ingredients": [
+        "amlodipine"
+      ],
+      "name": "amlodipine",
+      "rxcui": "17767",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "196472": {
+      "dose_form": null,
+      "ingredients": [
+        "lisinopril"
+      ],
+      "name": "Zestril",
+      "rxcui": "196472",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
+    },
+    "197604": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "digoxin"
+      ],
+      "name": "digoxin 0.125 MG Oral Tablet",
+      "rxcui": "197604",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "198014": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "naproxen"
+      ],
+      "name": "naproxen 500 MG Oral Tablet",
+      "rxcui": "198014",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "198440": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "acetaminophen"
+      ],
+      "name": "acetaminophen 500 MG Oral Tablet",
+      "rxcui": "198440",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "2001499": {
+      "dose_form": "Injectable Solution",
+      "ingredients": [
+        "vitamin B12"
+      ],
+      "name": "vitamin B12 5 MG/ML Injectable Solution",
+      "rxcui": "2001499",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "203138": {
+      "dose_form": null,
+      "ingredients": [
+        "verapamil"
+      ],
+      "name": "verapamil hydrochloride",
+      "rxcui": "203138",
+      "salt": "verapamil hydrochloride",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "203191": {
+      "dose_form": null,
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "metoprolol tartrate",
+      "rxcui": "203191",
+      "salt": "metoprolol tartrate",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "20610": {
+      "dose_form": null,
+      "ingredients": [
+        "cetirizine"
+      ],
+      "name": "cetirizine",
+      "rxcui": "20610",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "206905": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "ibuprofen"
+      ],
+      "name": "ibuprofen 400 MG Oral Tablet [Ibu]",
+      "rxcui": "206905",
+      "salt": null,
+      "status": "Active",
+      "tty": "SBD"
+    },
+    "209387": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "acetaminophen"
+      ],
+      "name": "acetaminophen 325 MG Oral Tablet [Tylenol]",
+      "rxcui": "209387",
+      "salt": null,
+      "status": "Active",
+      "tty": "SBD"
+    },
+    "221124": {
+      "dose_form": null,
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "metoprolol succinate",
+      "rxcui": "221124",
+      "salt": "metoprolol succinate",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "235743": {
+      "dose_form": null,
+      "ingredients": [
+        "metformin"
+      ],
+      "name": "metformin hydrochloride",
+      "rxcui": "235743",
+      "salt": "metformin hydrochloride",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "236083": {
+      "dose_form": null,
+      "ingredients": [
+        "alendronate"
+      ],
+      "name": "alendronic acid",
+      "rxcui": "236083",
+      "salt": null,
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "2400": {
+      "dose_form": null,
+      "ingredients": [
+        "chlorpheniramine"
+      ],
+      "name": "chlorpheniramine",
+      "rxcui": "2400",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "243670": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "aspirin"
+      ],
+      "name": "aspirin 81 MG Oral Tablet",
+      "rxcui": "243670",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "245314": {
+      "dose_form": "Inhalation Solution",
+      "ingredients": [
+        "albuterol"
+      ],
+      "name": "albuterol 5 MG/ML Inhalation Solution",
+      "rxcui": "245314",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "253182": {
+      "dose_form": null,
+      "ingredients": [
+        "insulin, regular, human"
+      ],
+      "name": "insulin, regular, human",
+      "rxcui": "253182",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "28889": {
+      "dose_form": null,
+      "ingredients": [
+        "loratadine"
+      ],
+      "name": "loratadine",
+      "rxcui": "28889",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "29046": {
+      "dose_form": null,
+      "ingredients": [
+        "lisinopril"
+      ],
+      "name": "lisinopril",
+      "rxcui": "29046",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "301542": {
+      "dose_form": null,
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "rosuvastatin",
+      "rxcui": "301542",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "309362": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "clopidogrel"
+      ],
+      "name": "clopidogrel 75 MG Oral Tablet",
+      "rxcui": "309362",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "310798": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "hydrochlorothiazide"
+      ],
+      "name": "hydrochlorothiazide 25 MG Oral Tablet",
+      "rxcui": "310798",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "312941": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "sertraline"
+      ],
+      "name": "sertraline 50 MG Oral Tablet",
+      "rxcui": "312941",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "312961": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "simvastatin"
+      ],
+      "name": "simvastatin 20 MG Oral Tablet",
+      "rxcui": "312961",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "314076": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "lisinopril"
+      ],
+      "name": "lisinopril 10 MG Oral Tablet",
+      "rxcui": "314076",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "314231": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "simvastatin"
+      ],
+      "name": "simvastatin 10 MG Oral Tablet",
+      "rxcui": "314231",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "320864": {
+      "dose_form": null,
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "Crestor",
+      "rxcui": "320864",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
+    },
+    "323828": {
+      "dose_form": null,
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "rosuvastatin calcium",
+      "rxcui": "323828",
+      "salt": "rosuvastatin calcium",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "329528": {
+      "dose_form": null,
+      "ingredients": [
+        "amlodipine"
+      ],
+      "name": "amlodipine 5 MG",
+      "rxcui": "329528",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCDC"
+    },
+    "32968": {
+      "dose_form": null,
+      "ingredients": [
+        "clopidogrel"
+      ],
+      "name": "clopidogrel",
+      "rxcui": "32968",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "3407": {
+      "dose_form": null,
+      "ingredients": [
+        "digoxin"
+      ],
+      "name": "digoxin",
+      "rxcui": "3407",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "36117": {
+      "dose_form": null,
+      "ingredients": [
+        "salmeterol"
+      ],
+      "name": "salmeterol",
+      "rxcui": "36117",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "36437": {
+      "dose_form": null,
+      "ingredients": [
+        "sertraline"
+      ],
+      "name": "sertraline",
+      "rxcui": "36437",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "36567": {
+      "dose_form": null,
+      "ingredients": [
+        "simvastatin"
+      ],
+      "name": "simvastatin",
+      "rxcui": "36567",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "40790": {
+      "dose_form": null,
+      "ingredients": [
+        "pantoprazole"
+      ],
+      "name": "pantoprazole",
+      "rxcui": "40790",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "41126": {
+      "dose_form": null,
+      "ingredients": [
+        "fluticasone"
+      ],
+      "name": "fluticasone",
+      "rxcui": "41126",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "42463": {
+      "dose_form": null,
+      "ingredients": [
+        "pravastatin"
+      ],
+      "name": "pravastatin",
+      "rxcui": "42463",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "4278": {
+      "dose_form": null,
+      "ingredients": [
+        "famotidine"
+      ],
+      "name": "famotidine",
+      "rxcui": "4278",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "435": {
+      "dose_form": null,
+      "ingredients": [
+        "albuterol"
+      ],
+      "name": "albuterol",
+      "rxcui": "435",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "4419": {
+      "dose_form": null,
+      "ingredients": [
+        "fish oils"
+      ],
+      "name": "fish oils",
+      "rxcui": "4419",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "46041": {
+      "dose_form": null,
+      "ingredients": [
+        "alendronate"
+      ],
+      "name": "alendronate",
+      "rxcui": "46041",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "477045": {
+      "dose_form": "Oral Solution",
+      "ingredients": [
+        "chlorpheniramine"
+      ],
+      "name": "chlorpheniramine maleate 2 MG/ML Oral Solution",
+      "rxcui": "477045",
+      "salt": "chlorpheniramine maleate",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "4917": {
+      "dose_form": null,
+      "ingredients": [
+        "nitroglycerin"
+      ],
+      "name": "nitroglycerin",
+      "rxcui": "4917",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "50121": {
+      "dose_form": null,
+      "ingredients": [
+        "fluticasone"
+      ],
+      "name": "fluticasone propionate",
+      "rxcui": "50121",
+      "salt": "fluticasone propionate",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "52175": {
+      "dose_form": null,
+      "ingredients": [
+        "losartan"
+      ],
+      "name": "losartan",
+      "rxcui": "52175",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5487": {
+      "dose_form": null,
+      "ingredients": [
+        "hydrochlorothiazide"
+      ],
+      "name": "hydrochlorothiazide",
+      "rxcui": "5487",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5489": {
+      "dose_form": null,
+      "ingredients": [
+        "hydrocodone"
+      ],
+      "name": "hydrocodone",
+      "rxcui": "5489",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5492": {
+      "dose_form": null,
+      "ingredients": [
+        "hydrocortisone"
+      ],
+      "name": "hydrocortisone",
+      "rxcui": "5492",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "5640": {
+      "dose_form": null,
+      "ingredients": [
+        "ibuprofen"
+      ],
+      "name": "ibuprofen",
+      "rxcui": "5640",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "58927": {
+      "dose_form": null,
+      "ingredients": [
+        "amlodipine"
+      ],
+      "name": "Norvasc",
+      "rxcui": "58927",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
+    },
+    "613391": {
+      "dose_form": null,
+      "ingredients": [
+        "prasugrel"
+      ],
+      "name": "prasugrel",
+      "rxcui": "613391",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "617310": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "atorvastatin"
+      ],
+      "name": "atorvastatin 20 MG Oral Tablet",
+      "rxcui": "617310",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "630208": {
+      "dose_form": "Inhalation Solution",
+      "ingredients": [
+        "albuterol"
+      ],
+      "name": "albuterol 0.83 MG/ML Inhalation Solution",
+      "rxcui": "630208",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "6574": {
+      "dose_form": null,
+      "ingredients": [
+        "magnesium"
+      ],
+      "name": "magnesium",
+      "rxcui": "6574",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "6711": {
+      "dose_form": null,
+      "ingredients": [
+        "melatonin"
+      ],
+      "name": "melatonin",
+      "rxcui": "6711",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "6809": {
+      "dose_form": null,
+      "ingredients": [
+        "metformin"
+      ],
+      "name": "metformin",
+      "rxcui": "6809",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "6918": {
+      "dose_form": null,
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "metoprolol",
+      "rxcui": "6918",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "705129": {
+      "dose_form": "Mucosal Spray",
+      "ingredients": [
+        "nitroglycerin"
+      ],
+      "name": "nitroglycerin 0.4 MG/ACTUAT Mucosal Spray",
+      "rxcui": "705129",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "7258": {
+      "dose_form": null,
+      "ingredients": [
+        "naproxen"
+      ],
+      "name": "naproxen",
+      "rxcui": "7258",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "7646": {
+      "dose_form": null,
+      "ingredients": [
+        "omeprazole"
+      ],
+      "name": "omeprazole",
+      "rxcui": "7646",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "77492": {
+      "dose_form": null,
+      "ingredients": [
+        "tamsulosin"
+      ],
+      "name": "tamsulosin",
+      "rxcui": "77492",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "82110": {
+      "dose_form": null,
+      "ingredients": [
+        "tramadol"
+      ],
+      "name": "tramadol hydrochloride",
+      "rxcui": "82110",
+      "salt": "tramadol hydrochloride",
+      "status": "Active",
+      "tty": "PIN"
+    },
+    "82728": {
+      "dose_form": null,
+      "ingredients": [
+        "sertraline"
+      ],
+      "name": "Zoloft",
+      "rxcui": "82728",
+      "salt": null,
+      "status": "Active",
+      "tty": "BN"
+    },
+    "83367": {
+      "dose_form": null,
+      "ingredients": [
+        "atorvastatin"
+      ],
+      "name": "atorvastatin",
+      "rxcui": "83367",
+      "salt": null,
+      "status": "Active",
+      "tty": "IN"
+    },
+    "835603": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "tramadol"
+      ],
+      "name": "tramadol hydrochloride 50 MG Oral Tablet",
+      "rxcui": "835603",
+      "salt": "tramadol hydrochloride",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "849574": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "naproxen"
+      ],
+      "name": "naproxen sodium 220 MG Oral Tablet",
+      "rxcui": "849574",
+      "salt": "naproxen sodium",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "855332": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "warfarin"
+      ],
+      "name": "warfarin sodium 5 MG Oral Tablet",
+      "rxcui": "855332",
+      "salt": "warfarin sodium",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "855812": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "prasugrel"
+      ],
+      "name": "prasugrel 10 MG Oral Tablet",
+      "rxcui": "855812",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "856987": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "acetaminophen",
+        "hydrocodone"
+      ],
+      "name": "acetaminophen 300 MG / hydrocodone bitartrate 5 MG Oral Tablet",
+      "rxcui": "856987",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "859747": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "rosuvastatin calcium 10 MG Oral Tablet",
+      "rxcui": "859747",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "859751": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "rosuvastatin"
+      ],
+      "name": "rosuvastatin calcium 20 MG Oral Tablet",
+      "rxcui": "859751",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "860975": {
+      "dose_form": "Extended Release Oral Tablet",
+      "ingredients": [
+        "metformin"
+      ],
+      "name": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet",
+      "rxcui": "860975",
+      "salt": "metformin hydrochloride",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "861007": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "metformin"
+      ],
+      "name": "metformin hydrochloride 500 MG Oral Tablet",
+      "rxcui": "861007",
+      "salt": "metformin hydrochloride",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "866412": {
+      "dose_form": "Extended Release Oral Tablet",
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "24 HR metoprolol succinate 100 MG Extended Release Oral Tablet",
+      "rxcui": "866412",
+      "salt": "metoprolol succinate",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "866427": {
+      "dose_form": "Extended Release Oral Tablet",
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "24 HR metoprolol succinate 25 MG Extended Release Oral Tablet",
+      "rxcui": "866427",
+      "salt": "metoprolol succinate",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "866436": {
+      "dose_form": "Extended Release Oral Tablet",
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "24 HR metoprolol succinate 50 MG Extended Release Oral Tablet",
+      "rxcui": "866436",
+      "salt": "metoprolol succinate",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "866924": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "metoprolol"
+      ],
+      "name": "metoprolol tartrate 25 MG Oral Tablet",
+      "rxcui": "866924",
+      "salt": "metoprolol tartrate",
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "895996": {
+      "dose_form": "Metered Dose Inhaler",
+      "ingredients": [
+        "fluticasone"
+      ],
+      "name": "120 ACTUAT fluticasone propionate 0.044 MG/ACTUAT Metered Dose Inhaler [Flovent]",
+      "rxcui": "895996",
+      "salt": "fluticasone propionate",
+      "status": "Active",
+      "tty": "SBD"
+    },
+    "896209": {
+      "dose_form": "Dry Powder Inhaler",
+      "ingredients": [
+        "fluticasone",
+        "salmeterol"
+      ],
+      "name": "60 ACTUAT fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+      "rxcui": "896209",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "897685": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "verapamil"
+      ],
+      "name": "verapamil hydrochloride 80 MG Oral Tablet [Calan]",
+      "rxcui": "897685",
+      "salt": "verapamil hydrochloride",
+      "status": "Obsolete",
+      "tty": "SBD"
+    },
+    "904419": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "alendronate"
+      ],
+      "name": "alendronic acid 10 MG Oral Tablet",
+      "rxcui": "904419",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    },
+    "979471": {
+      "dose_form": "Oral Tablet",
+      "ingredients": [
+        "hydrochlorothiazide",
+        "losartan"
+      ],
+      "name": "hydrochlorothiazide 25 MG / losartan potassium 100 MG Oral Tablet",
+      "rxcui": "979471",
+      "salt": null,
+      "status": "Active",
+      "tty": "SCD"
+    }
+  }
+}

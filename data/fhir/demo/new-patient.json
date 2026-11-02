@@ -102,7 +102,7 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "617311",
+              "code": "617310",
               "display": "atorvastatin 20 MG Oral Tablet"
             }
           ],

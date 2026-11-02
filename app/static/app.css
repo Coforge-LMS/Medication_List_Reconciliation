@@ -12,6 +12,8 @@
   --duplicate: #6d4fb3;
   --missing: #a85d0a;
   --mismatch: #1f6fb2;
+  --frequency: #a3317a;
+  --no-differences: #2e7d4f;
   --other: #66707c;
 }
 
@@ -28,6 +30,8 @@
     --duplicate: #b39df0;
     --missing: #e6a456;
     --mismatch: #6db3ea;
+    --frequency: #e58ac0;
+    --no-differences: #6fcf97;
     --other: #9aa6b4;
   }
 }
@@ -79,6 +83,9 @@ footer {
   color: var(--muted);
   font-size: .85rem;
 }
+
+.attribution { margin-top: .25rem; font-size: .75rem; }
+.matched { color: var(--muted); font-size: .8rem; }
 
 .muted { color: var(--muted); }
 
@@ -163,6 +170,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .type-duplicate { --type: var(--duplicate); }
 .type-missing { --type: var(--missing); }
 .type-dosage_mismatch { --type: var(--mismatch); }
+.type-frequency_mismatch { --type: var(--frequency); }
+.type-no_differences { --type: var(--no-differences); }
 
 .columns {
   display: grid;

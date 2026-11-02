@@ -15,8 +15,10 @@ from rules.base import (
     ReconciliationRule,
     all_names,
     by_name,
+    differing_concept,
     participating,
     sentence,
+    with_product_differences,
 )
 
 PRN = "PRN"
@@ -118,15 +120,15 @@ def _not_compared(records: list[MedicationRecord]) -> list[str]:
 
     Stored wording is kept when it says more than "as needed" does, as "BID PRN" does.
     """
-    stated: dict[str, None] = {}
+    stated: dict[str, str] = {}  # keyed by lowercase, so case variants appear once
     for record in records:
-        text = (record.frequency or "").strip()
+        text = " ".join((record.frequency or "").split())
         code = normalize_frequency(text)
         if code == PRN and _BY_PHRASE.get(text.lower().replace(".", "")) == PRN:
-            stated[PLAIN_TEXT[PRN]] = None
+            stated.setdefault(PLAIN_TEXT[PRN], PLAIN_TEXT[PRN])
         elif text and code in (PRN, None):
-            stated[text] = None
-    return list(stated)
+            stated.setdefault(text.lower(), text)
+    return list(stated.values())
 
 
 def _value(records: list[MedicationRecord], found: list[str]) -> str | None:
@@ -142,6 +144,9 @@ class FrequencyMismatchRule(ReconciliationRule):
     A source with no scheduled frequency for the name isn't compared, so as-needed or unknown
     never counts as a difference, but what it says still appears in its value, marked as not
     compared, so it can't be mistaken for saying nothing. No source is treated as the right one.
+
+    Matching by ingredient can group different products, which may rightly have different
+    schedules, so the summary leads with any form or salt difference.
     """
 
     discrepancy_type: ClassVar[str] = "frequency_mismatch"
@@ -159,16 +164,24 @@ class FrequencyMismatchRule(ReconciliationRule):
             values = {
                 source: ", ".join(map(plain_text, found)) for source, found in compared.items()
             }
+            # Only compared sources: a note about another source wouldn't explain this difference.
+            sources = {source: present[source] for source in compared}
+            forms = differing_concept(sources, "dose_form")
+            salts = differing_concept(sources, "salt")
             findings.append(
                 Finding(
                     discrepancy_type=self.discrepancy_type,
                     medication=name,
-                    summary=sentence(
-                        "; ".join(
-                            f"{SOURCE_LABELS[source]} frequency {value}"
-                            for source, value in values.items()
-                        )
-                        + "."
+                    summary=with_product_differences(
+                        sentence(
+                            "; ".join(
+                                f"{SOURCE_LABELS[source]} frequency {value}"
+                                for source, value in values.items()
+                            )
+                            + "."
+                        ),
+                        forms,
+                        salts,
                     ),
                     **{
                         f"{source}_value": _value(group, codes[source])
@@ -177,6 +190,8 @@ class FrequencyMismatchRule(ReconciliationRule):
                     details={
                         **{f"{source}_codes": found for source, found in compared.items()},
                         "not_compared": [source for source in present if source not in compared],
+                        **({"different_form": forms} if forms else {}),
+                        **({"different_salt": salts} if salts else {}),
                     },
                 )
             )

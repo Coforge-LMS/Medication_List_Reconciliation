@@ -67,13 +67,23 @@ def test_seeded_case_mixed_reconciles_end_to_end(db, client, recorded_client):
         response = client.post("/api/patients/2178/reconcile")
         assert response.status_code == 201
         body = response.json()
-        assert len(body["findings"]) == 8  # data/README's 7, plus V2's sertraline frequency
+        assert len(body["findings"]) == 8  # data/README's CASE-MIXED table
         assert body["intake_interview"]["taken_by"] == "RN Okafor"
         assert {r["source"] for r in body["rejected"]} == {"pharmacy", "intake"}
+        # Read back from Postgres: saved rows carry the RxCUI, in the existing column.
+        saved = [*body["fhir"], *body["pharmacy"], *body["intake"]]
+        assert all(r["rxcui"] for r in saved)
+        assert {r["normalized_name"] for r in body["fhir"]} >= {"metoprolol", "warfarin"}
+        assert all(r["raw"]["rxnorm"]["rxcui"] == r["rxcui"] for r in saved)
 
         run_page = client.get(f"/runs/{body['run_id']}").text
         assert "Duplicate medication" in run_page and "Dosage mismatch" in run_page
         assert "<h3>Frequency mismatch</h3>" in run_page
+        assert 'Zoloft<div class="matched">Matched as: sertraline</div>' in run_page
+        assert '<span class="count">1</span> No differences' in run_page
+        assert (
+            "0.5 g, twice a day" in run_page.split('id="no-differences"')[1].split("</section>")[0]
+        )
         assert "Intake taken 2026-10-28 by RN Okafor (patient)" in run_page
 
         assert client.get("/runs/99999999999999999999").status_code == 404

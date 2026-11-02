@@ -365,3 +365,107 @@ def test_medication_can_also_have_a_dose_finding(rec, data):
         )
     )
     assert [f.discrepancy_type for f in findings] == ["dosage_mismatch", "frequency_mismatch"]
+
+
+def _product(rec, source, frequency, form=None, salt=None):
+    """A metoprolol record with a frequency and, as RxNorm would set, a form or salt."""
+    return rec(source, "metoprolol", form=form, salt=salt).model_copy(
+        update={"frequency": frequency}
+    )
+
+
+def test_different_salts_are_named_on_the_frequency_finding(rec, data):
+    """Tartrate twice daily vs succinate once daily may be right: the row says they differ."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[_product(rec, "fhir", "BID", salt="metoprolol tartrate")],
+            pharmacy=[_product(rec, "pharmacy", "once daily", salt="metoprolol succinate")],
+        )
+    )
+    assert f.summary == (
+        "Different salt: FHIR metoprolol tartrate; pharmacy metoprolol succinate. "
+        "FHIR frequency twice daily; pharmacy frequency once daily."
+    )
+    assert f.details["different_salt"]["fhir"] == "metoprolol tartrate"
+    assert "different_form" not in f.details
+
+
+def test_different_forms_are_named_on_the_frequency_finding(rec, data):
+    """ER once daily vs IR twice daily: the form difference leads the summary."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[_product(rec, "fhir", "QD", form="Extended Release Oral Tablet")],
+            pharmacy=[_product(rec, "pharmacy", "BID", form="Oral Tablet")],
+        )
+    )
+    assert f.summary == (
+        "Different form: FHIR Extended Release Oral Tablet; pharmacy Oral Tablet. "
+        "FHIR frequency once daily; pharmacy frequency twice daily."
+    )
+    assert f.details["different_form"]["pharmacy"] == "Oral Tablet"
+
+
+def test_same_product_keeps_the_plain_summary(rec, data):
+    """No form or salt difference, or none stated, adds nothing."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[_product(rec, "fhir", "QD", form="Oral Tablet", salt="metoprolol tartrate")],
+            pharmacy=[_product(rec, "pharmacy", "BID", salt="metoprolol tartrate")],
+        )
+    )
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+    assert "different_form" not in f.details and "different_salt" not in f.details
+
+
+def test_product_difference_without_a_schedule_difference_is_not_a_frequency_finding(rec, data):
+    """Equal schedules give no finding here; the dosage rule reports the product difference."""
+    assert (
+        rule.evaluate(
+            data(
+                fhir=[_product(rec, "fhir", "QD", salt="metoprolol tartrate")],
+                pharmacy=[_product(rec, "pharmacy", "once daily", salt="metoprolol succinate")],
+            )
+        )
+        == []
+    )
+
+
+def test_product_note_only_covers_compared_sources(rec, data):
+    """A salt only the uncompared source names can't explain a difference between the others."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[_product(rec, "intake", "as needed", salt="metoprolol succinate")],
+            fhir=[_product(rec, "fhir", "QD", salt="metoprolol tartrate")],
+            pharmacy=[_product(rec, "pharmacy", "BID", salt="metoprolol tartrate")],
+        )
+    )
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+    assert "different_salt" not in f.details and f.details["not_compared"] == ["intake"]
+
+
+def test_form_note_only_covers_compared_sources(rec, data):
+    """A form only the uncompared source states can't explain a difference between the others."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[_product(rec, "intake", "as needed", form="Extended Release Oral Tablet")],
+            fhir=[_product(rec, "fhir", "QD", form="Oral Tablet")],
+            pharmacy=[_product(rec, "pharmacy", "BID", form="Oral Tablet")],
+        )
+    )
+    assert f.summary == "FHIR frequency once daily; pharmacy frequency twice daily."
+    assert "different_form" not in f.details
+
+
+def test_case_variants_of_a_non_compared_frequency_appear_once(rec, data):
+    """The same wording in other capitals is one statement, kept as first written."""
+    (f,) = rule.evaluate(
+        data(
+            intake=[
+                _with_frequency(rec, "intake", "x", "bid prn"),
+                _with_frequency(rec, "intake", "x", "BID  PRN"),
+            ],
+            fhir=[_with_frequency(rec, "fhir", "x", "QD")],
+            pharmacy=[_with_frequency(rec, "pharmacy", "x", "BID")],
+        )
+    )
+    assert f.intake_value == "bid prn (not compared)"

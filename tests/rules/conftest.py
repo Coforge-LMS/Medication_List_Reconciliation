@@ -15,8 +15,9 @@ _ids = count(1)
 def rec():
     """Factory for accepted MedicationRecords; normalized_name defaults to the lowercased name."""
 
-    def make(source, name, dose="10", unit="mg", normalized_name=None):
-        """Build one record with a unique source_record_id."""
+    def make(source, name, dose="10", unit="mg", normalized_name=None, form=None, salt=None):
+        """Build one record with a unique source_record_id; form and salt as RxNorm would set."""
+        raw = {"rxnorm": {"dose_form": form, "salt": salt}} if form or salt else {}
         return MedicationRecord(
             patient_id="CASE-TEST",
             source=source,
@@ -26,6 +27,7 @@ def rec():
             dose_unit=unit,
             date_recorded=date(2026, 9, 15),
             normalized_name=normalized_name or name.lower(),
+            raw=raw,
         )
 
     return make

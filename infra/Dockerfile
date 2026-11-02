@@ -29,6 +29,7 @@ COPY db/ ./db/
 COPY ingest/ ./ingest/
 COPY rules/ ./rules/
 COPY data/aliases.json ./data/aliases.json
+COPY data/rxnorm_cache.json ./data/rxnorm_cache.json
 COPY data/intake/ ./data/intake/
 COPY data/pharmacy/ ./data/pharmacy/
 

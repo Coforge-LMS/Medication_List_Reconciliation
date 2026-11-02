@@ -107,6 +107,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://medrec:${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}@app-db:5432/medrec
       FHIR_BASE_URL: http://hapi:8080/fhir
+      RXNORM_LIVE: ${RXNORM_LIVE:-0}
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
 

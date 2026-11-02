@@ -11,7 +11,7 @@
         <thead><tr><th>Name</th><th>Dose</th><th>Frequency</th></tr></thead>
         <tbody>
           {% for r in records %}
-          <tr><td>{{ r.name }}</td><td>{{ format_dose(r.dose_amount, r.dose_unit) }}</td><td>{{ r.frequency or "—" }}</td></tr>
+          <tr><td>{{ r.name }}{% if matched_as(r) %}<div class="matched">Matched as: {{ matched_as(r) }}</div>{% endif %}</td><td>{{ format_dose(r.dose_amount, r.dose_unit) }}</td><td>{{ r.frequency or "—" }}</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -61,3 +61,79 @@ def test_intake_duplicate_is_reported_per_source(rec, data):
     assert f.intake_value == "Advil 200 mg; ibuprofen 400 mg"
     assert f.fhir_value is None and f.pharmacy_value is None
     assert f.details["source"] == "intake" and f.details["count"] == 2
+
+
+def test_duplicate_of_different_salts_says_so(rec, data):
+    """Two products of one ingredient are worth flagging, and the summary names how they differ."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[
+                rec(
+                    "fhir",
+                    "metoprolol tartrate",
+                    "25",
+                    normalized_name="metoprolol",
+                    salt="metoprolol tartrate",
+                    form="Oral Tablet",
+                ),
+                rec(
+                    "fhir",
+                    "metoprolol succinate",
+                    "25",
+                    normalized_name="metoprolol",
+                    salt="metoprolol succinate",
+                    form="Extended Release Oral Tablet",
+                ),
+            ]
+        )
+    )
+    assert f.summary == (
+        "FHIR has 2 records for metoprolol. "
+        "Different salts: metoprolol succinate, metoprolol tartrate. "
+        "Different forms: Extended Release Oral Tablet, Oral Tablet."
+    )
+
+
+def test_duplicate_of_one_product_keeps_the_plain_summary(rec, data):
+    """The same salt and form twice adds nothing to the sentence."""
+    (f,) = rule.evaluate(
+        data(
+            pharmacy=[
+                rec(
+                    "pharmacy",
+                    "metformin",
+                    "500",
+                    salt="metformin hydrochloride",
+                    form="Oral Tablet",
+                ),
+                rec(
+                    "pharmacy",
+                    "metformin",
+                    "1000",
+                    salt="metformin hydrochloride",
+                    form="Oral Tablet",
+                ),
+            ]
+        )
+    )
+    assert f.summary == "Pharmacy has 2 records for metformin."
+
+
+def test_vaguer_form_is_not_a_different_form_on_a_duplicate(rec, data):
+    """ "Metformin ER" and an ER tablet agree, as they do in the dosage rule."""
+    (f,) = rule.evaluate(
+        data(
+            fhir=[
+                rec("fhir", "metformin", "500", form="Extended Release Oral Tablet"),
+                rec("fhir", "metformin", "500", form="Extended Release"),
+            ]
+        )
+    )
+    assert f.summary == "FHIR has 2 records for metformin."
+
+
+def test_duplicate_lists_the_record_ids(rec, data):
+    """Each record stays traceable."""
+    records = [rec("pharmacy", "x"), rec("pharmacy", "x")]
+    (f,) = rule.evaluate(data(pharmacy=records))
+    assert f.details["source_record_ids"] == [r.source_record_id for r in records]

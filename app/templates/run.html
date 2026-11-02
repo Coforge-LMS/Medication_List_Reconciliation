@@ -22,6 +22,9 @@
   {% for label, findings in groups %}
   <li class="type-{{ findings[0].discrepancy_type }}"><span class="count">{{ findings | length }}</span> {{ label }}</li>
   {% endfor %}
+  {% if no_differences %}
+  <li class="type-no_differences"><span class="count">{{ no_differences | length }}</span> No differences</li>
+  {% endif %}
 </ul>
 {% for label, findings in groups %}
 <section class="card finding-group type-{{ findings[0].discrepancy_type }}">
@@ -46,6 +49,28 @@
   </div>
 </section>
 {% endfor %}
+{% endif %}
+
+{% if no_differences %}
+<section class="card finding-group type-no_differences" id="no-differences">
+  <h3>No differences</h3>
+  <p class="muted">{{ no_differences_note }}</p>
+  <div class="table-wrap">
+    <table class="finding-table">
+      <thead>
+        <tr><th>Medication</th>{% for heading in headings %}<th>{{ heading }}</th>{% endfor %}</tr>
+      </thead>
+      <tbody>
+        {% for name, stated in no_differences %}
+        <tr>
+          <td>{{ name }}</td>
+          {% for source in source_headings %}<td>{{ stated.get(source, "—") }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endif %}
 
 {% include "_records.html" %}

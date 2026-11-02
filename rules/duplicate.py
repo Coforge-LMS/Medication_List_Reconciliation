@@ -3,11 +3,22 @@
 from typing import ClassVar
 
 from contract import Finding, ReconciliationInput, format_dose
-from rules.base import SOURCE_LABELS, ReconciliationRule, by_name, participating, sentence
+from rules.base import (
+    SOURCE_LABELS,
+    ReconciliationRule,
+    by_name,
+    concept_values,
+    most_specific,
+    participating,
+    sentence,
+)
 
 
 class DuplicateMedicationRule(ReconciliationRule):
-    """2+ records with the same name within one source (any dose); one per (source, name)."""
+    """2+ records with the same name within one source (any dose); one per (source, name).
+
+    Matching by ingredient can group different products, so the summary says when it has.
+    """
 
     discrepancy_type: ClassVar[str] = "duplicate"
 
@@ -21,12 +32,15 @@ class DuplicateMedicationRule(ReconciliationRule):
                 listed = "; ".join(
                     f"{r.name} {format_dose(r.dose_amount, r.dose_unit)}" for r in group
                 )
+                salts = concept_values(group, "salt")
+                forms = most_specific(concept_values(group, "dose_form"))
                 findings.append(
                     Finding(
                         discrepancy_type=self.discrepancy_type,
                         medication=name,
                         summary=f"{sentence(SOURCE_LABELS[source])} has {len(group)} records "
-                        f"for {name}.",
+                        f"for {name}.{_differences('salts', salts)}"
+                        f"{_differences('forms', forms)}",
                         **{f"{source}_value": listed},
                         details={
                             "source": source,
@@ -36,3 +50,8 @@ class DuplicateMedicationRule(ReconciliationRule):
                     )
                 )
         return findings
+
+
+def _differences(label: str, values: list[str]) -> str:
+    """ " Different salts: a, b." when a group's records state more than one, else nothing."""
+    return f" Different {label}: {', '.join(values)}." if len(values) > 1 else ""

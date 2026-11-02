@@ -4,7 +4,17 @@ from pathlib import Path
 
 from fpdf import FPDF
 
-from app.labels import DISCLAIMER, SOURCE_HEADINGS, group_findings, interview_line, utc_time
+from app.labels import (
+    DISCLAIMER,
+    NLM_ATTRIBUTION,
+    NO_DIFFERENCES_NOTE,
+    SOURCE_HEADINGS,
+    group_findings,
+    interview_line,
+    matched_as,
+    no_differences,
+    utc_time,
+)
 from contract import MedicationRecord, RunDetail, format_dose
 
 FONTS = Path(__file__).resolve().parent / "fonts"
@@ -13,17 +23,22 @@ EMPTY = "—"
 NEXT_LINE = {"new_x": "LMARGIN", "new_y": "NEXT"}
 MAX_CELL_CHARS = 400  # keeps any table row shorter than a page, which fpdf2 requires
 TRUNCATED = "… [truncated; full text on the run page]"
+BOTTOM_MARGIN = 20  # mm the page body stays above the bottom edge
+FOOTER_HEIGHT = 19  # mm the footer starts above the bottom edge, inside that margin
 KEEP_WITH_TABLE = 30  # mm a heading needs below it, so it isn't stranded at the foot of a page
 
 
 class _Report(FPDF):
-    """A4 pages whose footer carries the disclaimer and the page number."""
+    """A4 pages whose footer carries the disclaimer, the NLM attribution and the page number."""
 
     def footer(self) -> None:
         """Print the exact disclaimer on every page, not only the first."""
-        self.set_y(-15)
+        self.set_y(-FOOTER_HEIGHT)
         self.set_font(FAMILY, size=8)
         self.cell(0, 4, DISCLAIMER, align="C", **NEXT_LINE)
+        self.set_font(FAMILY, size=6)
+        self.multi_cell(0, 3, NLM_ATTRIBUTION, align="C", **NEXT_LINE)
+        self.set_font(FAMILY, size=8)
         self.cell(0, 4, f"Page {self.page_no()}", align="C")
 
 
@@ -32,13 +47,14 @@ def build_report(run: RunDetail) -> bytes:
     pdf = _Report(format="A4")
     pdf.add_font(FAMILY, fname=FONTS / "DejaVuSans.ttf")
     pdf.add_font(FAMILY, style="B", fname=FONTS / "DejaVuSans-Bold.ttf")
-    pdf.set_auto_page_break(True, margin=20)
+    pdf.set_auto_page_break(True, margin=BOTTOM_MARGIN)
     pdf.set_title(f"Reconciliation run {run.run_id}")
     pdf.add_page()
 
     _header(pdf, run)
     _summary(pdf, run)
     _findings(pdf, run)
+    _no_differences(pdf, run)
     _medications(
         pdf,
         "Patient-reported medications",
@@ -74,6 +90,8 @@ def _summary(pdf: FPDF, run: RunDetail) -> None:
     _heading(pdf, "Summary")
     groups = group_findings(run.findings)
     counts = [f"{label}: {len(findings)}" for label, findings in groups]
+    if groups and (agreeing := no_differences(run)):
+        counts.append(f"No differences: {len(agreeing)}")
     intake = f"{len(run.intake)} patient-reported, " if run.intake_interview else ""
     _lines(
         pdf,
@@ -104,6 +122,21 @@ def _findings(pdf: FPDF, run: RunDetail) -> None:
         )
 
 
+def _no_differences(pdf: FPDF, run: RunDetail) -> None:
+    """Medications every compared source lists with no finding; no section if there are none."""
+    agreeing = no_differences(run)
+    if not agreeing:
+        return
+    _heading(pdf, "No differences")
+    _lines(pdf, NO_DIFFERENCES_NOTE)
+    _table(
+        pdf,
+        ["Medication", *SOURCE_HEADINGS.values()],
+        [[name, *(stated.get(s, EMPTY) for s in SOURCE_HEADINGS)] for name, stated in agreeing],
+        widths=(25, 25, 25, 25),
+    )
+
+
 def _medications(
     pdf: FPDF, title: str, records: list[MedicationRecord], empty: str = "(none)"
 ) -> None:
@@ -112,10 +145,19 @@ def _medications(
     _table(
         pdf,
         ["Medication", "Dose", "Frequency"],
-        [[r.name, format_dose(r.dose_amount, r.dose_unit), r.frequency or EMPTY] for r in records],
+        [
+            [_named(r), format_dose(r.dose_amount, r.dose_unit), r.frequency or EMPTY]
+            for r in records
+        ],
         widths=(55, 15, 30),
         empty=empty,
     )
+
+
+def _named(record: MedicationRecord) -> str:
+    """The record's own name, plus what RxNorm matched it to when that isn't plain from the name."""
+    matched = matched_as(record)
+    return f"{record.name} (matched as {matched})" if matched else record.name
 
 
 def _rejected(pdf: FPDF, run: RunDetail) -> None:
