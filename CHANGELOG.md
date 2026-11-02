@@ -13,13 +13,21 @@ the public contract is the HTTP API and persisted data described in the README.
 - Frequency mismatch findings across comparable patient-reported, FHIR and
   pharmacy schedules, with deterministic normalization of equivalent wording.
 - Offline RxNorm cache matching brands to ingredients while preserving original
-  source values, strength differences, salts, forms and routes; optional live
+  source values and showing strength, salt and form differences; optional live
   RxNav resolution and NLM attribution.
-- A no-differences section showing medications shared by all compared sources,
-  with unavailable or unrecognized frequencies marked as not compared.
+- A "Matched as" label on run pages and PDFs for a record matched to its
+  ingredient under another name.
+- A no-differences section listing medications every compared source has with
+  no finding; as-needed, unrecognized and blank frequencies are marked as not
+  compared.
 
 ### Changed
 
+- Dosage mismatch findings also cover the same ingredient and dose with a
+  different salt or form, so a run that showed no difference in 1.0.0 can now
+  show one.
+- Missing medication findings compare salt by salt when one source lists two
+  salts of an ingredient.
 - Release builds accept lightweight and annotated Git tags, resolve the tag to
   its commit and verify the image revision and application version.
 
