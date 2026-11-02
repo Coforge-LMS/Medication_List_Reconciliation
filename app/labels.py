@@ -4,7 +4,9 @@ Unknown finding types render as "Other (x)" so an older release can still show f
 written by a newer one (tolerant reader).
 """
 
+import re
 from datetime import UTC, datetime
+from typing import NamedTuple
 
 from contract import (
     Finding,
@@ -68,6 +70,76 @@ SOURCE_HEADINGS: dict[str, str] = {
     "fhir": "FHIR",
     "pharmacy": "Pharmacy",
 }
+
+
+class Cell(NamedTuple):
+    """What one source shows in a finding row: its value, or a badge saying why there is none.
+
+    kind is "value", "not_listed", "rejected", "no_interview" or "listed": the source lists the
+    medication but isn't part of this finding, like the single-record side of a duplicate.
+    """
+
+    kind: str
+    text: str
+    count: int | None = None
+
+
+def finding_cells(finding: Finding, run: RunDetail) -> list[Cell]:
+    """One cell per source, in column order, so a row reads at a glance without its summary.
+
+    A source left out of a missing finding is "Rejected" when a record of its with this name was
+    rejected, else "Not listed". Runs saved before details named those sources fall back to the
+    records and rejections the run kept.
+    """
+    details = finding.details or {}
+    missing_from = details.get("missing_from") or []
+    missing_from = [missing_from] if isinstance(missing_from, str) else missing_from
+    rejected_ids = set(details.get("rejected_record_ids") or [])
+    cells = []
+    for source in SOURCE_HEADINGS:
+        value = getattr(finding, f"{source}_value")
+        rejected = any(
+            r.source == source
+            and (r.source_record_id in rejected_ids or identity(r) == finding.medication)
+            for r in run.rejected
+        )
+        listed = sum(identity(r) == finding.medication for r in getattr(run, source))
+        if value:
+            count = details.get("count") if details.get("source") == source else None
+            cells.append(Cell("value", value, count))
+        elif source == "intake" and run.intake_interview is None:
+            cells.append(Cell("no_interview", "No interview"))
+        elif rejected and (source in missing_from or not listed):
+            cells.append(Cell("rejected", "Rejected"))
+        elif source in missing_from or not listed:
+            cells.append(Cell("not_listed", "Not listed"))
+        elif finding.discrepancy_type == "frequency_mismatch":
+            cells.append(Cell("listed", "No frequency"))
+        else:
+            cells.append(Cell("listed", f"{listed} record{'s' if listed > 1 else ''}"))
+    return cells
+
+
+# Summary sentences that say more than a row's cells and badges already do.
+EXTRA_NOTES = ("Different ", "Same ingredient")
+DIFFERENT_MEASURE = "Doses are recorded in a different measure"
+
+
+def finding_note(finding: Finding) -> str:
+    """The part of a summary the row doesn't already show: salt, form and measure differences.
+
+    "On the FHIR list; not reported by the patient ..." repeats what the cells say, so it's
+    dropped. A type this release doesn't know keeps its whole stored summary.
+    """
+    if finding.discrepancy_type not in LABELS:
+        return finding.summary
+    kept = []
+    for part in re.split(r"(?<=\.)\s+", finding.summary.strip()):
+        if part.startswith(EXTRA_NOTES):
+            kept.append(part)
+        elif part.startswith(DIFFERENT_MEASURE):
+            kept.append("Doses are recorded in different measures.")
+    return " ".join(kept)
 
 
 def interview_line(interview: IntakeInterviewInfo | None) -> str:

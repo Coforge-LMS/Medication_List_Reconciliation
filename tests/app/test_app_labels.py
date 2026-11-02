@@ -9,6 +9,9 @@ from app.labels import (
     NO_DIFFERENCES_NOTE,
     NOT_COMPARED_NOTE,
     SOURCE_HEADINGS,
+    Cell,
+    finding_cells,
+    finding_note,
     interview_line,
     label_for,
     matched_as,
@@ -196,3 +199,95 @@ def test_no_differences_marks_a_frequency_that_was_not_compared(frequency, shown
     fhir = [record("fhir", "metformin", "500", frequency=frequency)]
     ((_, stated),) = no_differences(_three_way(fhir=fhir))
     assert stated["fhir"] == shown
+
+
+def _missing(medication, missing_from, rejected_ids=(), **values):
+    """A missing finding with the details the rule writes."""
+    return Finding(
+        discrepancy_type="missing",
+        medication=medication,
+        summary="On the FHIR list; not reported by the patient and not in pharmacy records.",
+        details={"missing_from": missing_from, "rejected_record_ids": list(rejected_ids)},
+        **values,
+    )
+
+
+def test_cells_mark_a_rejected_source_apart_from_one_that_lacks_the_medication():
+    """Pharmacy's warfarin was rejected; the patient never named it."""
+    finding = _missing("warfarin", ["intake", "pharmacy"], ["PH-9"], fhir_value="5 mg")
+    assert finding_cells(finding, make_run()) == [
+        Cell("not_listed", "Not listed"),
+        Cell("value", "5 mg"),
+        Cell("rejected", "Rejected"),
+    ]
+
+
+def test_cells_say_no_interview_rather_than_not_listed_for_the_patient():
+    """Without an interview nothing was asked, so the patient can't have left it out."""
+    run = make_run(intake_interview=None, intake=[])
+    finding = _missing("omeprazole", "fhir", pharmacy_value="20 mg")
+    assert [c.kind for c in finding_cells(finding, run)] == ["no_interview", "not_listed", "value"]
+
+
+def test_cells_fall_back_to_the_run_records_when_details_are_missing():
+    """A run saved before details named sources still gets badges, from what each source lists."""
+    finding = Finding(
+        discrepancy_type="missing", medication="ibuprofen", summary="", intake_value="200 mg"
+    )
+    assert [c.kind for c in finding_cells(finding, make_run())] == [
+        "value",
+        "not_listed",
+        "not_listed",
+    ]
+
+
+def test_duplicate_cells_count_records_on_every_side():
+    """The duplicated source shows its count; a source with one record says so, not a dash."""
+    finding = Finding(
+        discrepancy_type="duplicate",
+        medication="metformin",
+        summary="FHIR has 2 records for metformin.",
+        fhir_value="Metformin 500 mg; Metformin 1000 mg",
+        details={"source": "fhir", "count": 2},
+    )
+    intake, fhir, pharmacy = finding_cells(finding, make_run())
+    assert intake == Cell("not_listed", "Not listed")
+    assert fhir.count == 2 and pharmacy == Cell("listed", "1 record")
+
+
+@pytest.mark.parametrize(
+    ("summary", "note"),
+    [
+        (
+            "On the FHIR list; not in pharmacy records. 1 pharmacy record with this name was "
+            "rejected (see Rejected records).",
+            "",
+        ),
+        (
+            "On the FHIR list; not in pharmacy records. Same ingredient, other salt: pharmacy "
+            "metoprolol tartrate.",
+            "Same ingredient, other salt: pharmacy metoprolol tartrate.",
+        ),
+        (
+            "Different salt: FHIR metoprolol tartrate; pharmacy metoprolol succinate. FHIR dose "
+            "0.5 g; pharmacy dose 500 mg.",
+            "Different salt: FHIR metoprolol tartrate; pharmacy metoprolol succinate.",
+        ),
+        (
+            "Doses are recorded in a different measure: FHIR dose 5 mL; pharmacy dose 5 mg.",
+            "Doses are recorded in different measures.",
+        ),
+    ],
+    ids=["rejection", "other-salt", "different-salt", "measure"],
+)
+def test_note_keeps_only_what_the_cells_cannot_show(summary, note):
+    """Presence, absence and rejections are in the cells; product differences aren't."""
+    assert finding_note(Finding(discrepancy_type="missing", medication="x", summary=summary)) == (
+        note
+    )
+
+
+def test_note_for_an_unknown_type_is_its_whole_stored_summary():
+    """A newer release's finding can't be shortened safely, so it's shown as stored."""
+    finding = Finding(discrepancy_type="route_mismatch", medication="x", summary="FHIR route oral.")
+    assert finding_note(finding) == "FHIR route oral."
